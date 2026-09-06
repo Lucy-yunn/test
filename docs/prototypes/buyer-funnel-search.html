@@ -112,9 +112,9 @@
 
   /* ---- fake app chrome ---- */
   .chrome {
-    max-width: 1120px;
+    width: min(1480px, 100%);
     margin: 0 auto;
-    padding: 0 20px 140px;
+    padding: 0 clamp(18px, 3.5vw, 52px) 140px;
   }
   .topbar {
     display: flex;
@@ -471,6 +471,16 @@
     .c-layout { grid-template-columns: 1fr; }
     .facets { position: static; }
     .rowcard .thumb { display: none; }
+  }
+
+  /* wide laptops: use the horizontal room instead of stretching one column */
+  @media (min-width: 1180px) {
+    .res-section { display: grid; grid-template-columns: 1fr 1fr; column-gap: 30px; align-content: start; }
+    .res-section > .sec-label { grid-column: 1 / -1; }
+    .rowcard { border-bottom: none; border-top: 1px solid var(--hair); }
+    .live-list { grid-template-columns: 1fr 1fr; column-gap: 30px; }
+    .c-layout { grid-template-columns: 280px 1fr; gap: 28px; }
+    .wiz-stage > h2 { max-width: none; }
   }
 
   /* =====================================================================
