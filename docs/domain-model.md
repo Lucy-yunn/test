@@ -85,6 +85,8 @@ The login identity for every person who can sign in. Owned by Better Auth.
 
 - `email`, `passwordHash` (Better Auth), `name`
 - `role` — `buyer` | `seller` | `staff`; exactly one in v1
+- `messagingBlockedAt` — nullable; set by staff to bar this User from all messaging (see
+  [`docs/messaging-model.md`](./messaging-model.md))
 - Relationships: 1:1 optional → `Buyer`; 1:1 optional → `Seller`. A `staff` User has neither.
 
 Permission matrix and session detail: [Auth, roles & permissions (#12)](https://github.com/Lucy-yunn/test/issues/12).
@@ -315,18 +317,32 @@ the only variable is when (seller approves, staff approve, or auto-approve **7 d
 - `createdAt`
 
 #### Thread
-A single buyer↔seller conversation, scoped to one Listing and one Buyer.
+A single buyer↔seller conversation, scoped to one Listing and one Buyer. Exists **only when
+both parties have a login** — buyer signed in, `Seller.userId` set; no staff relay for a
+login-less seller (their listings carry no **Message seller** button).
 
 - `listingId`, `buyerId`, `sellerId` — required; unique `(listingId, buyerId)`
 - `createdAt`, `lastMessageAt`
-- Relationships: → many `Message`
+- `lockedAt`, `lockedBy` (staff User) — nullable; the only closed state (staff moderation)
+- Opened by the buyer from a listing page (`published` / `reserved` only); never auto-created
+  by an Order; survives every later Listing status change (reads through to the retained
+  Listing for its pinned header)
+- Relationships: → 1 `Listing`, → 1 `Buyer`, → 1 `Seller`, → many `Message`
 
 #### Message
-- `threadId` — required
-- `senderUserId` (or sender role + id) — resolved in [In-app messaging model (#11)](https://github.com/Lucy-yunn/test/issues/11)
-- `body`, `sentAt`, `readAt` (nullable)
+One entry in a Thread. Append-only — **immutable** after creation (only `readAt` is ever set);
+no edit or delete by anyone.
 
-Thread scoping, notifications, moderation: [In-app messaging model (#11)](https://github.com/Lucy-yunn/test/issues/11).
+- `threadId` — required
+- `senderRole` — `buyer` | `seller` | `staff`; **stored explicitly**, not derived from
+  `User.role`
+- `senderUserId` — FK → `User`, required (all three roles are logged-in Users; a `staff`
+  message renders to both parties as a labelled "IVO Support" entry, never as the seller)
+- `body` — plain text, ~4000-char cap; `sentAt`; `readAt` (nullable)
+
+Full rules — the both-sides-login gate, surfaces, unread state, moderation (report / lock /
+block), and the `Report` flag entity: [`docs/messaging-model.md`](./messaging-model.md)
+(resolves [#11](https://github.com/Lucy-yunn/test/issues/11)).
 
 ---
 
@@ -406,6 +422,6 @@ ADR structure, both hard to reverse and the result of real trade-offs:
 | [Listing model (#8)](https://github.com/Lucy-yunn/test/issues/8) | ✅ **Resolved** — `Listing` / `DonorVehicle` / `ListingPhoto` / `ListingDefect` above; lifecycle, publish checklist, buyer visibility. Seller-facing intake spun off to its own ticket. `DonorVehicle` gained structured `engine`/`fuel`/`bodyStyle`/`drivetrain` and `generationId` replaced `modificationId` ([#21](https://github.com/Lucy-yunn/test/issues/21)). |
 | [Buyer funnel search UX (#9)](https://github.com/Lucy-yunn/test/issues/9) | ✅ **Resolved** ([`docs/buyer-funnel-search.md`](./buyer-funnel-search.md)) — funnel `Make → Model → Generation → Category`; provenance-only results, no fit badges ([#21](https://github.com/Lucy-yunn/test/issues/21)); Engine/Fuel/Gearbox as provenance-narrowing facets. |
 | [Order model & stubbed checkout (#10)](https://github.com/Lucy-yunn/test/issues/10) | ✅ **Resolved** — `Order` + `CancellationRequest` above; full lifecycle, checkout flow, cancellation flow, shipping, visibility in [`docs/order-model.md`](./order-model.md) |
-| [In-app messaging model (#11)](https://github.com/Lucy-yunn/test/issues/11) | `Message.sender` representation, notifications, moderation |
+| [In-app messaging model (#11)](https://github.com/Lucy-yunn/test/issues/11) | ✅ **Resolved** — Thread exists only when both parties have a login (no staff relay); `Message` = explicit `senderRole` + `senderUserId`, immutable, text-only; in-app unread via `readAt`; moderation = staff report queue / lock / block. Full spec in [`docs/messaging-model.md`](./messaging-model.md). Email/push notifications split out to a new cross-cutting ticket. |
 | [Auth, roles & permissions (#12)](https://github.com/Lucy-yunn/test/issues/12) | The full permission matrix, seller account provisioning, buyer self-registration flow, the one-role-per-person rule |
 | [Seller center (#13)](https://github.com/Lucy-yunn/test/issues/13) | Which screens and metrics the read-only seller center shows, how they are computed |
