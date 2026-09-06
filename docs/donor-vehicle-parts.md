@@ -15,19 +15,21 @@ Vocabulary is governed by [`CONTEXT.md`](../CONTEXT.md).
 ## Terminology note — the vehicle catalogue
 
 This document uses the vehicle-catalogue vocabulary settled by
-[Vehicle-catalogue grain & the buyer-facing label for Modification (#21)](https://github.com/Lucy-yunn/test/issues/21):
+[Vehicle-catalogue grain & the buyer-facing label (#21)](https://github.com/Lucy-yunn/test/issues/21):
 
 - The buyer-facing hierarchy is **Make → Model → Generation → Category**.
 - **`VehicleGeneration`** is the catalogue leaf and the funnel's third step; it replaces the
-  earlier `Modification` term.
-- There is **no "Model Group"** entity or label. The `Model` value may itself be a grouped
-  name — `A4, S4`, `A6, S6`, `80, 90`.
+  earlier `Modification` term (engine-grain).
+- **`VehicleModelGroup`** is the second level — a real entity grouping model designations
+  (`A4, S4`; `80, 90`); its UI label is just "Model".
+- **There is no `Fitment` entity in v1** (#21 removed it). Buyer discovery is provenance-only;
+  the marketplace makes no platform-verified compatibility claims anywhere.
 - Worked example: `Audi → A4, S4 → A4 S4 B5 8D (1994–1999) → Headlights`.
 
-The repo-wide rename (`CONTEXT.md`, [`docs/domain-model.md`](./domain-model.md),
-[`docs/buyer-funnel-search.md`](./buyer-funnel-search.md), the Fitment doc) is **#21's
-deliverable**, not this one. This document is written to land cleanly on top of it; if #21's
-final label differs, only the strings here change, not the design.
+The repo-wide rename and the Fitment removal (`CONTEXT.md`,
+[`docs/domain-model.md`](./domain-model.md),
+[`docs/buyer-funnel-search.md`](./buyer-funnel-search.md)) are **#21's deliverable**, not this
+one. This document lands on top of it.
 
 ---
 
@@ -110,9 +112,9 @@ Each card links to that sibling's own listing detail page, where the normal trea
 
 ### 3.4 Ordering
 
-**Newest listed first**, flat list. Matches the funnel's secondary sort
-([#9](https://github.com/Lucy-yunn/test/issues/9): "confirmed-fit, then newest") with the fit
-dimension removed. Category grouping is a fast-follow (§8), not v1.
+**Newest listed first**, flat list — the same default sort as the funnel
+([#9](https://github.com/Lucy-yunn/test/issues/9), post-#21). Category grouping is a
+fast-follow (§8), not v1.
 
 ### 3.5 Size and "See all"
 
@@ -127,18 +129,16 @@ dimension removed. Category grouping is a fast-follow (§8), not v1.
 
 Cards in this section carry **no fit badge and no compatibility note**.
 
-This is **not a new rule** — it is the existing out-of-funnel rule from
-[`docs/fitment-and-compatibility-search.md`](./fitment-and-compatibility-search.md) (#7): a
-listing shown outside funnel context (from a favourite, a thread, an order re-entry) omits
-the `✓ Confirmed fit` / `From a matching car (unverified)` badge and the `Fitment.note`,
-because there is no buyer `VehicleGeneration` in context to judge against. A
-"more parts from the same car" card is outside funnel context by the same logic.
+This is **not a special rule** — v1 has **no fit badges anywhere** (#21: no `Fitment` entity,
+provenance-only discovery, badge-free result rows —
+[`docs/buyer-funnel-search.md`](./buyer-funnel-search.md) §2.1 / §3). Every result across the
+site is a provenance match the buyer verifies themselves against the part number and the
+donor vehicle's shown details.
 
-Sharing a `donorVehicleId` **never** implies compatibility. Fitment remains governed entirely
-by the normal `Fitment` rules (#7): a sibling part fits the buyer's car only if it has a
-`Fitment` row for the buyer's `VehicleGeneration`, or if the buyer's generation happens to be
-this donor vehicle's generation (the provenance path). Either way, that judgement is made on
-the sibling's **own** listing page when the buyer opens it — not inferred here.
+Sharing a `donorVehicleId` **never** implies compatibility — these parts came off one car but
+are not guaranteed to fit each other's applications, let alone the buyer's car. The section
+caption (§3.2) carries that message; the buyer checks each sibling on its **own** listing
+page.
 
 No `⚠ compatibility not checked` marker on cards: the §3.2 caption carries that message once,
 for the whole section.
@@ -190,7 +190,7 @@ one-line pointer noting the listing detail page carries this section (added with
 |---|---|
 | Dedicated / shareable **donor-vehicle page** | Explicitly rejected for v1 — would be a second browse surface. Revisit only if buyers ask to link/share "this car". |
 | **Category grouping** within the section | Genuinely useful for the "rebuild one corner" buyer; a fast-follow, not v1. |
-| Fit badges on sibling cards | Would require evaluating each sibling's `Fitment` against the buyer's `VehicleGeneration` and only makes sense with funnel context carried through; out of scope with the #7 out-of-funnel rule. |
+| Any fit / compatibility signal on sibling cards | v1 has no compatibility signal anywhere (#21 removed `Fitment`); revisit only if platform-verified compatibility returns as a future feature. |
 | Cross-seller "same car" linking | Structurally impossible in v1 anyway (`DonorVehicle` belongs to one `Seller`); not a goal. |
 | "Notify me about new parts from this car" | No notification surface for this (`Notification` covers order + cancellation only — [#17](https://github.com/Lucy-yunn/test/issues/17)). |
 
