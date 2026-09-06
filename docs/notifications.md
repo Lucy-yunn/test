@@ -191,13 +191,10 @@ beyond a simple "older" control; rows are kept indefinitely (volume is tiny).
 
 ---
 
-## 7. ADR candidate
+## 7. ADR
 
-**"v1 notifications are in-app only; transactional email is deferred as one layer."**
-Logged for the **final spec assembly** ADR set (alongside #7's search-union, #10's
-always-approves cancellation, #11's both-sides-login messaging gate, #12's one-role-per-user).
-It is a real trade-off (a marketplace normally emails buyers when an order ships), it is
-mildly surprising to a future reader, and while each half is cheap to reverse, the *shape* —
-a durable in-app `Notification` record as the system of record, with email as a later
-additive channel rather than the primary one — is the decision worth recording. Not written
-now.
+**"v1 notifications are in-app only; transactional email is deferred as one layer."** —
+[ADR-0008](./adr/0008-in-app-notifications-email-deferred.md). A real trade-off (a marketplace
+normally emails buyers when an order ships), mildly surprising to a future reader, and while
+each half is cheap to reverse the *shape* — a durable in-app `Notification` record as the
+system of record, with email as a later additive channel — is worth recording.

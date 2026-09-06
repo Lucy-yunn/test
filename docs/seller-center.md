@@ -29,7 +29,8 @@ actions (§4). Listing is never done here — staff enter and maintain every Lis
   week-over-week comparison anywhere in v1 (§7).
 
 Out of this ticket:
-- The **admin tool** screens (staff-side order and product management) — final spec assembly.
+- The **admin tool** screens (staff-side order and product management) —
+  [`docs/spec/admin-tool.md`](./spec/admin-tool.md).
 - **Notifications** — email / push for new orders, cancellations, or messages is deferred to
   [Notifications (#17)](https://github.com/Lucy-yunn/test/issues/17). The seller center shows
   **in-app state only**: live counts and the #11 unread badge.
@@ -293,5 +294,6 @@ a Buyer favourites a `published` Listing that later goes `reserved` (to someone 
   seller-center query to the signed-in Seller.
 - **Notifications ([#17](https://github.com/Lucy-yunn/test/issues/17))** — every "no
   notification" note above resolves there.
-- **Final spec assembly** (map fog) — the admin-tool counterparts (staff order and product
-  management, the staff "Pending cancellations" list) and the overall screen inventory.
+- **Final spec assembly ([#26](https://github.com/Lucy-yunn/test/issues/26))** — done: the
+  admin-tool counterparts are in [`docs/spec/admin-tool.md`](./spec/admin-tool.md); the full
+  screen inventory (incl. this seller center) is [`docs/spec/screens.md`](./spec/screens.md).

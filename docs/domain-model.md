@@ -423,13 +423,15 @@ erDiagram
 | **`Listing.status` merges pipeline + stock state; `sold` only at order `delivered`** | One enum, no ambiguity; `reserved` holds the item for the whole order, released on pre-`shipped` cancel | Separate `stockStatus` field; `sold` at `confirmed` |
 | **`sold`/`cancelled`/`archived` listings are fully hidden from buyers** | Keeps the marketplace showing only actionable stock; a completed sale is back-office data | Show sold listings greyed (clutters browse) |
 
-Two ADRs should be extracted when the "Final spec assembly" ticket decides the deliverable's
-ADR structure, both hard to reverse and the result of real trade-offs:
+These two calls are recorded as ADRs (written by the Final spec assembly ticket, [#26](https://github.com/Lucy-yunn/test/issues/26)):
 
-- the `DonorVehicle` / Provenance decision (surprising against the map's Q6);
-- **provenance-first, `VehicleGeneration`-grain, no `Fitment` in v1** ([#21](https://github.com/Lucy-yunn/test/issues/21)) —
-  surprising against Q6's separate Fitment concept and the earlier [#4](https://github.com/Lucy-yunn/test/issues/4)/[#7](https://github.com/Lucy-yunn/test/issues/7)
-  engine-grain + verified-fit design, traded away for a maintainable two-person catalogue.
+- [ADR-0002](./adr/0002-donorvehicle-provenance-as-relationship.md) — `DonorVehicle` as a
+  first-class entity; Provenance is the `Listing → DonorVehicle` link (surprising against the
+  map's Q6);
+- [ADR-0003](./adr/0003-provenance-first-generation-grain.md) — provenance-first,
+  `VehicleGeneration`-grain, no `Fitment` in v1 ([#21](https://github.com/Lucy-yunn/test/issues/21)).
+
+The full v1 spec is assembled at [`docs/spec/`](./spec/) (front door: [`docs/spec/README.md`](./spec/README.md)).
 
 ---
 
@@ -442,6 +444,7 @@ ADR structure, both hard to reverse and the result of real trade-offs:
 | [Buyer funnel search UX (#9)](https://github.com/Lucy-yunn/test/issues/9) | ✅ **Resolved** ([`docs/buyer-funnel-search.md`](./buyer-funnel-search.md)) — funnel `Make → Model → Generation → Category`; provenance-only results, no fit badges ([#21](https://github.com/Lucy-yunn/test/issues/21)); Engine/Fuel/Gearbox as provenance-narrowing facets. |
 | [Order model & stubbed checkout (#10)](https://github.com/Lucy-yunn/test/issues/10) | ✅ **Resolved** — `Order` + `CancellationRequest` above; full lifecycle, checkout flow, cancellation flow, shipping, visibility in [`docs/order-model.md`](./order-model.md) |
 | [In-app messaging model (#11)](https://github.com/Lucy-yunn/test/issues/11) | ✅ **Resolved** — Thread exists only when both parties have a login (no staff relay); `Message` = explicit `senderRole` + `senderUserId`, immutable, text-only; in-app unread via `readAt`; moderation = staff report queue / lock / block. Full spec in [`docs/messaging-model.md`](./messaging-model.md). Email/push notifications split out to a new cross-cutting ticket. |
-| [Auth, roles & permissions (#12)](https://github.com/Lucy-yunn/test/issues/12) | The full permission matrix, seller account provisioning, buyer self-registration flow, the one-role-per-person rule |
-| [Seller center (#13)](https://github.com/Lucy-yunn/test/issues/13) | Which screens and metrics the read-only seller center shows, how they are computed |
-| [Notifications (#17)](https://github.com/Lucy-yunn/test/issues/17) | ✅ **Resolved** — `Notification` above; in-app only (no email in v1), event → audience matrix, the per-user feed in [`docs/notifications.md`](./notifications.md) |
+| [Auth, roles & permissions (#12)](https://github.com/Lucy-yunn/test/issues/12) | ✅ **Resolved** — Better Auth + `admin` plugin; buyer self-registration (atomic `User` + `Buyer`); two-phase seller provisioning; one role per `User` ([ADR-0004](./adr/0004-one-role-per-user.md)); the full permission matrix; DAL enforcement. Full spec in [`docs/auth-and-permissions.md`](./auth-and-permissions.md). |
+| [Seller center (#13)](https://github.com/Lucy-yunn/test/issues/13) | ✅ **Resolved** — five near-read-only sections, exactly two write actions, live-count metrics only, the Q15 boundary. Full spec in [`docs/seller-center.md`](./seller-center.md). |
+| [Notifications (#17)](https://github.com/Lucy-yunn/test/issues/17) | ✅ **Resolved** — `Notification` above; in-app only (no email in v1 — [ADR-0008](./adr/0008-in-app-notifications-email-deferred.md)), event → audience matrix, the per-user feed in [`docs/notifications.md`](./notifications.md) |
+| [Final spec assembly (#26)](https://github.com/Lucy-yunn/test/issues/26) | ✅ **Resolved** — the build-ready SPEC front door, screen inventory, and admin-tool spec in [`docs/spec/`](./spec/); the eight ADRs in [`docs/adr/`](./adr/). |

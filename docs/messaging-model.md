@@ -47,8 +47,8 @@ Messaging coverage in the demo therefore tracks exactly which sellers have been 
 Rationale (founder's call): a relay makes staff a synchronous dependency on every buyer
 question and blurs who said what. Requiring a login on both sides keeps every Thread a direct,
 attributable, two-party conversation. The trade-off — listings from login-less sellers carry
-no buyer channel — is accepted for v1. **This is an ADR candidate for the final spec
-assembly** (alongside the #7 search-union and #10 cancellation-policy ADRs).
+no buyer channel — is accepted for v1. Recorded as
+[ADR-0006](./adr/0006-both-sides-login-messaging.md).
 
 ---
 
@@ -252,7 +252,8 @@ that staff get a queue of reported Threads.)*
   unread state only.
 - **Seller center (#13)** — must plan a **Messages** section with a **reply box**; it is the
   one write action in the seller center. Context note added to the ticket.
-- **Final spec assembly** (map fog) — the admin tool's Threads / report-queue screens; and an
-  **ADR** for the "both sides logged in, no staff relay" decision (§2).
+- **Final spec assembly ([#26](https://github.com/Lucy-yunn/test/issues/26))** — done: the
+  admin Threads / report-queue screens are in [`docs/spec/admin-tool.md`](./spec/admin-tool.md) §9;
+  the "both sides logged in, no staff relay" decision is [ADR-0006](./adr/0006-both-sides-login-messaging.md).
 - **Attachments in Threads** — deferred; a later enhancement, tied to the same blob-storage
   concern as the Listing model (#8).
