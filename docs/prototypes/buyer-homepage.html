@@ -285,11 +285,6 @@
   .carou-btns button { width: 34px; height: 34px; border: 1px solid var(--hair-strong); background: var(--panel); display: grid; place-items: center; }
   .carou-btns button:hover { border-color: var(--brand); }
 
-  .steps3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
-  .step3 { display: flex; flex-direction: column; gap: 6px; padding: 20px; background: var(--panel); border: 1px solid var(--hair); }
-  .step3 .num { font: 700 12px/1 "Spline Sans Mono", monospace; color: var(--brand); }
-  .step3 h4 { font-size: 16px; }
-  .step3 p { margin: 0; font-size: 13px; color: var(--ink-soft); }
 
   .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
   .tile { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 17px; background: var(--panel); border: 1px solid var(--hair); }
@@ -728,15 +723,26 @@ function resultsPreview(s){
 }
 
 /* =============================================================== shared page sections */
-function howItWorks(){
+/* "What's in stock right now" — category tiles with live counts (shared by A and C) */
+function categoryTilesHTML(){
   return `<section class="block"><div class="shell">
-    <div class="sec-head"><h3>How IVO works</h3></div>
-    <div class="steps3">
-      <div class="step3"><span class="num">01</span><h4>Tell us your car</h4><p>Make, model, and engine variant &mdash; no VIN needed. Not sure which engine? Say so and we search every variant of your model.</p></div>
-      <div class="step3"><span class="num">02</span><h4>We show what fits</h4><p>Parts our team confirmed against your exact engine carry a &#10003; badge. Parts pulled from a matching car sit just below, worth a closer look.</p></div>
-      <div class="step3"><span class="num">03</span><h4>Order &mdash; we handle the rest</h4><p>Staff-checked packing and delivery across Bulgaria. Prices in EUR. One part per order in this release.</p></div>
-    </div>
+    <div class="sec-head"><h3>What&rsquo;s in stock right now</h3><span class="aside">across every car in the catalogue</span></div>
+    <div class="tiles">${CATALOG.groups.flatMap(g => g.cats).map(c => {
+      const n = LISTINGS.filter(l => l.cat === c.id).length;
+      return `<button class="tile" data-tilecat="${c.id}" ${n?'':'disabled'} style="${n?'':'opacity:.45'}">
+        <span class="t-name">${esc(c.name)}</span><span class="t-count">${n}</span>
+      </button>`;
+    }).join('')}</div>
   </div></section>`;
+}
+function wireTiles(root, s, render){
+  root.querySelectorAll('[data-tilecat]').forEach(b => b.onclick = () => {
+    s.catId = b.dataset.tilecat;
+    if (canSearch(s)) { s.searched = true; s.openSlot = null; }
+    else s.openSlot = 'make';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    render();
+  });
 }
 function mostViewed(scroller){
   return `<section class="block is-v2"><div class="shell">
@@ -770,8 +776,8 @@ function VariantA(root){
   function render(){
     root.innerHTML = `
       <div class="vcap"><div class="shell">
-        <div class="row"><h2>Their mock, realized</h2><span class="k">variant A</span></div>
-        <p>Faithful to <span class="mono">UI/Homepage</span>: purple chrome, the headline, a horizontal 4-slot bar. Tapping a slot drops a panel below it. Engine variant is spec cards; discovery below is the Most&nbsp;Viewed carousel.</p>
+        <div class="row"><h2>Their mock, realized</h2><span class="k">variant A</span><span class="k" style="background:var(--gold);color:var(--gold-ink)">chosen homepage</span></div>
+        <p>Faithful to <span class="mono">UI/Homepage</span>: purple chrome, the headline, a horizontal 4-slot bar. Tapping a slot drops a panel below it. Engine variant is spec cards. Below: <b>What&rsquo;s in stock right now</b> (category tiles with live counts), then the Most&nbsp;Viewed carousel (v2). No &ldquo;How IVO works&rdquo; block.</p>
       </div></div>
       <section class="hero"><div class="shell">
         <div class="a-hero-grid">
@@ -794,9 +800,10 @@ function VariantA(root){
           </div>
         </div>
       </div></section>
-      ${mostViewed(true)}
-      ${howItWorks()}`;
+      ${categoryTilesHTML()}
+      ${mostViewed(true)}`;
     wireFunnel(root, s, render);
+    wireTiles(root, s, render);
     wireCarousel(root);
   }
   render();
@@ -925,25 +932,11 @@ function VariantC(root){
           </aside>
         </div>
       </div></section>
-      ${categoryTiles()}
+      ${categoryTilesHTML()}
       ${mostViewed(true)}`;
     wireFunnel(root, s, render);
-    root.querySelectorAll('[data-tilecat]').forEach(b => b.onclick = () => {
-      s.catId = b.dataset.tilecat; s.openSlot = canSearch(s) ? null : 'make';
-      window.scrollTo({ top: 0, behavior: 'smooth' }); render();
-    });
+    wireTiles(root, s, render);
     wireCarousel(root);
-  }
-  function categoryTiles(){
-    return `<section class="block"><div class="shell">
-      <div class="sec-head"><h3>What&rsquo;s in stock right now</h3><span class="aside">across every car in the catalogue</span></div>
-      <div class="tiles">${CATALOG.groups.flatMap(g => g.cats).map(c => {
-        const n = LISTINGS.filter(l => l.cat === c.id).length;
-        return `<button class="tile" data-tilecat="${c.id}" ${n?'':'disabled'} style="${n?'':'opacity:.45'}">
-          <span class="t-name">${esc(c.name)}</span><span class="t-count">${n}</span>
-        </button>`;
-      }).join('')}</div>
-    </div></section>`;
   }
   render();
 }

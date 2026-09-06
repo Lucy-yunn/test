@@ -27,15 +27,19 @@ reaches Listings through one funnel: **`Make → Model → Modification → part
 is **no year step and no body-style step** (locked in #4) — the Modification carries the
 year range.
 
-Entry point: the **homepage funnel card** (prototype homepage take **C**).
+Entry point: the **homepage funnel bar** (prototype homepage take **A** — faithful to the
+founder's original `UI/` mock).
 
-- A compact vertical funnel card sits in the hero, beside the trust panel ("Why buyers
-  trust IVO").
-- The **Search button lives in the card header** — visible on landing, before any scroll.
+- A **horizontal 4-slot bar** (`Make · Model · Engine variant · Part` + a gold **Search**
+  button) sits in the hero, under the headline *"Find the part you need, without the wait."*
+- Tapping a slot drops an options panel below the bar. The Engine-variant panel is the spec
+  cards (§1.2); the Part panel is the grouped category list.
 - Search is **never a dead control**: until Make + Model are set it opens the next empty
   step; once they are set it navigates to **Browse** (`/browse?...`).
-- Below the fold: category tiles with live in-stock counts (discovery). **Most Viewed** is
+- Below the hero, in order: **"What's in stock right now"** — category tiles with live
+  in-stock counts (the v1 discovery surface) — then the **Most Viewed** carousel, which is
   **v2**, not first release.
+- **No "How IVO works" explainer block.**
 
 ### 1.1 The four steps
 
