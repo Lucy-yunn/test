@@ -195,8 +195,9 @@ A read-only rendering of the Listing exactly as staff entered it:
 - **Part** — name, Category, `attributes`, `PartNumber`s (or the "no visible number" note).
 - **This item** — `condition` + `conditionNotes`, the `ListingDefect` list, photos,
   dimensions / weight, `priceEur`, `negotiable`.
-- **Provenance** — the `DonorVehicle` (`label`, Modification, and the nullable donor fields
-  the Seller supplied at intake; `vin` masked, consistent with the buyer view — #8).
+- **Provenance** — the `DonorVehicle` (`label`, `VehicleGeneration`, and the nullable donor
+  fields the Seller supplied at intake — engine / engine code / fuel / transmission / body /
+  drivetrain; `vin` masked, consistent with the buyer view — #8 / #21).
 - **Per-listing metrics** — three counts:
 
   | Metric | Computed from |
