@@ -34,8 +34,10 @@ Modification` catalogue.
 - **Fitment** points at `Modification` **directly and per-Part**: a verified many-to-many join
   `Part ↔ Modification`.
 - **Provenance** reaches `Modification` **indirectly and per-physical-car**:
-  `Listing → DonorVehicle → Modification` (the `DonorVehicle.modificationId` is nullable — an
-  unknown donor is allowed).
+  `Listing → DonorVehicle → Modification` (`DonorVehicle.modificationId` is **required** — see
+  [Listing model (#8)](https://github.com/Lucy-yunn/test/issues/8); there is no unknown-donor
+  case, staff always identify the donor to a Modification, extending the hand-built catalogue
+  during intake when needed).
 
 One shared `Modification` entity, two independent paths to it. Fitment is never inferred from
 Provenance.
@@ -194,37 +196,58 @@ Staff entry workflow and how buyer search combines Fitment + Provenance:
 ### Selling & buying
 
 #### DonorVehicle
-The physical car a Seller dismantled. Entered once; parts added against it.
+The physical car a Seller dismantled. Entered once by staff; parts added against it. Full
+model resolved by [Listing model (#8)](https://github.com/Lucy-yunn/test/issues/8).
 
 - `sellerId` — required
-- `modificationId` — **nullable** (unknown donor allowed)
-- `donorYear`, `vin`, `vinDerivedNotes`, `mileageKm`, `engineCode`, `notes` — all nullable
+- `modificationId` — **required** (no unknown-donor case; catalogue is extended during intake)
+- `label` — required, staff reference ("Silver Golf VII, Plovdiv yard")
+- `donorYear`, `vin`, `vinDerivedNotes`, `mileageKm`, `engineCode`, `transmission`
+  (`manual`/`automatic`/`other`), `registrationCountry`, `notes` — all nullable
 - `createdBy`
 - **No lifecycle status in v1** — it is a data record
-- Relationships: → many `Listing`
-
-Donor-car photos and the full donor intake form: [Listing model (#8)](https://github.com/Lucy-yunn/test/issues/8).
+- `vin` is shown to buyers **masked**; `vinDerivedNotes` is staff-only
+- Relationships: → many `Listing`, → many `DonorVehiclePhoto` (0..n, optional)
 
 #### Listing
-One physical used item one Seller has for sale. A single unique unit.
+One physical used item one Seller has for sale. A single unique unit. Full model resolved by
+[Listing model (#8)](https://github.com/Lucy-yunn/test/issues/8).
 
-- `partId` — required
+- `internalCode` — readable, e.g. `LST-000123`, unique
+- `partId` — required (Part must have a leaf `Category`)
 - `sellerId` — required; invariant `== donorVehicle.sellerId` (DAL-enforced)
 - `donorVehicleId` — required (this link *is* Provenance)
-- `priceEur`
-- `condition` — `new` | `used_good` | `needs_repair`
-- `conditionNotes`, `removalNotes` (nullable, part-specific)
-- `status` — lifecycle enum (draft → quality-check → published → reserved → sold → cancelled);
-  exact states and transitions owned by [Listing model (#8)](https://github.com/Lucy-yunn/test/issues/8)
-- `publishedAt`
-- Relationships: → many `ListingPhoto`, → many `Favorite`, → many `Thread`, → 0..1 `Order`
-  (active)
+- `priceEur` — required; `negotiable` (bool)
+- `condition` — `new` | `used_good` | `needs_repair`; `conditionNotes`
+- `removalNotes` — nullable, part-specific provenance detail
+- `sellerSku`, `warehouseLocation` — nullable
+- `lengthCm`, `widthCm`, `heightCm`, `weightKg`, `packageSizeNotes` — nullable (shipping;
+  [Order model (#10)](https://github.com/Lucy-yunn/test/issues/10) consumes these)
+- `status` — `draft` | `published` | `reserved` | `sold` | `cancelled` | `archived`
+- `publishedAt`, `reviewedBy` (nullable), `createdBy`
+- Title is auto-composed for display, not stored
+- Relationships: → many `ListingPhoto`, → many `ListingDefect`, → many `Favorite`,
+  → many `Thread`, → 0..1 `Order` (active)
+
+**Lifecycle:** `draft → published` (staff, passes the publish checklist);
+`published → reserved` (order `placed`); `reserved → sold` (order `delivered`);
+`reserved → published` (order cancelled before `shipped`); `published ↔ cancelled` (staff);
+`published`/`cancelled → archived` (staff). Staff never set `sold` by hand. Only `published`
+and `reserved` are buyer-visible.
 
 #### ListingPhoto
 - `listingId` — required
 - `url` + metadata only (Vercel Blob behind the storage abstraction)
-- `displayOrder`, `caption` (nullable)
-- At least one required before a Listing is published (detail: #8)
+- `displayOrder` (first = primary), `caption` (nullable)
+- **≥ 1 required to publish**; soft cap ~15
+
+#### ListingDefect
+A single known defect, entered separately (transparency — buyer sees a bulleted list).
+
+- `listingId` — required
+- `description` — required
+- `photoId` — nullable, points at one `ListingPhoto`
+- `displayOrder`
 
 #### Order
 A Buyer's purchase of exactly one Listing. **No cart, no line items, no `OrderItem`** in v1.
@@ -282,7 +305,9 @@ erDiagram
     Modification ||--o{ DonorVehicle : "identified as"
 
     DonorVehicle ||--o{ Listing : "provenance of"
+    DonorVehicle ||--o{ DonorVehiclePhoto : shows
     Listing ||--o{ ListingPhoto : shows
+    Listing ||--o{ ListingDefect : discloses
     Listing ||--o{ Favorite : "saved as"
     Listing ||--o{ Thread : "discussed in"
     Listing ||--o| Order : "sold via"
@@ -309,6 +334,10 @@ erDiagram
 | **Fitment grain = `Modification` only** | Trivial, unambiguous fitment resolution; matches the hand-built catalogue | Model-level or year-range Fitment rows (ambiguous unions) |
 | **No cart / `OrderItem` in v1** | Every part is a unique single unit; multi-seller carts split into N orders anyway; checkout is stubbed so one-payment-many-items has no value yet | Cart + `Order → OrderItem` split now |
 | **`Listing.sellerId` kept explicit** (redundant with `donorVehicle.sellerId`) | Nearly every query is "listings/orders by seller"; invariant enforced in the DAL | Derive seller through the DonorVehicle on every query |
+| **`DonorVehicle.modificationId` required** (reverses the "unknown donor allowed" note from #2) | Provenance stays meaningful; enables "parts from this exact car"; the hand-built catalogue already only holds real pilot-donor Modifications, so staff extend it during intake | Nullable modification — but a numberless *and* variant-less part is barely identifiable |
+| **A Part with no `PartNumber` can still be published** (checklist takes "no visible number" tick) | #5's researched position — used-yard parts routinely lack legible numbers; fit-confidence comes from `Fitment`, not the number; a *wrong* forced number generates disputes | Hard-require a number — blocks legitimate parts, slows intake, risks bad data |
+| **`Listing.status` merges pipeline + stock state; `sold` only at order `delivered`** | One enum, no ambiguity; `reserved` holds the item for the whole order, released on pre-`shipped` cancel | Separate `stockStatus` field; `sold` at `confirmed` |
+| **`sold`/`cancelled`/`archived` listings are fully hidden from buyers** | Keeps the marketplace showing only actionable stock; a completed sale is back-office data | Show sold listings greyed (clutters browse) |
 
 An ADR for the `DonorVehicle` / Provenance decision (hard to reverse, surprising against the
 map's Q6, a real trade-off) should be extracted when the "Final spec assembly" ticket decides
@@ -321,7 +350,7 @@ the deliverable's ADR structure.
 | Ticket | Owns |
 |---|---|
 | [Fitment model & staff-entry workflow (#7)](https://github.com/Lucy-yunn/test/issues/7) | `Fitment` verification status, the staff entry workflow, how buyer search unions Fitment + Provenance |
-| [Listing model (#8)](https://github.com/Lucy-yunn/test/issues/8) | Full `Listing` + `DonorVehicle` field lists, `ListingPhoto` rules, the `status` lifecycle and transitions, the staff quality check, donor-car photos |
+| [Listing model (#8)](https://github.com/Lucy-yunn/test/issues/8) | ✅ **Resolved** — `Listing` / `DonorVehicle` / `ListingPhoto` / `ListingDefect` above; lifecycle, publish checklist, buyer visibility. Seller-facing intake spun off to its own ticket. |
 | [Buyer funnel search UX (#9)](https://github.com/Lucy-yunn/test/issues/9) | How a non-expert buyer picks a `Modification` with no year step; the `Modification → Group → Category` tail |
 | [Order model & stubbed checkout (#10)](https://github.com/Lucy-yunn/test/issues/10) | `Order` lifecycle, delivery-address capture, shipping cost, expected-time-range display, cancel behaviour, what "Buy" does |
 | [In-app messaging model (#11)](https://github.com/Lucy-yunn/test/issues/11) | `Message.sender` representation, notifications, moderation |

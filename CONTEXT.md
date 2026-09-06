@@ -104,7 +104,8 @@ _Avoid_: search, filter, finder, wizard
 
 **DonorVehicle**:
 The physical car a Seller dismantled, from which one or more Listings' parts were removed.
-Entered once by staff; its parts are then added as Listings against it.
+Entered once by staff and always identified down to a Modification; its parts are then added
+as Listings against it.
 _Avoid_: donor car (as the entity name), source vehicle, scrap car, parts car, vehicle
 
 **Provenance**:
@@ -121,6 +122,11 @@ _Avoid_: ad, item, product, offer, SKU, inventory, stock
 The fixed grade of a Listing's item: New / Used – Good / Needs Repair. Plus free-text notes
 and required photos.
 _Avoid_: grade, quality, state, rating
+
+**Known defect**:
+One specific fault or missing element of a Listing's item, disclosed as its own entry so the
+buyer sees a bulleted list. Distinct from the free-text condition notes.
+_Avoid_: fault, issue, flaw, damage note
 
 **Order**:
 A buyer's purchase of exactly one Listing, moving through a fixed lifecycle
