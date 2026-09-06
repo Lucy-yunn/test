@@ -3,10 +3,6 @@
 Resolves [Order model & stubbed checkout (#10)](https://github.com/Lucy-yunn/test/issues/10)
 on the [Wayfinder map (#1)](https://github.com/Lucy-yunn/test/issues/1).
 
-> **DRAFT — grilling in progress.** Q1–Q15 are confirmed by the founder. **Q16, Q17, Q18
-> (marked ⏳ below) are recommendations awaiting confirmation.** Do not treat this document as
-> final or merge it to `master` until those three are settled and the ticket is resolved.
-
 Builds on [Core domain model (#2)](https://github.com/Lucy-yunn/test/issues/2) and
 [Listing model (#8)](https://github.com/Lucy-yunn/test/issues/8). Vocabulary is governed by
 [`CONTEXT.md`](../CONTEXT.md); the entity/field skeleton lives in
@@ -239,12 +235,13 @@ Reachable by the buyer who placed the order, only for their own orders. Shows:
   beneath the current step (§8); or, if cancelled, the pipeline "done" up to
   `lastReachedStatus` with a **Cancelled** marker below and the cancellation reason.
 - **The item** — primary photo, title, condition, and key Part details, **read through to the
-  Listing** (the Listing is never deleted — it goes `sold` / `cancelled` and drops out of
-  browse, but the buyer with an order still sees it here). Price shown is the Order's
-  `itemPriceEur` snapshot.
+  retained Listing** (§10.3). The Listing is never deleted — it goes `sold` / `cancelled` and
+  drops out of browse, but the buyer with an order still renders it from here. The Order
+  snapshots only what can drift or must be preserved: `itemPriceEur` and the delivery address.
 - **Shipping** — `shippingCostEur` + `shippingNotes` when set; order total.
 - **Delivery address** — the Order snapshot.
-- **Seller** — ⏳ see Q18 for exactly which seller fields.
+- **Seller** — display name + Location city / country only (§11) — never the seller's full
+  address.
 - **Tracking number** — once `shipped`.
 - **Actions**, contextual:
   - **Cancel order** — when `placed` / `confirmed` and no request is pending (§6);
@@ -257,7 +254,7 @@ explicit link above.
 
 ---
 
-## 8. Expected-time display (Q17)
+## 8. Expected-time display
 
 Two layers, shown as a single line under the current status in the tracker:
 
@@ -303,9 +300,18 @@ Two layers, shown as a single line under the current status in the tracker:
 | `trackingNumber` | text, nullable | staff free text, set at `shipped` |
 | delivery-address snapshot | 7 columns / embedded value | `recipientName`, `phone`, `addressLine1`, `addressLine2?`, `city`, `postcode`, `country` (§4) |
 | `placedAt` | timestamp, required | |
-| `confirmedAt` `shippedAt` `deliveredAt` `cancelledAt` | timestamp, nullable | ⏳ Q16 — dedicated columns vs an event log |
+| `confirmedAt` `shippedAt` `deliveredAt` `cancelledAt` | timestamp, nullable | dedicated columns, one per transition — enough for the tracker; a full `OrderEvent` audit log is deferred (fog) |
 
 Relationships: → 1 `Buyer`, → 1 `Seller`, → 1 `Listing`, → 0..1 `CancellationRequest`.
+
+#### 10.3 Item display after the Listing is hidden
+
+The `Listing` is never deleted — once the order completes it goes `sold` (or `cancelled`) and
+drops out of the funnel / browse, but the row stays. The buyer's order detail page **reads
+through** to it for the photo, title, condition, and Part details. The Order does **not**
+snapshot the item's display fields; it snapshots only `itemPriceEur` (which could otherwise be
+edited on a re-published Listing after a cancellation) and the delivery address. A future full
+`OrderEvent` / snapshot model is fog.
 
 ### CancellationRequest (new)
 
@@ -329,7 +335,7 @@ Invariants (DAL, per #2's "behavioural invariants → the DAL" rule):
 
 ---
 
-## 11. Visibility ⏳ (Q18 — recommendation, awaiting confirmation)
+## 11. Visibility
 
 | Viewer | Sees |
 |---|---|
@@ -340,17 +346,7 @@ Invariants (DAL, per #2's "behavioural invariants → the DAL" rule):
 
 ---
 
-## 12. Open items for confirmation
-
-| # | Question | Recommendation |
-|---|---|---|
-| **Q16** | Status-transition timestamps: dedicated `confirmedAt` / `shippedAt` / `deliveredAt` / `cancelledAt` columns, **or** a separate append-only `OrderEvent` log? | **Dedicated columns** (option A) — trivial to render, enough for the tracker; an event log is fog if a full audit history is ever wanted. |
-| **Q17** | Order-detail item display after the Listing is hidden from browse | **Read through** to the retained Listing for photo/title/details; the Order snapshots only `itemPriceEur` + the delivery address. |
-| **Q18** | Who sees which fields of an Order (§11) | As tabled in §11 — staff & the fulfilling seller get buyer contact + address; the buyer gets the seller's display name + city only. |
-
----
-
-## 13. Downstream / fog touched by this ticket
+## 12. Downstream / fog touched by this ticket
 
 - **Notifications** (map fog) — order-status-change and cancellation-request notifications
   (email vs in-app) are still unspecified; this ticket deliberately leaves them out.
