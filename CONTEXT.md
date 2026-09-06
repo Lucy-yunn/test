@@ -155,10 +155,15 @@ A Buyer's saved reference to a Listing. Feeds the seller-center favourites count
 _Avoid_: wishlist, bookmark, like, save, watch
 
 **Thread**:
-A single buyer↔seller conversation, scoped to one Listing and one Buyer. Started from a
-listing page.
+A single buyer↔seller conversation, scoped to one Listing and one Buyer. Started by the buyer
+from a listing page, and only when both parties have a login. Text only in v1.
 _Avoid_: conversation, chat, inbox, ticket
 
 **Message**:
-One entry in a Thread.
+One entry in a Thread. Immutable once sent. Its sender is a buyer, a seller, or Staff (shown
+as "IVO Support").
 _Avoid_: DM, note, chat, post
+
+**Report**:
+A buyer's or seller's flag on a Thread, raising it for Staff to review. Not itself a message.
+_Avoid_: flag, complaint, abuse report, ticket
