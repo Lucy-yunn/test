@@ -167,3 +167,10 @@ _Avoid_: DM, note, chat, post
 **Report**:
 A buyer's or seller's flag on a Thread, raising it for Staff to review. Not itself a message.
 _Avoid_: flag, complaint, abuse report, ticket
+
+**Notification**:
+A durable in-app record that one event (an Order status change, a Cancellation request event)
+happened, addressed to one recipient with a login — a Buyer or a Seller. Shown in a per-user
+feed with an unread count. New-message alerting is not a Notification; it stays on the Thread's
+own unread state. There is no notification email in v1.
+_Avoid_: alert, message (for this), push, toast, inbox item
