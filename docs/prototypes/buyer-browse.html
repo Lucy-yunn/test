@@ -1,0 +1,687 @@
+<!--
+  THROWAWAY PROTOTYPE — Wayfinder #9 "Buyer funnel search UX" — Browse (results) page
+  The screen the homepage funnel's Search button opens. Switchable via ?variant=A|B|C
+  (floating bar / arrow keys). Brand + layout direction — IVO purple, left filter rail,
+  breadcrumb "Home > Make > Model > Group > Category", "N parts found" + Clear filter,
+  active filter chips, Sort by, numbered pagination, horizontal result rows with a purple
+  "Taken from:" line — come from the founder's mock in UI/Browse/4-5.png.
+  Not production: no framework, inline seed data, read-only.
+
+  What this take is here to settle (the #9 items the funnel + homepage protos left open):
+    1. ordering — the default sort, and what "Sort by" offers
+    2. how the #7 fit signal (✓ Confirmed fit  vs  From a matching car) lives inside the
+       founder's row design — her mock shows neither; #7 requires both, confirmed above provenance
+    3. empty-result handling (notify me / widen to all variants)
+    4. refine-after-results — the facet rail + removable chips
+  Union rule + badge vocabulary are locked by #7 / docs/fitment-and-compatibility-search.html.
+-->
+<title>IVO Browse Results</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Instrument+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --brand: #8a1a86; --brand-deep: #6d1569; --brand-ink: #ffffff;
+    --gold: #f5c33b; --gold-deep: #d99e14; --gold-ink: #2c2005;
+    --ground: #ffffff; --wash: #f3e7f4; --panel: #ffffff; --panel-2: #f7f0f8;
+    --ink: #221a25; --ink-soft: #5f5763; --muted: #8b8290;
+    --hair: #e7dcea; --hair-strong: #d3c5d8;
+    --confirmed: #2b6a49; --confirmed-soft: #dcebe3; --confirmed-line: #9fcdb5;
+    --unverified: #8a6412; --unverified-soft: #f1e7d1; --unverified-line: #d8c489;
+    --focus: #1f5fb8;
+    --shadow-sm: 0 1px 2px rgba(34,20,37,.06);
+    --shadow-md: 0 2px 6px rgba(34,20,37,.06), 0 16px 38px rgba(34,20,37,.10);
+    color-scheme: light;
+  }
+  :root:not([data-theme="light"]) { @media (prefers-color-scheme: dark) {
+    --brand: #9a2296; --brand-deep: #7a1a76;
+    --ground: #161219; --wash: #241b27; --panel: #211b25; --panel-2: #1b1620;
+    --ink: #efe7f0; --ink-soft: #b7adba; --muted: #8b8290;
+    --hair: #332b38; --hair-strong: #453a4b;
+    --confirmed: #6cbf92; --confirmed-soft: #1f3a2c; --confirmed-line: #2f5b44;
+    --unverified: #d4a03f; --unverified-soft: #382d15; --unverified-line: #5c4a20;
+    --focus: #6da8ff;
+    --shadow-md: 0 2px 6px rgba(0,0,0,.3), 0 16px 40px rgba(0,0,0,.42);
+    color-scheme: dark;
+  } }
+  :root[data-theme="dark"] {
+    --brand: #9a2296; --brand-deep: #7a1a76;
+    --ground: #161219; --wash: #241b27; --panel: #211b25; --panel-2: #1b1620;
+    --ink: #efe7f0; --ink-soft: #b7adba; --muted: #8b8290;
+    --hair: #332b38; --hair-strong: #453a4b;
+    --confirmed: #6cbf92; --confirmed-soft: #1f3a2c; --confirmed-line: #2f5b44;
+    --unverified: #d4a03f; --unverified-soft: #382d15; --unverified-line: #5c4a20;
+    --focus: #6da8ff;
+    --shadow-md: 0 2px 6px rgba(0,0,0,.3), 0 16px 40px rgba(0,0,0,.42);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font: 15px/1.5 "Instrument Sans", system-ui, sans-serif; }
+  h1, h2, h3, h4, h5 { font-family: "Archivo", "Instrument Sans", sans-serif; font-weight: 700; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+  button { font: inherit; cursor: pointer; color: inherit; }
+  a { color: var(--brand); }
+  .mono { font-family: "Spline Sans Mono", ui-monospace, monospace; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 3px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+
+  .proto-note {
+    background: repeating-linear-gradient(-45deg, rgba(138,26,134,.10), rgba(138,26,134,.10) 12px, transparent 12px, transparent 24px);
+    border-bottom: 1px solid var(--hair-strong); color: var(--ink-soft);
+    font: 500 12px/1.5 "Spline Sans Mono", monospace; padding: 7px 20px; text-align: center;
+    display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: center;
+  }
+  .proto-note b { color: var(--brand); }
+  .proto-note select { font: inherit; padding: 3px 8px; border: 1px solid var(--hair-strong); border-radius: 5px; background: var(--panel); color: var(--ink); }
+
+  .shell { width: min(1320px, 100%); margin: 0 auto; padding: 0 clamp(14px, 3vw, 40px); }
+
+  /* chrome ------------------------------------------------------------------- */
+  .topbar { background: var(--brand); color: var(--brand-ink); }
+  .tb-util { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 12.5px; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,.16); }
+  .tb-util nav { display: flex; gap: 18px; flex-wrap: wrap; }
+  .tb-util a { color: var(--brand-ink); text-decoration: none; opacity: .92; }
+  .tb-util a.sell { color: var(--gold); font-weight: 600; }
+  .tb-right { display: flex; align-items: center; gap: 14px; white-space: nowrap; }
+  .lang { display: inline-flex; border: 1px solid rgba(255,255,255,.4); border-radius: 999px; overflow: hidden; }
+  .lang span { padding: 2px 9px; font-size: 11.5px; }
+  .lang .on { background: var(--brand-ink); color: var(--brand); font-weight: 600; }
+  .tb-main { display: flex; align-items: center; gap: 20px; padding: 12px 0; }
+  .burger { background: none; border: none; display: inline-grid; gap: 4px; padding: 4px; }
+  .burger i { width: 22px; height: 2px; background: currentColor; display: block; }
+  .brand { display: inline-flex; align-items: center; gap: 9px; font-family: "Archivo", sans-serif; font-weight: 800; font-size: 25px; letter-spacing: .04em; }
+  .brand svg { width: 25px; height: 25px; display: block; }
+  .tb-icons { margin-left: auto; display: flex; align-items: center; gap: 18px; }
+  .tb-icons button { background: none; border: none; display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; opacity: .95; }
+  .tb-icons svg { width: 20px; height: 20px; }
+
+  /* variant caption -------------------------------------------------------- */
+  .vcap { padding: 18px 0 0; }
+  .vcap .row { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .vcap h2 { font-size: 20px; }
+  .vcap .k { font: 500 12px/1 "Spline Sans Mono", monospace; background: var(--ink); color: var(--ground); padding: 3px 8px; border-radius: 5px; }
+  .vcap p { margin: 6px 0 0; color: var(--ink-soft); font-size: 13.5px; max-width: 82ch; }
+
+  /* breadcrumb + title ---------------------------------------------------- */
+  .crumb { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 18px 0 4px; font-size: 13px; color: var(--muted); }
+  .crumb a { color: var(--ink-soft); text-decoration: none; }
+  .crumb a:hover { color: var(--brand); }
+  .crumb .sep { opacity: .5; }
+  .crumb b { color: var(--ink); font-weight: 600; }
+  .page-h1 { font-size: clamp(22px, 3vw, 32px); padding-bottom: 18px; }
+  .page-h1 .eng { color: var(--brand); }
+  :root[data-theme="dark"] .page-h1 .eng, :root:not([data-theme="light"]) .page-h1 .eng { color: #c874c2; }
+
+  /* layout --------------------------------------------------------------- */
+  .layout { display: grid; grid-template-columns: 258px 1fr; gap: 22px; align-items: start; padding-bottom: 60px; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+  /* filter rail --------------------------------------------------------- */
+  .rail { display: grid; gap: 10px; position: sticky; top: 10px; }
+  @media (max-width: 900px) { .rail { position: static; } }
+  .facet { background: var(--wash); border: 1px solid transparent; border-radius: 12px; overflow: hidden; }
+  .facet > summary {
+    list-style: none; cursor: pointer; padding: 15px 18px; display: flex; justify-content: space-between; align-items: center;
+    font-family: "Archivo", sans-serif; font-weight: 600; font-size: 16px;
+  }
+  .facet > summary::-webkit-details-marker { display: none; }
+  .facet > summary .chev { transition: transform .15s; color: var(--brand); font-size: 13px; }
+  .facet[open] > summary .chev { transform: rotate(180deg); }
+  .facet[open] { border-color: var(--hair-strong); }
+  .facet .facet-body { padding: 2px 16px 15px; display: grid; gap: 3px; }
+  .facet .applied { font: 500 11px/1 "Spline Sans Mono", monospace; color: var(--brand); padding: 0 18px 12px; margin-top: -6px; }
+  .opt-check { display: flex; align-items: center; gap: 9px; padding: 6px 6px; border-radius: 7px; font-size: 13.5px; color: var(--ink-soft); background: none; border: none; width: 100%; text-align: left; }
+  .opt-check:hover { background: var(--panel); }
+  .opt-check .box { width: 16px; height: 16px; border: 1.5px solid var(--hair-strong); border-radius: 4px; display: grid; place-items: center; flex: none; }
+  .opt-check.on { color: var(--ink); font-weight: 600; }
+  .opt-check.on .box { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .opt-check .n { margin-left: auto; font: 500 11.5px/1 "Spline Sans Mono", monospace; color: var(--muted); }
+  .opt-check .sub { display: block; font-size: 11px; color: var(--muted); font-weight: 400; }
+
+  /* results head panel ------------------------------------------------- */
+  .rhead { background: var(--wash); border-radius: 14px; padding: 18px 20px; display: grid; gap: 14px; }
+  .rhead .top { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+  .rhead .found { font-family: "Archivo", sans-serif; font-weight: 800; font-size: clamp(18px, 2.2vw, 23px); }
+  .clearbtn { display: inline-flex; align-items: center; gap: 7px; background: none; border: none; color: var(--brand); font-weight: 600; font-size: 14px; }
+  .clearbtn svg { width: 15px; height: 15px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { display: inline-flex; align-items: center; gap: 9px; background: var(--panel); border: 1px solid var(--hair-strong); border-radius: 999px; padding: 7px 8px 7px 14px; font-size: 13px; }
+  .chip.locked { color: var(--ink-soft); padding-right: 14px; }
+  .chip button { background: none; border: none; color: var(--muted); font-size: 15px; line-height: 1; padding: 0 2px; }
+  .chip button:hover { color: var(--ink); }
+
+  /* sort + pagination bar -------------------------------------------- */
+  .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; background: var(--wash); border-radius: 12px; padding: 10px 16px; margin-top: 12px; }
+  .pager { display: flex; align-items: center; gap: 5px; }
+  .pager button { min-width: 34px; height: 34px; border-radius: 999px; border: 1px solid transparent; background: var(--panel); color: var(--ink); font-weight: 600; font-size: 13.5px; display: grid; place-items: center; }
+  .pager button.on { background: var(--brand); color: #fff; }
+  .pager button:disabled { opacity: .4; cursor: not-allowed; }
+  .pager .arrow { color: var(--brand); font-weight: 700; }
+  .pager .gap { color: var(--muted); padding: 0 2px; }
+  .sortby { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--ink-soft); }
+  .sortby select { font: inherit; padding: 7px 10px; border: 1px solid var(--hair-strong); border-radius: 8px; background: var(--panel); color: var(--ink); font-weight: 600; }
+
+  /* results list --------------------------------------------------- */
+  .rlist { background: var(--wash); border-radius: 14px; margin-top: 12px; padding: 6px; display: grid; gap: 6px; }
+  .rgroup-label { display: flex; align-items: center; gap: 10px; padding: 16px 16px 8px; font-family: "Archivo", sans-serif; font-weight: 700; font-size: 15px; }
+  .rgroup-label .n { font: 500 12px/1 "Spline Sans Mono", monospace; color: var(--muted); }
+  .rgroup-label.fit { color: var(--confirmed); }
+  .rgroup-label.prov { color: var(--unverified); }
+  .rgroup-label small { font-weight: 400; font-family: "Instrument Sans"; font-size: 12.5px; color: var(--muted); }
+
+  .rrow { display: grid; grid-template-columns: 148px 1fr auto; gap: 16px; background: var(--panel); border: 1px solid var(--hair); border-radius: 10px; padding: 14px; align-items: start; }
+  .rrow.pinned { border-color: var(--confirmed-line); }
+  .rrow .thumb { aspect-ratio: 4/3; border-radius: 7px; background: hsl(var(--h,280) 22% 84%); display: grid; place-items: end start; padding: 7px; }
+  :root[data-theme="dark"] .rrow .thumb, :root:not([data-theme="light"]) .rrow .thumb { background: hsl(var(--h,280) 20% 26%); }
+  .rrow .thumb span { font: 500 10px/1 "Spline Sans Mono", monospace; background: rgba(0,0,0,.55); color: #fff; padding: 3px 6px; border-radius: 4px; }
+  .rbody { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .rbody h4 { font-size: 16.5px; }
+  .taken { font-size: 12.5px; color: var(--brand); font-weight: 500; }
+  :root[data-theme="dark"] .taken, :root:not([data-theme="light"]) .taken { color: #c874c2; }
+  .rbadges { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; border: 1px solid transparent; }
+  .badge.fit { background: var(--confirmed-soft); color: var(--confirmed); border-color: var(--confirmed-line); }
+  .badge.prov { background: var(--unverified-soft); color: var(--unverified); border-color: var(--unverified-line); }
+  .fit-note { font-size: 12px; color: var(--unverified); font-style: italic; }
+  .rmeta { display: flex; flex-wrap: wrap; gap: 5px 14px; font-size: 12.5px; color: var(--muted); }
+  .rmeta .cond { color: var(--ink-soft); border: 1px solid var(--hair-strong); border-radius: 5px; padding: 0 7px; }
+  .rmeta .pn { font-family: "Spline Sans Mono", monospace; }
+  .rdefects { margin: 2px 0 0; padding-left: 16px; font-size: 12px; color: var(--ink-soft); }
+  .rprice { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+  .rprice .amt { font-family: "Archivo", sans-serif; font-weight: 800; font-size: 21px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .rprice .fav { width: 34px; height: 34px; border: 1px solid var(--hair-strong); border-radius: 999px; background: var(--panel); display: grid; place-items: center; }
+  .rprice .fav svg { width: 17px; height: 17px; }
+  @media (max-width: 560px) {
+    .rrow { grid-template-columns: 92px 1fr; }
+    .rprice { grid-column: 2; flex-direction: row; align-items: center; justify-content: space-between; width: 100%; }
+  }
+
+  .pin-note { font-size: 12px; color: var(--muted); padding: 10px 16px 4px; }
+
+  /* fit-only toggle (variant C) ---------------------------------------- */
+  .fittoggle { display: inline-flex; background: var(--panel); border: 1px solid var(--hair-strong); border-radius: 999px; padding: 3px; gap: 2px; }
+  .fittoggle button { border: none; background: none; padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+  .fittoggle button.on { background: var(--confirmed); color: #fff; }
+  .fittoggle button:first-child.on { background: var(--brand); }
+
+  /* empty state ------------------------------------------------------- */
+  .empty { background: var(--wash); border-radius: 14px; padding: 44px 26px; text-align: center; margin-top: 12px; }
+  .empty h3 { font-size: 20px; margin-bottom: 8px; }
+  .empty p { margin: 0 auto 18px; color: var(--ink-soft); font-size: 14px; max-width: 44ch; }
+  .empty .acts { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .btn { border: 1px solid var(--hair-strong); background: var(--panel); color: var(--ink); border-radius: 9px; padding: 10px 16px; font-weight: 600; font-size: 14px; }
+  .btn:hover { border-color: var(--brand); }
+  .btn.primary { background: var(--gold); border-color: var(--gold-deep); color: var(--gold-ink); }
+  .btn.primary:hover { filter: brightness(1.04); }
+
+  footer.foot { background: var(--brand); color: var(--brand-ink); }
+  footer.foot .shell { padding: 24px clamp(14px,3vw,40px); display: flex; flex-wrap: wrap; gap: 14px 36px; align-items: center; }
+  footer.foot nav { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; }
+  footer.foot a { color: var(--brand-ink); text-decoration: none; opacity: .9; }
+  footer.foot .disc { margin-left: auto; font: 500 11.5px/1.5 "Spline Sans Mono", monospace; opacity: .85; }
+
+  .switcher { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 100; display: flex; align-items: center; gap: 2px; background: #17120f; color: #f4f2ee; border-radius: 999px; padding: 5px; box-shadow: 0 8px 30px rgba(0,0,0,.4), inset 0 0 0 1px rgba(255,255,255,.08); font-family: "Spline Sans Mono", monospace; }
+  .switcher button { background: none; border: none; color: inherit; width: 34px; height: 34px; border-radius: 999px; font-size: 15px; display: grid; place-items: center; }
+  .switcher button:hover { background: rgba(255,255,255,.12); }
+  .switcher .label { padding: 0 12px; font-size: 12px; white-space: nowrap; min-width: 196px; text-align: center; }
+  .switcher .label b { color: var(--gold); }
+  .switcher .label .k { opacity: .5; margin-right: 6px; }
+</style>
+
+<div class="proto-note">
+  <span>Throwaway prototype &middot; Wayfinder <b>#9</b> &middot; Browse results</span>
+  <label>scenario
+    <select id="scenario">
+      <option value="golf-16tdi|headlight">VW Golf 1.6 TDI &rarr; Headlight (exact engine)</option>
+      <option value="golf|headlight">VW Golf &rarr; Headlight (not sure &mdash; all variants)</option>
+      <option value="bmw5-520d|front-bumper">BMW 5 520d &rarr; Front bumper</option>
+      <option value="3series|headlight">BMW 3 Series &rarr; Headlight (empty)</option>
+    </select>
+  </label>
+</div>
+
+<header class="topbar">
+  <div class="shell">
+    <div class="tb-util">
+      <nav><a href="#">Contacts</a><a href="#">Help</a><a href="#" class="sell">Sell</a><a href="#">Join us</a><a href="#">Follow us</a></nav>
+      <div class="tb-right">
+        <span>Delivery to <b>Bulgaria, Aytos</b></span>
+        <span class="lang"><span class="on">EN</span><span>BG</span></span>
+      </div>
+    </div>
+    <div class="tb-main">
+      <button class="burger" aria-label="Menu"><i></i><i></i><i></i></button>
+      <span class="brand"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2 21 7v10l-9 5-9-5V7l9-5Z" fill="var(--gold)"/><circle cx="12" cy="12" r="3.4" fill="var(--brand)"/></svg> IVO</span>
+      <div class="tb-icons">
+        <button aria-label="Messages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v11H8l-4 4V5Z"/></svg></button>
+        <button aria-label="Favorites"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 5C19 15.5 12 20 12 20Z"/></svg></button>
+        <button aria-label="Cart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h2l2.2 11h9.6L21 8H7"/><circle cx="9.5" cy="20" r="1.3"/><circle cx="17.5" cy="20" r="1.3"/></svg></button>
+        <button aria-label="Log in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 5-6 8-6s6.5 2 8 6"/></svg> Log in</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="shell" id="stage"></main>
+
+<footer class="foot"><div class="shell">
+  <span class="brand"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2 21 7v10l-9 5-9-5V7l9-5Z" fill="var(--gold)"/><circle cx="12" cy="12" r="3.4" fill="#fff"/></svg> IVO</span>
+  <nav><a href="#">Contacts</a><a href="#">Help</a><a href="#">FAQ</a><a href="#">Terms &amp; law</a></nav>
+  <span class="disc">Demo build &middot; no real transactions</span>
+</div></footer>
+
+<div class="switcher" id="switcher">
+  <button id="prev" aria-label="Previous take">&lsaquo;</button><span class="label" id="swLabel"></span><button id="next" aria-label="Next take">&rsaquo;</button>
+</div>
+
+<script>
+/* ================================================================ seed data (shared with the other #9 protos) */
+const CATALOG = {
+  makes: [
+    { id:'vw', name:'Volkswagen', models:[
+      { id:'golf', name:'Golf', mods:[
+        {id:'golf-16tdi', label:'1.6 TDI', code:'CLHA', fuel:'Diesel', hp:115, body:'Estate',    years:'2017–2020', gen:'Mk7 facelift'},
+        {id:'golf-20tdi', label:'2.0 TDI', code:'DFGA', fuel:'Diesel', hp:150, body:'Hatchback', years:'2016–2020', gen:'Mk7 facelift'},
+        {id:'golf-15tsi', label:'1.5 TSI', code:'DPCA', fuel:'Petrol', hp:150, body:'Hatchback', years:'2017–2020', gen:'Mk7 facelift'},
+        {id:'golf-10tsi', label:'1.0 TSI', code:'CHZJ', fuel:'Petrol', hp:110, body:'Hatchback', years:'2017–2019', gen:'Mk7 facelift'},
+      ]},
+    ]},
+    { id:'bmw', name:'BMW', models:[
+      { id:'3series', name:'3 Series', mods:[
+        {id:'bmw-320d', label:'320d', code:'B47D20', fuel:'Diesel', hp:190, body:'Saloon', years:'2015–2019', gen:'F30 LCI'},
+        {id:'bmw-330i', label:'330i', code:'B48B20', fuel:'Petrol', hp:252, body:'Saloon', years:'2015–2019', gen:'F30 LCI'},
+      ]},
+      { id:'5series', name:'5 Series', mods:[
+        {id:'bmw5-520d', label:'520d', code:'B47D20', fuel:'Diesel', hp:190, body:'Saloon', years:'2017–2020', gen:'G30'},
+        {id:'bmw5-530i', label:'530i', code:'B48B20', fuel:'Petrol', hp:252, body:'Saloon', years:'2017–2020', gen:'G30'},
+      ]},
+    ]},
+    { id:'audi', name:'Audi', models:[
+      { id:'a3', name:'A3', mods:[ {id:'a3-20tdi', label:'2.0 TDI', code:'DEJA', fuel:'Diesel', hp:150, body:'Sportback', years:'2016–2020', gen:'8V facelift'} ]},
+    ]},
+  ],
+  groups: [
+    { id:'lighting',   name:'Lighting',        cats:[{id:'headlight',name:'Headlight'},{id:'tail-light',name:'Tail light'},{id:'fog-light',name:'Fog light'}] },
+    { id:'braking',    name:'Braking',         cats:[{id:'brake-caliper',name:'Brake caliper'},{id:'brake-disc',name:'Brake disc'},{id:'abs-pump',name:'ABS pump'}] },
+    { id:'engine',     name:'Engine & turbo',  cats:[{id:'alternator',name:'Alternator'},{id:'starter-motor',name:'Starter motor'},{id:'turbocharger',name:'Turbocharger'}] },
+    { id:'electrical', name:'Electrical',      cats:[{id:'ecu',name:'Engine ECU'},{id:'bcm',name:'Body control module'}] },
+    { id:'body',       name:'Body & exterior', cats:[{id:'wing-mirror',name:'Wing mirror'},{id:'bonnet',name:'Bonnet'},{id:'front-bumper',name:'Front bumper'}] },
+  ],
+};
+const LISTINGS = [
+  {code:'LST-004203', pn:'5G1941035C', cat:'headlight', title:'Headlight, left — LED, genuine', priceEur:260.00, condition:'new',
+   fitment:['golf-16tdi','golf-20tdi','golf-15tsi','golf-10tsi'], fitNote:'whole-model: Golf', donor:'golf-15tsi', photos:5, defects:[], seller:'RetroParts BG', city:'Varna', days:1},
+  {code:'LST-004120', pn:'5G1941007B', cat:'headlight', title:'Headlight, left — halogen', priceEur:85.00, condition:'used_good',
+   fitment:['golf-16tdi','golf-20tdi','golf-15tsi'], donor:'golf-20tdi', photos:2, defects:['Mounting tab chipped — clips still hold'], seller:'Plovdiv Auto Parts', city:'Plovdiv', days:3},
+  {code:'LST-003991', pn:'5G1941007', cat:'headlight', title:'Headlight, left — halogen, hazed lens', priceEur:45.00, condition:'needs_repair',
+   fitment:['golf-16tdi'], fitNote:'pre-facelift lens shape', donor:'golf-16tdi', photos:3, defects:['Lens cracked, top corner','Reflector yellowed'], seller:'Plovdiv Auto Parts', city:'Plovdiv', days:34},
+  {code:'LST-004077', pn:'5G1941008', cat:'headlight', title:'Headlight, right — halogen', priceEur:70.00, condition:'used_good',
+   fitment:[], donor:'golf-16tdi', photos:4, defects:[], seller:'AutoDemontazh Sofia', city:'Sofia', days:12},
+  {code:'LST-003820', pn:'5G1941016A', cat:'headlight', title:'Headlight, right — Xenon', priceEur:190.00, condition:'used_good',
+   fitment:['golf-20tdi'], donor:'golf-20tdi', photos:3, defects:[], seller:'AutoDemontazh Sofia', city:'Sofia', days:8},
+  {code:'LST-004010', pn:'04L903023R', cat:'alternator', title:'Alternator 140A — Valeo', priceEur:95.00, condition:'used_good',
+   fitment:['golf-16tdi','golf-20tdi','a3-20tdi'], donor:'a3-20tdi', photos:2, defects:[], seller:'RetroParts BG', city:'Varna', days:5},
+  {code:'LST-003770', pn:'5Q0615123', cat:'brake-caliper', title:'Brake caliper, front left', priceEur:60.00, condition:'used_good',
+   fitment:['golf-16tdi','golf-15tsi'], donor:'golf-15tsi', photos:3, defects:[], seller:'Plovdiv Auto Parts', city:'Plovdiv', days:22},
+  {code:'LST-004150', pn:'5G0857501', cat:'wing-mirror', title:'Wing mirror, right — power fold', priceEur:75.00, condition:'used_good',
+   fitment:[], donor:'golf-16tdi', photos:4, defects:['Indicator lens scratched'], seller:'AutoDemontazh Sofia', city:'Sofia', days:6},
+  {code:'LST-003655', pn:'8570079', cat:'turbocharger', title:'Turbocharger — Garrett, off 320d', priceEur:340.00, condition:'used_good',
+   fitment:['bmw-320d'], donor:'bmw-320d', photos:3, defects:[], seller:'RetroParts BG', city:'Varna', days:14},
+  {code:'LST-004500', pn:'1547147524B', cat:'front-bumper', title:'Front bumper — M Sport, primed', priceEur:500.27, condition:'used_good',
+   fitment:['bmw5-520d','bmw5-530i'], fitNote:'M Sport only', donor:'bmw5-520d', photos:6, defects:['Lower lip scuffed'], seller:'AutoDemontazh Sofia', city:'Sofia', days:2},
+  {code:'LST-004512', pn:'63117214941', cat:'front-bumper', title:'Front bumper — standard, silver A83', priceEur:300.00, condition:'used_good',
+   fitment:['bmw5-520d'], donor:'bmw5-520d', photos:4, defects:[], seller:'RetroParts BG', city:'Varna', days:20},
+  {code:'LST-004520', pn:'51127903911', cat:'front-bumper', title:'Front bumper — M Sport, unpainted', priceEur:210.00, condition:'needs_repair',
+   fitment:[], donor:'bmw5-530i', photos:3, defects:['Radar bracket broken','Two mount tabs cracked'], seller:'Plovdiv Auto Parts', city:'Plovdiv', days:41},
+];
+
+/* ================================================================ helpers */
+const byId = {};
+CATALOG.makes.forEach(mk => { byId[mk.id]=mk; mk.models.forEach(md => { byId[md.id]=md; md.makeId=mk.id; md.mods.forEach(mo => { byId[mo.id]=mo; mo.modelId=md.id; }); }); });
+CATALOG.groups.forEach(g => { byId[g.id]=g; g.cats.forEach(c => { byId[c.id]=c; c.groupId=g.id; }); });
+const CONDLABEL = { new:'New', used_good:'Used – good', needs_repair:'Needs repair' };
+const CONDRANK  = { new:0, used_good:1, needs_repair:2 };
+const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const hueOf = s => { let h=0; for (const c of s) h=(h*31+c.charCodeAt(0))%360; return h; };
+const modsOfModel = id => byId[id].mods.map(m => m.id);
+function carOf(modId){ const mo=byId[modId], md=byId[mo.modelId], mk=byId[md.makeId]; return {mo,md,mk}; }
+const carTitle = modId => { const {md,mk}=carOf(modId); return `${mk.name} ${md.name}`; };
+const maskDonor = modId => { const {mo,md,mk}=carOf(modId); return `${mk.name} ${md.name} ${mo.label} (${mo.code})`; };
+const buyerNote = r => (r.fitNote && !/^whole-model:/.test(r.fitNote)) ? r.fitNote : null;
+
+/* union of Fitment path + Provenance path — docs/fitment-and-compatibility-search.html §3 */
+function unionRows({ modelId, modId }){
+  const scope = modId ? [modId] : modsOfModel(modelId);
+  return LISTINGS.map(l => {
+    const fitMatch  = l.fitment.some(f => scope.includes(f));
+    const provMatch = scope.includes(l.donor);
+    if (!fitMatch && !provMatch) return null;
+    return { ...l, bucket: fitMatch ? 'fit' : 'prov' };
+  }).filter(Boolean);
+}
+const SORTS = {
+  relevance: { label:'Best match (fit first, then newest)', fn:(a,b)=> a.days-b.days },
+  newest:    { label:'Newest first',        fn:(a,b)=> a.days-b.days },
+  price_asc: { label:'Price: low to high',   fn:(a,b)=> a.priceEur-b.priceEur },
+  price_desc:{ label:'Price: high to low',   fn:(a,b)=> b.priceEur-a.priceEur },
+  condition: { label:'Best condition first', fn:(a,b)=> CONDRANK[a.condition]-CONDRANK[b.condition] || a.days-b.days },
+};
+
+function badge(r){
+  const n = buyerNote(r);
+  return r.bucket === 'fit'
+    ? `<span class="badge fit">&#10003; Confirmed fit</span>${n ? `<span class="fit-note">${esc(n)}</span>` : ''}`
+    : `<span class="badge prov">From a matching car</span>`;
+}
+function row(r, pinned){
+  return `<article class="rrow${pinned ? ' pinned' : ''}">
+    <div class="thumb" style="--h:${hueOf(r.code)}"><span>${r.photos} photos</span></div>
+    <div class="rbody">
+      <h4>${esc(r.title)}</h4>
+      <div class="taken">Taken from: ${esc(maskDonor(r.donor))}</div>
+      <div class="rbadges">${badge(r)}</div>
+      <div class="rmeta">
+        <span class="cond">${CONDLABEL[r.condition]}</span>
+        <span class="pn">${esc(r.pn)}</span>
+        <span>Seller: ${esc(r.seller)}, ${esc(r.city)}</span>
+        <span>${r.days===1 ? 'listed today' : `listed ${r.days} days ago`}</span>
+      </div>
+      ${r.defects.length ? `<ul class="rdefects">${r.defects.map(d=>`<li>${esc(d)}</li>`).join('')}</ul>` : ''}
+    </div>
+    <div class="rprice">
+      <span class="amt">&euro;${r.priceEur.toFixed(2)}</span>
+      <button class="fav" aria-label="Save to favorites"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 5C19 15.5 12 20 12 20Z"/></svg></button>
+    </div>
+  </article>`;
+}
+
+/* ================================================================ page */
+const PER_PAGE = 6;
+
+function App(root, variant){
+  // scenario -> initial state
+  const [scRaw] = [(new URLSearchParams(location.search)).get('sc') || 'golf-16tdi|headlight'];
+  const [scLeft, catId] = scRaw.split('|');
+  const isMod = !!byId[scLeft] && !!byId[scLeft].modelId;
+  const modId = isMod ? scLeft : null;
+  const modelId = isMod ? byId[scLeft].modelId : scLeft;
+
+  const s = {
+    modelId, modId, catId,
+    sort: 'relevance', fitOnly: false, page: 1,
+    fFuel: new Set(), fCond: new Set(), fCat: new Set([catId]), fEngine: new Set(modId ? [modId] : []),
+  };
+
+  function baseRows(){
+    // engine facet narrows the modId scope when the search was model-wide
+    let rows = s.fEngine.size
+      ? [].concat(...[...s.fEngine].map(m => unionRows({ modelId: s.modelId, modId: m })))
+      : unionRows({ modelId: s.modelId, modId: null });
+    // de-dupe (a listing can match two engines)
+    const seen = new Set(); rows = rows.filter(r => !seen.has(r.code) && seen.add(r.code));
+    if (s.fCat.size) rows = rows.filter(r => s.fCat.has(r.cat));
+    if (s.fFuel.size) rows = rows.filter(r => s.fFuel.has(byId[r.donor].fuel));
+    if (s.fCond.size) rows = rows.filter(r => s.fCond.has(r.condition));
+    if (s.fitOnly) rows = rows.filter(r => r.bucket === 'fit');
+    return rows;
+  }
+  function sorted(rows){
+    const within = SORTS[s.sort].fn;
+    const arr = [...rows];
+    if (s.sort === 'relevance' || variant !== 'C')      // A + B always float confirmed-fit up; C only when sort=relevance
+      arr.sort((a,b) => (a.bucket===b.bucket ? 0 : a.bucket==='fit' ? -1 : 1) || within(a,b));
+    else arr.sort(within);
+    return arr;
+  }
+
+  function facetCounts(){
+    // counts reflect the current *other* filters, like a real faceted search
+    const all = (() => {
+      let rows = s.fEngine.size
+        ? [].concat(...[...s.fEngine].map(m => unionRows({ modelId: s.modelId, modId: m })))
+        : unionRows({ modelId: s.modelId, modId: null });
+      const seen = new Set(); return rows.filter(r => !seen.has(r.code) && seen.add(r.code));
+    })();
+    const count = (pred, exclude) => {
+      let r = all;
+      if (exclude !== 'cat'   && s.fCat.size)  r = r.filter(x => s.fCat.has(x.cat));
+      if (exclude !== 'fuel'  && s.fFuel.size) r = r.filter(x => s.fFuel.has(byId[x.donor].fuel));
+      if (exclude !== 'cond'  && s.fCond.size) r = r.filter(x => s.fCond.has(x.condition));
+      return r.filter(pred).length;
+    };
+    return { count, all };
+  }
+
+  function railHTML(){
+    const { count } = facetCounts();
+    const md = byId[s.modelId];
+    const catsInGroupOrder = CATALOG.groups.flatMap(g => g.cats);
+    const engineFacet = `
+      <details class="facet" ${s.fEngine.size ? 'open' : ''}>
+        <summary>Engine variant <span class="chev">&#9662;</span></summary>
+        <div class="facet-body">
+          ${md.mods.map(mo => `
+            <button class="opt-check ${s.fEngine.has(mo.id)?'on':''}" data-facet="engine" data-val="${mo.id}">
+              <span class="box">${s.fEngine.has(mo.id)?'&#10003;':''}</span>
+              <span>${mo.label}<span class="sub">${mo.fuel} &middot; ${mo.hp} hp &middot; ${mo.years} &middot; ${mo.code}</span></span>
+            </button>`).join('')}
+        </div>
+        <div class="applied">${s.fEngine.size ? `checking fit against ${s.fEngine.size} engine${s.fEngine.size>1?'s':''}` : 'all variants of the '+esc(md.name)}</div>
+      </details>`;
+    const catFacet = `
+      <details class="facet" open>
+        <summary>Categories <span class="chev">&#9662;</span></summary>
+        <div class="facet-body">
+          ${catsInGroupOrder.map(c => {
+            const n = count(r => r.cat === c.id, 'cat');
+            if (!n && !s.fCat.has(c.id)) return '';
+            return `<button class="opt-check ${s.fCat.has(c.id)?'on':''}" data-facet="cat" data-val="${c.id}">
+              <span class="box">${s.fCat.has(c.id)?'&#10003;':''}</span><span>${c.name}</span><span class="n">${n}</span></button>`;
+          }).join('')}
+        </div>
+      </details>`;
+    const fuelFacet = `
+      <details class="facet">
+        <summary>Fuel type <span class="chev">&#9662;</span></summary>
+        <div class="facet-body">
+          ${['Diesel','Petrol'].map(f => {
+            const n = count(r => byId[r.donor].fuel === f, 'fuel');
+            return `<button class="opt-check ${s.fFuel.has(f)?'on':''}" data-facet="fuel" data-val="${f}">
+              <span class="box">${s.fFuel.has(f)?'&#10003;':''}</span><span>${f}</span><span class="n">${n}</span></button>`;
+          }).join('')}
+        </div>
+      </details>`;
+    const condFacet = `
+      <details class="facet">
+        <summary>Quality <span class="chev">&#9662;</span></summary>
+        <div class="facet-body">
+          ${Object.keys(CONDLABEL).map(k => {
+            const n = count(r => r.condition === k, 'cond');
+            return `<button class="opt-check ${s.fCond.has(k)?'on':''}" data-facet="cond" data-val="${k}">
+              <span class="box">${s.fCond.has(k)?'&#10003;':''}</span><span>${CONDLABEL[k]}</span><span class="n">${n}</span></button>`;
+          }).join('')}
+        </div>
+      </details>`;
+    const priceFacet = `
+      <details class="facet"><summary>Price <span class="chev">&#9662;</span></summary>
+        <div class="facet-body"><p class="pin-note" style="padding:6px 2px">Range slider &mdash; stubbed in this prototype.</p></div>
+      </details>`;
+    return `<div class="rail">${catFacet}${engineFacet}${fuelFacet}${condFacet}${priceFacet}</div>`;
+  }
+
+  function chipsHTML(){
+    const md = byId[s.modelId];
+    const bits = [`<span class="chip locked">${esc(carTitle(s.modId || modsOfModel(s.modelId)[0]))}${s.modId ? ' '+esc(byId[s.modId].label) : ' &middot; all variants'}</span>`];
+    [...s.fCat].forEach(c => bits.push(`<span class="chip">${esc(byId[c].name)} <button data-remove="cat" data-val="${c}" aria-label="Remove">&times;</button></span>`));
+    [...s.fEngine].forEach(e => bits.push(`<span class="chip">${esc(byId[e].label)} (${esc(byId[e].code)}) <button data-remove="engine" data-val="${e}" aria-label="Remove">&times;</button></span>`));
+    [...s.fFuel].forEach(f => bits.push(`<span class="chip">${esc(f)} <button data-remove="fuel" data-val="${f}" aria-label="Remove">&times;</button></span>`));
+    [...s.fCond].forEach(c => bits.push(`<span class="chip">${esc(CONDLABEL[c])} <button data-remove="cond" data-val="${c}" aria-label="Remove">&times;</button></span>`));
+    return `<div class="chips">${bits.join('')}</div>`;
+  }
+
+  function pagerHTML(total){
+    const pages = Math.max(1, Math.ceil(total / PER_PAGE));
+    if (pages === 1) return '';
+    let btns = `<button class="arrow" data-page="${s.page-1}" ${s.page===1?'disabled':''}>&lsaquo;</button>`;
+    for (let p = 1; p <= pages; p++){
+      if (p === 1 || p === pages || Math.abs(p - s.page) <= 1) btns += `<button data-page="${p}" class="${p===s.page?'on':''}">${p}</button>`;
+      else if (p === 2 || p === pages-1) btns += `<span class="gap">&hellip;</span>`;
+    }
+    btns += `<button class="arrow" data-page="${s.page+1}" ${s.page===pages?'disabled':''}>&rsaquo;</button>`;
+    return `<div class="pager">${btns}</div>`;
+  }
+  function sortHTML(){
+    return `<div class="sortby">Sort by
+      <select data-sort>${Object.entries(SORTS).map(([k,v])=>`<option value="${k}" ${s.sort===k?'selected':''}>${v.label}</option>`).join('')}</select>
+    </div>`;
+  }
+
+  function listHTML(rows){
+    if (variant === 'B'){
+      const fit = rows.filter(r => r.bucket === 'fit'), prov = rows.filter(r => r.bucket === 'prov');
+      const sec = (label, cls, list, note) => list.length ? `
+        <div class="rgroup-label ${cls}">${label} <span class="n">${list.length}</span> ${note?`<small>&mdash; ${note}</small>`:''}</div>
+        ${list.map(r => row(r, false)).join('')}` : '';
+      return `<div class="rlist">
+        ${sec('&#10003; Confirmed fit for your car', 'fit', fit, 'our team checked these against your engine')}
+        ${sec('From a matching car', 'prov', prov, 'came off the same model &mdash; not fit-checked, look closely')}
+      </div>`;
+    }
+    if (variant === 'C'){
+      return `<div class="rlist">${rows.map(r => row(r, false)).join('')}</div>`;
+    }
+    // A — one list, confirmed-fit rows pinned to the top with a hairline
+    const anyFit = rows.some(r => r.bucket === 'fit') && rows.some(r => r.bucket === 'prov');
+    return `<div class="rlist">
+      ${anyFit ? `<p class="pin-note">&#10003; Confirmed-fit parts are held at the top whatever the sort order.</p>` : ''}
+      ${rows.map(r => row(r, r.bucket === 'fit' && anyFit)).join('')}
+    </div>`;
+  }
+
+  function render(){
+    const md = byId[s.modelId];
+    const leafName = s.fCat.size === 1 ? byId[[...s.fCat][0]].name : (s.catId ? byId[s.catId].name : 'parts');
+    const groupName = s.fCat.size === 1 ? byId[byId[[...s.fCat][0]].groupId].name : null;
+    let rows = sorted(baseRows());
+    const total = rows.length;
+    const pages = Math.max(1, Math.ceil(total / PER_PAGE));
+    if (s.page > pages) s.page = pages;
+    const pageRows = rows.slice((s.page-1)*PER_PAGE, s.page*PER_PAGE);
+
+    const capText = {
+      A: 'The founder&rsquo;s mock, realized &mdash; one list of rows, purple &ldquo;Taken from&rdquo; line kept. The #7 fit signal is added as a badge on every row, and confirmed-fit rows are pinned above the rest no matter how &ldquo;Sort by&rdquo; is set.',
+      B: 'Two labelled sections &mdash; &ldquo;Confirmed fit for your car&rdquo; then &ldquo;From a matching car&rdquo;. Sort acts within each section. Makes the fit distinction structural, not just a badge.',
+      C: 'One flat list, pure sort (no pinning). A prominent &ldquo;Confirmed fit only&rdquo; toggle lets the buyer collapse to just the checked parts. Closest to the founder&rsquo;s mock; the fit signal is opt-in filtering + a row badge.',
+    }[variant];
+
+    let mainInner;
+    if (total === 0){
+      mainInner = `
+        <div class="rhead"><div class="top">
+          <span class="found">0 parts found</span>
+          <button class="clearbtn" data-clear><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10a8 8 0 0 1 14-5m2 5a8 8 0 0 1-14 5"/><path d="M18 3v4h-4M6 21v-4h4"/></svg> Clear filters</button>
+        </div>${chipsHTML()}</div>
+        <div class="empty">
+          <h3>No ${esc(leafName.toLowerCase())} for this car yet</h3>
+          <p>Nothing in the catalogue is confirmed to fit${s.modId ? ` the ${esc(byId[s.modId].label)}` : ` the ${esc(md.name)}`}, and none came off a matching car.</p>
+          <div class="acts">
+            <button class="btn primary">Notify me when one is listed</button>
+            ${s.fEngine.size ? `<button class="btn" data-widen>Search all ${esc(md.name)} variants</button>` : ''}
+            ${s.fFuel.size || s.fCond.size ? `<button class="btn" data-clear>Clear the other filters</button>` : ''}
+          </div>
+        </div>`;
+    } else {
+      mainInner = `
+        <div class="rhead">
+          <div class="top">
+            <span class="found">${total} part${total>1?'s':''} found</span>
+            <button class="clearbtn" data-clear><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10a8 8 0 0 1 14-5m2 5a8 8 0 0 1-14 5"/><path d="M18 3v4h-4M6 21v-4h4"/></svg> Clear filters</button>
+          </div>
+          ${chipsHTML()}
+        </div>
+        <div class="toolbar">
+          ${pagerHTML(total) || '<span></span>'}
+          <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+            ${variant === 'C' ? `<div class="fittoggle">
+              <button class="${!s.fitOnly?'on':''}" data-fitonly="0">All ${total}</button>
+              <button class="${s.fitOnly?'on':''}" data-fitonly="1">&#10003; Confirmed fit ${baseRowsFitCount()}</button>
+            </div>` : ''}
+            ${sortHTML()}
+          </div>
+        </div>
+        ${listHTML(pageRows)}
+        <div class="toolbar" style="justify-content:center">${pagerHTML(total) || '<span style="color:var(--muted);font-size:13px">All results shown</span>'}</div>`;
+    }
+
+    root.innerHTML = `
+      <div class="vcap"><div class="row"><h2>${ {A:'Rows + fit badge, confirmed pinned', B:'Two labelled sections', C:'Flat list + fit filter'}[variant] }</h2><span class="k">variant ${variant}</span></div>
+        <p>${capText}</p></div>
+      <div class="crumb">
+        <a href="#">Home</a><span class="sep">&rsaquo;</span>
+        <a href="#">${esc(byId[md.makeId].name)}</a><span class="sep">&rsaquo;</span>
+        <a href="#">${esc(md.name)}</a>
+        ${groupName ? `<span class="sep">&rsaquo;</span><a href="#">${esc(groupName)}</a>` : ''}
+        ${s.fCat.size === 1 ? `<span class="sep">&rsaquo;</span><b>${esc(leafName)}</b>` : ''}
+      </div>
+      <h1 class="page-h1">Used ${esc(byId[md.makeId].name)} ${esc(md.name)} ${esc(leafName)}${s.modId ? ` <span class="eng">&middot; ${esc(byId[s.modId].label)}</span>` : ''}</h1>
+      <div class="layout">
+        ${railHTML()}
+        <div>${mainInner}</div>
+      </div>`;
+
+    wire();
+  }
+  function baseRowsFitCount(){ const seen=new Set(); let rows = s.fEngine.size ? [].concat(...[...s.fEngine].map(m=>unionRows({modelId:s.modelId,modId:m}))) : unionRows({modelId:s.modelId,modId:null}); rows = rows.filter(r=>!seen.has(r.code)&&seen.add(r.code)); if(s.fCat.size) rows=rows.filter(r=>s.fCat.has(r.cat)); if(s.fFuel.size) rows=rows.filter(r=>s.fFuel.has(byId[r.donor].fuel)); if(s.fCond.size) rows=rows.filter(r=>s.fCond.has(r.condition)); return rows.filter(r=>r.bucket==='fit').length; }
+
+  function toggle(set, val){ set.has(val) ? set.delete(val) : set.add(val); s.page = 1; }
+  function wire(){
+    root.querySelectorAll('[data-facet]').forEach(b => b.onclick = () => {
+      const f = b.dataset.facet, v = b.dataset.val;
+      if (f === 'engine') toggle(s.fEngine, v);
+      if (f === 'cat')    toggle(s.fCat, v);
+      if (f === 'fuel')   toggle(s.fFuel, v);
+      if (f === 'cond')   toggle(s.fCond, v);
+      render();
+    });
+    root.querySelectorAll('[data-remove]').forEach(b => b.onclick = () => {
+      const f = b.dataset.remove, v = b.dataset.val;
+      ({ cat:s.fCat, engine:s.fEngine, fuel:s.fFuel, cond:s.fCond })[f].delete(v); s.page = 1; render();
+    });
+    root.querySelectorAll('[data-clear]').forEach(b => b.onclick = () => {
+      s.fFuel.clear(); s.fCond.clear(); s.page = 1;
+      if (s.fCat.size !== 1) s.fCat = new Set([s.catId]);
+      render();
+    });
+    const widen = root.querySelector('[data-widen]'); if (widen) widen.onclick = () => { s.fEngine.clear(); s.page = 1; render(); };
+    const sortSel = root.querySelector('[data-sort]'); if (sortSel) sortSel.onchange = e => { s.sort = e.target.value; render(); };
+    root.querySelectorAll('[data-fitonly]').forEach(b => b.onclick = () => { s.fitOnly = b.dataset.fitonly === '1'; s.page = 1; render(); });
+    root.querySelectorAll('[data-page]').forEach(b => b.onclick = () => { const p = +b.dataset.page; if (p >= 1) { s.page = p; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+  }
+  render();
+}
+
+/* ================================================================ switcher + scenario */
+const VARIANTS = [
+  { key:'A', name:'Rows + badge, pinned' },
+  { key:'B', name:'Two labelled sections' },
+  { key:'C', name:'Flat list + fit filter' },
+];
+const stage = document.getElementById('stage');
+const swLabel = document.getElementById('swLabel');
+const curIdx = () => { const p = (new URLSearchParams(location.search)).get('variant'); const i = VARIANTS.findIndex(v => v.key === (p||'').toUpperCase()); return i < 0 ? 0 : i; };
+function show(i){
+  const v = VARIANTS[(i + VARIANTS.length) % VARIANTS.length];
+  const url = new URL(location.href); url.searchParams.set('variant', v.key); history.replaceState(null, '', url);
+  swLabel.innerHTML = `<span class="k">${v.key}</span><b>${v.name}</b>`;
+  stage.innerHTML = ''; App(stage, v.key); window.scrollTo(0, 0);
+}
+document.getElementById('prev').onclick = () => show(curIdx() - 1);
+document.getElementById('next').onclick = () => show(curIdx() + 1);
+document.addEventListener('keydown', e => {
+  if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName) || e.target.isContentEditable) return;
+  if (e.key === 'ArrowLeft')  show(curIdx() - 1);
+  if (e.key === 'ArrowRight') show(curIdx() + 1);
+});
+const scenario = document.getElementById('scenario');
+scenario.value = (new URLSearchParams(location.search)).get('sc') || 'golf-16tdi|headlight';
+scenario.onchange = () => { const url = new URL(location.href); url.searchParams.set('sc', scenario.value); location.href = url.toString(); };
+show(curIdx());
+</script>
