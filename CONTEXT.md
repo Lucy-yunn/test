@@ -117,6 +117,12 @@ guarantee; platform-verified cross-vehicle compatibility is out of scope for v1.
 part numbers and the donor vehicle's details before purchasing.
 _Avoid_: source, origin, history, donor (on its own), pedigree, fitment
 
+**Seller intake sheet**:
+The spreadsheet a Seller fills in to hand their inventory to Staff — one workbook per batch,
+a row per donor car and a row per part. Staff transcribe it into the admin tool; it is never
+stored in the platform. The only Seller-to-Staff handoff in v1.
+_Avoid_: submission, intake form, listing form, import, feed
+
 **Listing**:
 One physical used item a single Seller has for sale. Always tied to one Part and one
 DonorVehicle. A single unique unit — never a quantity.
