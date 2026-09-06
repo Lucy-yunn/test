@@ -1,0 +1,1120 @@
+<!--
+  THROWAWAY PROTOTYPE — Wayfinder ticket #9 "Buyer funnel search UX"
+  Three structurally different takes on the buyer funnel, switchable via ?variant=A|B|C
+  or the floating bar / arrow keys. Not production code: no framework, no build, inline
+  seed data, read-only. Double-click to open, or view the published Artifact.
+
+  What it exists to settle:
+    1. how a non-expert buyer picks a Modification with no year step
+    2. the Modification -> Group -> Category tail (own step, or grouped list?)
+    3. ordering WITHIN each fit-badge bucket (recency / price / condition)
+    4. empty-result handling
+    5. what partial-funnel assistance looks like
+  Fit rules (union of Fitment path + Provenance path, badge vocabulary) are already
+  locked by #7 / docs/fitment-and-compatibility-search.md — this prototype just renders them.
+-->
+<title>Buyer Funnel Search</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --ground: #f4f2ee;
+    --panel: #ffffff;
+    --panel-2: #faf8f4;
+    --ink: #1d1b17;
+    --ink-soft: #55514a;
+    --muted: #8a857c;
+    --hair: #e2ded4;
+    --hair-strong: #cec9bc;
+    --accent: #b1441d;
+    --accent-soft: #f0e2da;
+    --confirmed: #2c6a4a;
+    --confirmed-soft: #dcece3;
+    --unverified: #8a6412;
+    --unverified-soft: #f0e7d2;
+    --focus: #1d5fb8;
+    --shadow: 0 1px 2px rgba(29,27,23,.06), 0 6px 20px rgba(29,27,23,.06);
+    color-scheme: light;
+  }
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark) {
+      --ground: #151412;
+      --panel: #201e1b;
+      --panel-2: #1a1917;
+      --ink: #ece9e2;
+      --ink-soft: #b4afa4;
+      --muted: #857f73;
+      --hair: #322f2a;
+      --hair-strong: #423e37;
+      --accent: #e0703f;
+      --accent-soft: #3a2419;
+      --confirmed: #6bbd90;
+      --confirmed-soft: #1f3a2c;
+      --unverified: #d4a03f;
+      --unverified-soft: #3a2f16;
+      --focus: #6da8ff;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #151412;
+    --panel: #201e1b;
+    --panel-2: #1a1917;
+    --ink: #ece9e2;
+    --ink-soft: #b4afa4;
+    --muted: #857f73;
+    --hair: #322f2a;
+    --hair-strong: #423e37;
+    --accent: #e0703f;
+    --accent-soft: #3a2419;
+    --confirmed: #6bbd90;
+    --confirmed-soft: #1f3a2c;
+    --unverified: #d4a03f;
+    --unverified-soft: #3a2f16;
+    --focus: #6da8ff;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  h1, h2, h3, h4 {
+    font-family: "Barlow Semi Condensed", "IBM Plex Sans", sans-serif;
+    font-weight: 600;
+    text-wrap: balance;
+    margin: 0;
+    letter-spacing: .01em;
+  }
+  button { font: inherit; cursor: pointer; }
+  a { color: var(--accent); }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  /* ---- prototype banner ---- */
+  .proto-note {
+    background: repeating-linear-gradient(-45deg, var(--accent-soft), var(--accent-soft) 12px, transparent 12px, transparent 24px);
+    border-bottom: 1px solid var(--hair-strong);
+    color: var(--ink-soft);
+    font-size: 12px;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    padding: 6px 20px;
+    text-align: center;
+  }
+  .proto-note strong { color: var(--accent); }
+
+  /* ---- fake app chrome ---- */
+  .chrome {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 20px 140px;
+  }
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 0 16px;
+    border-bottom: 1px solid var(--hair);
+  }
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    font-family: "Barlow Semi Condensed", sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+  .brand .dot { color: var(--accent); }
+  .brand small {
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 400;
+    font-size: 11px;
+    letter-spacing: .05em;
+    color: var(--muted);
+    text-transform: none;
+  }
+  .topbar-right { display: flex; align-items: center; gap: 18px; color: var(--muted); font-size: 13px; }
+  .lang { display: flex; border: 1px solid var(--hair-strong); border-radius: 999px; overflow: hidden; }
+  .lang span { padding: 3px 10px; font-size: 12px; letter-spacing: .04em; }
+  .lang .on { background: var(--ink); color: var(--ground); }
+  .lang .off { color: var(--muted); }
+
+  .variant-caption {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px 14px;
+    padding: 22px 0 4px;
+  }
+  .variant-caption h1 { font-size: 26px; }
+  .variant-caption .key {
+    font-family: "IBM Plex Mono", monospace;
+    background: var(--ink);
+    color: var(--ground);
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 5px;
+  }
+  .variant-caption p { margin: 0; color: var(--ink-soft); font-size: 13.5px; max-width: 62ch; flex-basis: 100%; }
+
+  /* ---- shared bits ---- */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--hair);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+  }
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .btn {
+    border: 1px solid var(--hair-strong);
+    background: var(--panel);
+    color: var(--ink);
+    border-radius: 7px;
+    padding: 8px 14px;
+    font-weight: 500;
+  }
+  .btn:hover { border-color: var(--ink-soft); }
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover { filter: brightness(1.05); border-color: var(--accent); }
+  .btn:focus-visible, .choice:focus-visible, select:focus-visible, .facet-opt:focus-visible, .crumb:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .badge.fit { background: var(--confirmed-soft); color: var(--confirmed); }
+  .badge.prov { background: var(--unverified-soft); color: var(--unverified); }
+  .badge .tick { font-weight: 700; }
+  .fit-note {
+    font-size: 12.5px;
+    color: var(--unverified);
+    font-style: italic;
+  }
+
+  .cond {
+    font-size: 12px;
+    color: var(--ink-soft);
+    border: 1px solid var(--hair-strong);
+    border-radius: 5px;
+    padding: 1px 7px;
+  }
+
+  select {
+    font: inherit;
+    padding: 9px 12px;
+    border: 1px solid var(--hair-strong);
+    border-radius: 7px;
+    background: var(--panel);
+    color: var(--ink);
+    min-width: 0;
+  }
+  select:disabled { opacity: .45; }
+
+  .empty {
+    text-align: center;
+    padding: 40px 24px;
+    color: var(--ink-soft);
+  }
+  .empty h3 { font-size: 19px; margin-bottom: 6px; }
+  .empty .why { font-size: 13.5px; color: var(--muted); max-width: 46ch; margin: 0 auto 16px; }
+  .empty-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  .thumb {
+    background: var(--panel-2);
+    border: 1px solid var(--hair);
+    border-radius: 6px;
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    flex: none;
+  }
+
+  /* =====================================================================
+     VARIANT A — guided wizard, one decision per screen
+     ===================================================================== */
+  .wiz-rail {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 20px 0 6px;
+    align-items: center;
+  }
+  .crumb {
+    border: 1px solid var(--hair-strong);
+    background: var(--panel);
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    display: inline-flex;
+    gap: 7px;
+    align-items: center;
+  }
+  .crumb.done { border-color: var(--accent); color: var(--ink); }
+  .crumb.current { background: var(--ink); color: var(--ground); border-color: var(--ink); }
+  .crumb .lbl { font-family: "IBM Plex Mono", monospace; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; opacity: .7; }
+  .crumb-sep { color: var(--hair-strong); }
+
+  .wiz-stage { margin-top: 18px; padding: 30px; }
+  .wiz-stage > .eyebrow { display: block; margin-bottom: 4px; }
+  .wiz-stage > h2 { font-size: 23px; margin-bottom: 22px; }
+
+  .choice-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .choice {
+    text-align: left;
+    border: 1px solid var(--hair-strong);
+    background: var(--panel);
+    border-radius: 9px;
+    padding: 15px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .choice:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .choice .c-title { font-family: "Barlow Semi Condensed", sans-serif; font-weight: 600; font-size: 17px; }
+  .choice .c-sub { font-size: 12.5px; color: var(--muted); }
+
+  .mod-choice { padding: 16px; gap: 8px; }
+  .mod-choice .c-title { font-size: 18px; display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+  .mod-choice .c-title .yrs { font-family: "IBM Plex Mono", monospace; font-size: 12px; font-weight: 500; color: var(--ink-soft); }
+  .spec-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .spec {
+    font-size: 11.5px;
+    background: var(--panel-2);
+    border: 1px solid var(--hair);
+    border-radius: 5px;
+    padding: 2px 8px;
+    color: var(--ink-soft);
+  }
+  .spec.mono { font-family: "IBM Plex Mono", monospace; }
+  .notsure {
+    margin-top: 18px;
+    border-top: 1px dashed var(--hair-strong);
+    padding-top: 16px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .notsure .txt { font-size: 13px; color: var(--ink-soft); }
+  .notsure .txt strong { color: var(--ink); }
+
+  .grouprow { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 10px; }
+
+  .wiz-back { margin-top: 24px; }
+
+  /* results — variant A: two labelled sections, roomy list */
+  .res-head { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: baseline; padding: 22px 0 6px; }
+  .res-head h2 { font-size: 22px; }
+  .res-head .count { color: var(--muted); font-size: 13.5px; }
+  .sortbar { display: flex; gap: 8px; align-items: center; margin-left: auto; font-size: 13px; color: var(--ink-soft); }
+
+  .res-section { margin-top: 18px; }
+  .res-section > .sec-label {
+    display: flex; align-items: center; gap: 10px;
+    font-family: "Barlow Semi Condensed", sans-serif; font-weight: 600; font-size: 15px;
+    letter-spacing: .03em; text-transform: uppercase; color: var(--ink-soft);
+    padding-bottom: 8px; border-bottom: 1px solid var(--hair);
+  }
+  .res-section > .sec-label .n { color: var(--muted); font-family: "IBM Plex Mono", monospace; font-size: 12px; }
+  .res-section.prov > .sec-label { color: var(--unverified); }
+
+  .rowcard { display: flex; gap: 16px; padding: 16px 4px; border-bottom: 1px solid var(--hair); }
+  .rowcard .thumb { width: 96px; height: 74px; }
+  .rowcard .body { flex: 1; min-width: 0; }
+  .rowcard .r-top { display: flex; justify-content: space-between; gap: 14px; align-items: baseline; }
+  .rowcard h4 { font-size: 17px; }
+  .rowcard .price { font-family: "Barlow Semi Condensed", sans-serif; font-weight: 700; font-size: 19px; white-space: nowrap; }
+  .rowcard .meta { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 7px; font-size: 12.5px; color: var(--muted); align-items: center; }
+  .rowcard .prov-line { margin-top: 7px; font-size: 12.5px; color: var(--ink-soft); }
+  .rowcard .defects { margin: 8px 0 0; padding-left: 18px; font-size: 12.5px; color: var(--ink-soft); }
+
+  /* =====================================================================
+     VARIANT B — one accumulating page, selectors pinned, live results
+     ===================================================================== */
+  .b-wrap { margin-top: 20px; display: grid; gap: 16px; }
+  .b-selectors { padding: 18px; position: sticky; top: 8px; z-index: 5; }
+  .b-selectors .eyebrow { display: block; margin-bottom: 12px; }
+  .sel-line { display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; }
+  .sel-line select { flex: 1 1 150px; }
+  .sel-field { display: flex; flex-direction: column; gap: 4px; flex: 1 1 160px; }
+  .sel-field label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-family: "IBM Plex Mono", monospace; }
+  .cat-pick { margin-top: 12px; }
+  .cat-pick summary {
+    cursor: pointer; list-style: none; padding: 9px 12px; border: 1px solid var(--hair-strong);
+    border-radius: 7px; font-weight: 500; display: flex; justify-content: space-between; align-items: center;
+  }
+  .cat-pick summary::-webkit-details-marker { display: none; }
+  .cat-pick[open] summary { border-color: var(--accent); }
+  .cat-menu { padding: 12px; border: 1px solid var(--hair); border-top: none; border-radius: 0 0 7px 7px; max-height: 280px; overflow-y: auto; }
+  .cat-group + .cat-group { margin-top: 12px; }
+  .cat-group h5 {
+    font-family: "IBM Plex Mono", monospace; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 5px; position: sticky; top: -12px; background: var(--panel); padding: 3px 0;
+  }
+  .cat-opts { display: flex; flex-wrap: wrap; gap: 6px; }
+  .cat-opt { border: 1px solid var(--hair-strong); background: var(--panel); border-radius: 6px; padding: 5px 10px; font-size: 13px; }
+  .cat-opt:hover { border-color: var(--accent); }
+  .cat-opt.sel { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .b-status {
+    display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center;
+    font-size: 13px; color: var(--ink-soft); padding: 2px;
+  }
+  .b-status .pill { background: var(--panel-2); border: 1px solid var(--hair); border-radius: 999px; padding: 3px 10px; }
+  .b-status .pill b { color: var(--ink); font-weight: 600; }
+
+  .b-results { padding: 6px 18px 18px; }
+  .b-results .res-head { padding-top: 14px; }
+  .live-list { display: grid; gap: 0; }
+  .live-item { display: flex; gap: 14px; padding: 14px 2px; border-bottom: 1px solid var(--hair); align-items: flex-start; }
+  .live-item .thumb { width: 74px; height: 60px; }
+  .live-item .li-body { flex: 1; min-width: 0; }
+  .live-item .li-top { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .live-item h4 { font-size: 15.5px; }
+  .live-item .li-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+  .live-item .li-meta { margin-top: 5px; font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 5px 12px; }
+  .live-item .price { font-family: "Barlow Semi Condensed", sans-serif; font-weight: 700; font-size: 17px; }
+
+  .continue-box { padding: 16px 18px; background: var(--panel-2); border-radius: 8px; border: 1px dashed var(--hair-strong); }
+  .continue-box h4 { font-size: 15px; margin-bottom: 4px; }
+  .continue-box p { margin: 0 0 12px; font-size: 13px; color: var(--ink-soft); }
+  .continue-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { border: 1px solid var(--hair-strong); background: var(--panel); border-radius: 999px; padding: 6px 13px; font-size: 13px; }
+  .chip:hover { border-color: var(--accent); }
+  .chip .n { color: var(--muted); font-family: "IBM Plex Mono", monospace; font-size: 11px; }
+
+  /* =====================================================================
+     VARIANT C — results-first, facet rail
+     ===================================================================== */
+  .c-search {
+    margin-top: 20px; padding: 26px 28px;
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;
+  }
+  .c-search .sel-field { flex: 1 1 180px; }
+  .c-search .go { flex: none; }
+  .c-search .hint { flex-basis: 100%; font-size: 12.5px; color: var(--muted); margin: 0; }
+
+  .c-layout { margin-top: 16px; display: grid; grid-template-columns: 244px 1fr; gap: 20px; align-items: start; }
+  .facets { padding: 16px 16px 20px; position: sticky; top: 8px; }
+  .facet + .facet { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--hair); }
+  .facet h4 { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-family: "IBM Plex Mono", monospace; margin-bottom: 9px; }
+  .facet-opt {
+    display: flex; width: 100%; text-align: left; justify-content: space-between; gap: 8px; align-items: center;
+    background: none; border: none; padding: 6px 8px; border-radius: 6px; color: var(--ink-soft); font-size: 13px;
+  }
+  .facet-opt:hover { background: var(--panel-2); }
+  .facet-opt.sel { background: var(--accent-soft); color: var(--ink); font-weight: 600; }
+  .facet-opt .n { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--muted); }
+  .facet-opt.sel .n { color: var(--accent); }
+  .facet .mod-detail { font-size: 11.5px; color: var(--muted); padding: 0 8px 4px 8px; }
+
+  .c-results { min-width: 0; }
+  .c-resbar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: baseline; padding-bottom: 12px; border-bottom: 1px solid var(--hair); }
+  .c-resbar h2 { font-size: 20px; }
+  .c-resbar .count { color: var(--muted); font-size: 13px; }
+  .c-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 4px; }
+  .c-chips .active-facet {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
+    background: var(--ink); color: var(--ground); border-radius: 999px; padding: 3px 6px 3px 11px;
+  }
+  .c-chips .active-facet button { background: none; border: none; color: var(--ground); font-size: 14px; line-height: 1; padding: 0 2px; opacity: .7; }
+  .c-chips .active-facet button:hover { opacity: 1; }
+
+  .dense { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  .dense th {
+    text-align: left; font-family: "IBM Plex Mono", monospace; font-size: 10.5px; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--muted); font-weight: 400; padding: 8px 10px; border-bottom: 1px solid var(--hair-strong);
+  }
+  .dense th.sortable { cursor: pointer; }
+  .dense th.sortable:hover { color: var(--ink); }
+  .dense th .arrow { color: var(--accent); }
+  .dense td { padding: 12px 10px; border-bottom: 1px solid var(--hair); vertical-align: top; }
+  .dense tr:hover td { background: var(--panel-2); }
+  .dense .c-part { font-weight: 600; font-size: 14.5px; }
+  .dense .c-sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .dense .c-price { font-family: "Barlow Semi Condensed", sans-serif; font-weight: 700; font-size: 16px; white-space: nowrap; text-align: right; }
+  .dense .c-fit { white-space: nowrap; }
+  .dense-note { font-size: 11.5px; color: var(--unverified); font-style: italic; margin-top: 3px; max-width: 22ch; }
+
+  @media (max-width: 780px) {
+    .c-layout { grid-template-columns: 1fr; }
+    .facets { position: static; }
+    .rowcard .thumb { display: none; }
+  }
+
+  /* =====================================================================
+     floating variant switcher
+     ===================================================================== */
+  .switcher {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    background: #17150f;
+    color: #f4f2ee;
+    border-radius: 999px;
+    padding: 5px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.4), 0 0 0 1px rgba(255,255,255,.08) inset;
+    font-family: "IBM Plex Mono", monospace;
+  }
+  .switcher button {
+    background: none; border: none; color: inherit;
+    width: 34px; height: 34px; border-radius: 999px; font-size: 15px;
+    display: grid; place-items: center;
+  }
+  .switcher button:hover { background: rgba(255,255,255,.12); }
+  .switcher .label {
+    padding: 0 14px; font-size: 12.5px; letter-spacing: .02em; white-space: nowrap;
+    min-width: 190px; text-align: center;
+  }
+  .switcher .label b { color: #e0703f; }
+  .switcher .label .k { opacity: .55; margin-right: 6px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="proto-note">Throwaway prototype · Wayfinder <strong>#9</strong> buyer funnel search · switch takes below ↓</div>
+
+<div class="chrome">
+  <div class="topbar">
+    <div class="brand">Части<span class="dot">.</span>bg <small>used-parts marketplace</small></div>
+    <div class="topbar-right">
+      <div class="lang" title="Language toggle present from day one — BG inactive in v1">
+        <span class="on">EN</span><span class="off">BG</span>
+      </div>
+      <span>Sign in</span>
+    </div>
+  </div>
+
+  <div id="stage"></div>
+</div>
+
+<div class="switcher" id="switcher">
+  <button id="prev" aria-label="Previous take">‹</button>
+  <span class="label" id="swLabel"></span>
+  <button id="next" aria-label="Next take">›</button>
+</div>
+
+<script>
+/* ------------------------------------------------------------------ seed data */
+const CATALOG = {
+  makes: [
+    { id:'vw', name:'Volkswagen', models:[
+      { id:'golf', name:'Golf', mods:[
+        {id:'golf-16tdi', label:'1.6 TDI', code:'CLHA', fuel:'Diesel', hp:115, body:'Estate',    years:'2017–2020', gen:'Mk7 facelift'},
+        {id:'golf-20tdi', label:'2.0 TDI', code:'DFGA', fuel:'Diesel', hp:150, body:'Hatchback', years:'2016–2020', gen:'Mk7 facelift'},
+        {id:'golf-15tsi', label:'1.5 TSI', code:'DPCA', fuel:'Petrol', hp:150, body:'Hatchback', years:'2017–2020', gen:'Mk7 facelift'},
+        {id:'golf-10tsi', label:'1.0 TSI', code:'CHZJ', fuel:'Petrol', hp:110, body:'Hatchback', years:'2017–2019', gen:'Mk7 facelift'},
+      ]},
+    ]},
+    { id:'bmw', name:'BMW', models:[
+      { id:'3series', name:'3 Series', mods:[
+        {id:'bmw-320d', label:'320d', code:'B47D20', fuel:'Diesel', hp:190, body:'Saloon', years:'2015–2019', gen:'F30 LCI'},
+        {id:'bmw-330i', label:'330i', code:'B48B20', fuel:'Petrol', hp:252, body:'Saloon', years:'2015–2019', gen:'F30 LCI'},
+      ]},
+    ]},
+    { id:'audi', name:'Audi', models:[
+      { id:'a3', name:'A3', mods:[
+        {id:'a3-20tdi', label:'2.0 TDI', code:'DEJA', fuel:'Diesel', hp:150, body:'Sportback', years:'2016–2020', gen:'8V facelift'},
+      ]},
+    ]},
+  ],
+  groups: [
+    { id:'lighting',   name:'Lighting',          cats:[{id:'headlight',name:'Headlight'},{id:'tail-light',name:'Tail light'},{id:'fog-light',name:'Fog light'}] },
+    { id:'braking',    name:'Braking',           cats:[{id:'brake-caliper',name:'Brake caliper'},{id:'brake-disc',name:'Brake disc'},{id:'abs-pump',name:'ABS pump'}] },
+    { id:'engine',     name:'Engine & turbo',    cats:[{id:'alternator',name:'Alternator'},{id:'starter-motor',name:'Starter motor'},{id:'turbocharger',name:'Turbocharger'}] },
+    { id:'electrical', name:'Electrical',        cats:[{id:'ecu',name:'Engine ECU'},{id:'bcm',name:'Body control module'}] },
+    { id:'body',       name:'Body & exterior',   cats:[{id:'wing-mirror',name:'Wing mirror'},{id:'bonnet',name:'Bonnet'},{id:'front-bumper',name:'Front bumper'}] },
+  ],
+};
+
+const LISTINGS = [
+  {code:'LST-004203', cat:'headlight', title:'Headlight, left — LED, genuine', priceEur:260, condition:'new',
+   fitment:['golf-16tdi','golf-20tdi','golf-15tsi','golf-10tsi'], fitNote:'whole-model: Golf', donor:'golf-15tsi',
+   photos:5, defects:[], seller:'RetroParts BG', city:'Varna', days:1},
+  {code:'LST-004120', cat:'headlight', title:'Headlight, left — halogen', priceEur:85, condition:'used_good',
+   fitment:['golf-16tdi','golf-20tdi','golf-15tsi'], donor:'golf-20tdi',
+   photos:2, defects:['Mounting tab chipped — clips still hold'], seller:'Plovdiv Auto Parts', city:'Plovdiv', days:3},
+  {code:'LST-003991', cat:'headlight', title:'Headlight, left — halogen, hazed lens', priceEur:45, condition:'needs_repair',
+   fitment:['golf-16tdi'], fitNote:'pre-facelift only', donor:'golf-16tdi',
+   photos:3, defects:['Lens cracked, top corner','Reflector yellowed'], seller:'Plovdiv Auto Parts', city:'Plovdiv', days:34},
+  {code:'LST-004077', cat:'headlight', title:'Headlight, right — halogen', priceEur:70, condition:'used_good',
+   fitment:[], donor:'golf-16tdi',
+   photos:4, defects:[], seller:'AutoDemontazh Sofia', city:'Sofia', days:12},
+  {code:'LST-003820', cat:'headlight', title:'Headlight, right — Xenon', priceEur:190, condition:'used_good',
+   fitment:['golf-20tdi'], donor:'golf-20tdi',
+   photos:3, defects:[], seller:'AutoDemontazh Sofia', city:'Sofia', days:8},
+  {code:'LST-004010', cat:'alternator', title:'Alternator 140A — Valeo', priceEur:95, condition:'used_good',
+   fitment:['golf-16tdi','golf-20tdi','a3-20tdi'], donor:'a3-20tdi',
+   photos:2, defects:[], seller:'RetroParts BG', city:'Varna', days:5},
+  {code:'LST-003770', cat:'brake-caliper', title:'Brake caliper, front left', priceEur:60, condition:'used_good',
+   fitment:['golf-16tdi','golf-15tsi'], donor:'golf-15tsi',
+   photos:3, defects:[], seller:'Plovdiv Auto Parts', city:'Plovdiv', days:22},
+  {code:'LST-004150', cat:'wing-mirror', title:'Wing mirror, right — power fold', priceEur:75, condition:'used_good',
+   fitment:[], donor:'golf-16tdi',
+   photos:4, defects:['Indicator lens scratched'], seller:'AutoDemontazh Sofia', city:'Sofia', days:6},
+  {code:'LST-003655', cat:'turbocharger', title:'Turbocharger — Garrett, off 320d', priceEur:340, condition:'used_good',
+   fitment:['bmw-320d'], donor:'bmw-320d',
+   photos:3, defects:[], seller:'RetroParts BG', city:'Varna', days:14},
+];
+
+/* ------------------------------------------------------------------ helpers */
+const byId = {};
+CATALOG.makes.forEach(mk => { byId[mk.id]=mk; mk.models.forEach(md => { byId[md.id]=md; md.makeId=mk.id; md.mods.forEach(mo => { byId[mo.id]=mo; mo.modelId=md.id; }); }); });
+CATALOG.groups.forEach(g => { byId[g.id]=g; g.cats.forEach(c => { byId[c.id]=c; c.groupId=g.id; }); });
+
+const CONDLABEL = { new:'New', used_good:'Used – good', needs_repair:'Needs repair' };
+const CONDRANK  = { new:0, used_good:1, needs_repair:2 };
+
+function modsOfModel(modelId){ return byId[modelId].mods.map(m=>m.id); }
+function maskDonor(modId){ const m=byId[modId]; const md=byId[m.modelId]; const mk=byId[md.makeId];
+  return `${mk.name} ${md.name} ${m.label} (${m.code}) · ${m.years}`; }
+
+/* the union from docs/fitment-and-compatibility-search.md §3 */
+function search({ modelId, modId, catId, sort='recency' }){
+  if(!catId) return null;
+  const scope = modId ? [modId] : (modelId ? modsOfModel(modelId) : []);
+  const rows = LISTINGS.filter(l => l.cat === catId).map(l => {
+    const fitMatch  = l.fitment.some(f => scope.includes(f));
+    const provMatch = scope.includes(l.donor);
+    if(!fitMatch && !provMatch) return null;
+    return {
+      ...l,
+      bucket: fitMatch ? 'fit' : 'prov',
+      note: (fitMatch && modId && l.fitment.includes(modId)) ? l.fitNote : (fitMatch && !modId ? l.fitNote : null),
+    };
+  }).filter(Boolean);
+
+  const within = (a,b) => {
+    if(sort==='price') return a.priceEur - b.priceEur;
+    if(sort==='condition') return CONDRANK[a.condition]-CONDRANK[b.condition] || a.days-b.days;
+    return a.days - b.days; // recency
+  };
+  rows.sort((a,b) => (a.bucket===b.bucket ? 0 : a.bucket==='fit' ? -1 : 1) || within(a,b));
+  return rows;
+}
+
+// a real buyer-facing caveat, not an internal "whole-model:" traceability tag (see #7 §2.3 — open question)
+const buyerNote = r => (r.note && !/^whole-model:/.test(r.note)) ? r.note : null;
+function badgeHTML(r){
+  const n = buyerNote(r);
+  return r.bucket==='fit'
+    ? `<span class="badge fit"><span class="tick">✓</span> Confirmed fit</span>${n ? ` <span class="fit-note">note: ${n}</span>` : ''}`
+    : `<span class="badge prov">From a matching car (unverified)</span>`;
+}
+const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+/* ================================================================== VARIANT A */
+function VariantA(root){
+  let s = { step:0, makeId:null, modelId:null, modId:null, notsure:false, groupId:null, catId:null, sort:'recency' };
+  const STEPS = ['Vehicle','Model','Engine variant','Part group','Part','Results'];
+
+  function go(n){ s.step = n; render(); }
+  function reset(to){
+    if(to<=0){ s.makeId=s.modelId=s.modId=s.groupId=s.catId=null; s.notsure=false; }
+    else if(to===1){ s.modelId=s.modId=s.groupId=s.catId=null; s.notsure=false; }
+    else if(to===2){ s.modId=null; s.notsure=false; }
+    else if(to===3){ s.groupId=s.catId=null; }
+    else if(to===4){ s.catId=null; }
+    go(to);
+  }
+
+  function rail(){
+    const done = [
+      s.makeId && byId[s.makeId].name,
+      s.modelId && byId[s.modelId].name,
+      s.modId ? byId[s.modId].label + ' ' + byId[s.modId].code : (s.notsure ? 'Not sure — all variants' : null),
+      s.groupId && byId[s.groupId].name,
+      s.catId && byId[s.catId].name,
+    ];
+    let out = '<div class="wiz-rail">';
+    STEPS.forEach((st,i) => {
+      if(i===5) return;
+      const cls = i===s.step ? 'current' : (done[i] ? 'done' : '');
+      out += `<button class="crumb ${cls}" data-goto="${i}" ${done[i]||i===s.step?'':'disabled'}>
+        <span class="lbl">${st}</span> ${done[i] ? esc(done[i]) : '—'}</button>`;
+      if(i<4) out += '<span class="crumb-sep">›</span>';
+    });
+    out += '</div>';
+    return out;
+  }
+
+  function stepVehicle(){
+    return `<div class="panel wiz-stage">
+      <span class="eyebrow">Step 1 of 5 · Your car</span>
+      <h2>Which make?</h2>
+      <div class="choice-grid">${CATALOG.makes.map(mk =>
+        `<button class="choice" data-make="${mk.id}">
+          <span class="c-title">${mk.name}</span>
+          <span class="c-sub">${mk.models.length} model${mk.models.length>1?'s':''} in the demo catalogue</span>
+        </button>`).join('')}</div>
+    </div>`;
+  }
+  function stepModel(){
+    const mk = byId[s.makeId];
+    return `<div class="panel wiz-stage">
+      <span class="eyebrow">Step 2 of 5 · ${esc(mk.name)}</span>
+      <h2>Which model?</h2>
+      <div class="choice-grid">${mk.models.map(md =>
+        `<button class="choice" data-model="${md.id}">
+          <span class="c-title">${md.name}</span>
+          <span class="c-sub">${md.mods.length} engine variants</span>
+        </button>`).join('')}</div>
+      <div class="wiz-back"><button class="btn" data-goto="0">‹ Back</button></div>
+    </div>`;
+  }
+  function stepMod(){
+    const md = byId[s.modelId];
+    return `<div class="panel wiz-stage">
+      <span class="eyebrow">Step 3 of 5 · ${esc(byId[s.makeId].name)} ${esc(md.name)}</span>
+      <h2>Which engine variant?</h2>
+      <div class="choice-grid">${md.mods.map(mo =>
+        `<button class="choice mod-choice" data-mod="${mo.id}">
+          <span class="c-title">${mo.label} <span class="yrs">${mo.years}</span></span>
+          <span class="spec-row">
+            <span class="spec">${mo.fuel}</span>
+            <span class="spec">${mo.hp} hp</span>
+            <span class="spec">${mo.body}</span>
+            <span class="spec mono">${mo.code}</span>
+            <span class="spec">${mo.gen}</span>
+          </span>
+        </button>`).join('')}</div>
+      <div class="notsure">
+        <button class="btn" data-notsure="1">I'm not sure →</button>
+        <span class="txt">Pick this and we'll search <strong>every variant of the ${esc(md.name)}</strong>. You'll see a
+        <span class="badge fit"><span class="tick">✓</span> Confirmed fit</span> badge on the parts staff have checked against your engine —
+        the rest are <span class="badge prov">from a matching car</span>, worth a closer look before buying.</span>
+      </div>
+      <div class="wiz-back"><button class="btn" data-goto="1">‹ Back</button></div>
+    </div>`;
+  }
+  function stepGroup(){
+    return `<div class="panel wiz-stage">
+      <span class="eyebrow">Step 4 of 5 · Part group</span>
+      <h2>What kind of part?</h2>
+      <div class="grouprow">${CATALOG.groups.map(g =>
+        `<button class="choice" data-group="${g.id}">
+          <span class="c-title">${g.name}</span>
+          <span class="c-sub">${g.cats.map(c=>c.name).join(' · ')}</span>
+        </button>`).join('')}</div>
+      <div class="wiz-back"><button class="btn" data-goto="2">‹ Back</button></div>
+    </div>`;
+  }
+  function stepCat(){
+    const g = byId[s.groupId];
+    return `<div class="panel wiz-stage">
+      <span class="eyebrow">Step 5 of 5 · ${esc(g.name)}</span>
+      <h2>Which part exactly?</h2>
+      <div class="choice-grid">${g.cats.map(c =>
+        `<button class="choice" data-cat="${c.id}"><span class="c-title">${c.name}</span></button>`).join('')}</div>
+      <div class="wiz-back"><button class="btn" data-goto="3">‹ Back</button></div>
+    </div>`;
+  }
+  function stepResults(){
+    const rows = search({ modelId:s.modelId, modId:s.modId, catId:s.catId, sort:s.sort });
+    const car = `${byId[s.makeId].name} ${byId[s.modelId].name} ${s.modId ? byId[s.modId].label+' '+byId[s.modId].code : '· all variants'}`;
+    const fit = rows.filter(r=>r.bucket==='fit'), prov = rows.filter(r=>r.bucket==='prov');
+
+    if(rows.length===0){
+      return `<div class="res-head"><h2>${esc(byId[s.catId].name)}</h2><span class="count">for ${esc(car)}</span></div>
+      <div class="panel empty">
+        <h3>No ${esc(byId[s.catId].name.toLowerCase())} listed for this car yet</h3>
+        <p class="why">Nothing in the demo catalogue is confirmed to fit, and no dismantled ${esc(byId[s.modelId].name)} currently has this part.</p>
+        <div class="empty-actions">
+          <button class="btn" data-goto="4">Try another part</button>
+          <button class="btn" data-notsure="1">Search all ${esc(byId[s.modelId].name)} variants</button>
+          <button class="btn btn-primary">Notify me when one is listed</button>
+        </div>
+      </div>`;
+    }
+
+    const rowCard = r => `<div class="rowcard">
+      <div class="thumb">${r.photos} photos</div>
+      <div class="body">
+        <div class="r-top">
+          <h4>${esc(r.title)}</h4>
+          <span class="price">€${r.priceEur}</span>
+        </div>
+        <div style="margin-top:6px">${badgeHTML(r)}</div>
+        <div class="meta">
+          <span class="cond">${CONDLABEL[r.condition]}</span>
+          <span class="mono">${r.code}</span>
+          <span>${esc(r.seller)} · ${esc(r.city)}</span>
+          <span>${r.days===1?'listed today':`listed ${r.days} days ago`}</span>
+        </div>
+        <div class="prov-line">Removed from: ${esc(maskDonor(r.donor))}</div>
+        ${r.defects.length ? `<ul class="defects">${r.defects.map(d=>`<li>${esc(d)}</li>`).join('')}</ul>` : ''}
+      </div>
+    </div>`;
+
+    const section = (label, list, cls) => list.length ? `<div class="res-section ${cls}">
+      <div class="sec-label">${label} <span class="n">${list.length}</span></div>
+      ${list.map(rowCard).join('')}
+    </div>` : '';
+
+    return `<div class="res-head">
+      <h2>${esc(byId[s.catId].name)}</h2>
+      <span class="count">for ${esc(car)} · ${rows.length} result${rows.length>1?'s':''}</span>
+      <div class="sortbar">
+        <label for="a-sort">Sort within each group</label>
+        <select id="a-sort">
+          <option value="recency"${s.sort==='recency'?' selected':''}>Newest first</option>
+          <option value="price"${s.sort==='price'?' selected':''}>Price: low to high</option>
+          <option value="condition"${s.sort==='condition'?' selected':''}>Best condition first</option>
+        </select>
+      </div>
+    </div>
+    ${section('Confirmed fit for your car', fit, 'fit')}
+    ${section('From a matching car — check before buying', prov, 'prov')}
+    <div class="wiz-back" style="margin-top:20px">
+      <button class="btn" data-goto="4">‹ Change part</button>
+      <button class="btn" data-goto="2">Change engine variant</button>
+    </div>`;
+  }
+
+  function render(){
+    let body;
+    if(s.step===0) body = stepVehicle();
+    else if(s.step===1) body = stepModel();
+    else if(s.step===2) body = stepMod();
+    else if(s.step===3) body = stepGroup();
+    else if(s.step===4) body = stepCat();
+    else body = stepResults();
+    root.innerHTML = `<div class="variant-caption">
+        <h1>Guided wizard</h1><span class="key">variant A</span>
+        <p>One decision per screen. Rich spec cards at the engine step do the job the year would;
+        an explicit “I’m not sure” path skips it. Group and Part are two separate steps.
+        Results split into two labelled sections.</p>
+      </div>
+      ${rail()}${body}`;
+
+    root.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => reset(+b.dataset.goto));
+    root.querySelectorAll('[data-make]').forEach(b => b.onclick = () => { s.makeId=b.dataset.make; go(1); });
+    root.querySelectorAll('[data-model]').forEach(b => b.onclick = () => { s.modelId=b.dataset.model; go(2); });
+    root.querySelectorAll('[data-mod]').forEach(b => b.onclick = () => { s.modId=b.dataset.mod; s.notsure=false; go(3); });
+    root.querySelectorAll('[data-notsure]').forEach(b => b.onclick = () => { s.modId=null; s.notsure=true; go(3); });
+    root.querySelectorAll('[data-group]').forEach(b => b.onclick = () => { s.groupId=b.dataset.group; go(4); });
+    root.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => { s.catId=b.dataset.cat; go(5); });
+    const sort = root.querySelector('#a-sort');
+    if(sort) sort.onchange = () => { s.sort = sort.value; render(); };
+  }
+  render();
+}
+
+/* ================================================================== VARIANT B */
+function VariantB(root){
+  let s = { makeId:null, modelId:null, modId:'', catId:null, sort:'recency', catOpen:false };
+
+  function render(){
+    const models = s.makeId ? byId[s.makeId].models : [];
+    const mods   = s.modelId ? byId[s.modelId].mods : [];
+    const rows   = search({ modelId:s.modelId, modId:s.modId||null, catId:s.catId, sort:s.sort });
+
+    const selectors = `<div class="panel b-selectors">
+      <span class="eyebrow">Find a part for your car</span>
+      <div class="sel-line">
+        <div class="sel-field"><label>Make</label>
+          <select id="b-make"><option value="">Choose…</option>${CATALOG.makes.map(mk=>`<option value="${mk.id}"${s.makeId===mk.id?' selected':''}>${mk.name}</option>`).join('')}</select></div>
+        <div class="sel-field"><label>Model</label>
+          <select id="b-model" ${s.makeId?'':'disabled'}><option value="">Choose…</option>${models.map(md=>`<option value="${md.id}"${s.modelId===md.id?' selected':''}>${md.name}</option>`).join('')}</select></div>
+        <div class="sel-field"><label>Engine variant</label>
+          <select id="b-mod" ${s.modelId?'':'disabled'}>
+            <option value="">${s.modelId?'Not sure — all variants':'Choose…'}</option>
+            ${mods.map(mo=>`<option value="${mo.id}"${s.modId===mo.id?' selected':''}>${mo.label} · ${mo.fuel} ${mo.hp}hp · ${mo.body} · ${mo.years} (${mo.code})</option>`).join('')}
+          </select></div>
+      </div>
+      ${s.modelId && !s.modId ? `<div class="b-status" style="margin-top:10px"><span class="pill">Searching <b>all ${esc(byId[s.modelId].name)} variants</b> — pick your engine above to get a confirmed-fit check</span></div>` : ''}
+      <details class="cat-pick" ${s.catOpen?'open':''}>
+        <summary id="b-catsum"><span>${s.catId ? esc(byId[s.catId].name) : 'Choose a part…'}</span><span class="eyebrow">${s.catId?'change':'browse all'}</span></summary>
+        <div class="cat-menu">${CATALOG.groups.map(g=>`
+          <div class="cat-group"><h5>${g.name}</h5><div class="cat-opts">
+            ${g.cats.map(c=>`<button class="cat-opt${s.catId===c.id?' sel':''}" data-cat="${c.id}">${c.name}</button>`).join('')}
+          </div></div>`).join('')}
+        </div>
+      </details>
+    </div>`;
+
+    let results = '';
+    if(!s.catId){
+      results = `<div class="panel b-results"><div class="continue-box">
+        <h4>Pick a part to see listings</h4>
+        <p>${s.modelId ? 'Your car is set. Choose a part group above and we’ll show what fits.' : 'Set your make and model, then choose a part.'}</p>
+        <div class="continue-chips">${CATALOG.groups[0].cats.concat(CATALOG.groups[2].cats).map(c=>`<button class="chip" data-cat="${c.id}">${c.name}</button>`).join('')}</div>
+      </div></div>`;
+    } else if(!s.makeId || !s.modelId){
+      results = `<div class="panel b-results"><div class="continue-box">
+        <h4>Now tell us your car</h4>
+        <p>You’re looking for a <b>${esc(byId[s.catId].name)}</b>. Set the make and model above to filter to parts that fit.</p>
+      </div></div>`;
+    } else if(rows.length===0){
+      results = `<div class="panel b-results"><div class="empty">
+        <h3>No ${esc(byId[s.catId].name.toLowerCase())} for this car yet</h3>
+        <p class="why">Nothing is confirmed to fit your ${esc(byId[s.modelId].name)}, and no dismantled car here has this part right now.</p>
+        <div class="empty-actions">
+          <button class="btn btn-primary">Notify me when one is listed</button>
+          ${s.modId?`<button class="btn" id="b-widen">Search all ${esc(byId[s.modelId].name)} variants</button>`:''}
+        </div>
+      </div></div>`;
+    } else {
+      const car = `${byId[s.makeId].name} ${byId[s.modelId].name}${s.modId?' '+byId[s.modId].label:''}`;
+      results = `<div class="panel b-results">
+        <div class="res-head">
+          <h2>${rows.length} ${esc(byId[s.catId].name.toLowerCase())}${rows.length>1?'s':''}</h2>
+          <span class="count">fitting ${esc(car)}</span>
+          <div class="sortbar">
+            <label for="b-sort">Sort</label>
+            <select id="b-sort">
+              <option value="recency"${s.sort==='recency'?' selected':''}>Newest first</option>
+              <option value="price"${s.sort==='price'?' selected':''}>Price: low to high</option>
+              <option value="condition"${s.sort==='condition'?' selected':''}>Best condition first</option>
+            </select>
+          </div>
+        </div>
+        <div class="b-status" style="margin:10px 0 4px">
+          <span class="pill"><b>${rows.filter(r=>r.bucket==='fit').length}</b> confirmed fit</span>
+          <span class="pill"><b>${rows.filter(r=>r.bucket==='prov').length}</b> from a matching car</span>
+          <span class="pill">Confirmed-fit parts always shown first</span>
+        </div>
+        <div class="live-list">${rows.map(r=>`
+          <div class="live-item">
+            <div class="thumb">${r.photos} ph</div>
+            <div class="li-body">
+              <div class="li-top">
+                <h4>${esc(r.title)}</h4>
+                <span class="price">€${r.priceEur}</span>
+                <span class="li-badges">${badgeHTML(r)}</span>
+              </div>
+              <div class="li-meta">
+                <span class="cond">${CONDLABEL[r.condition]}</span>
+                <span>${esc(r.seller)}, ${esc(r.city)}</span>
+                <span>Removed from ${esc(byId[r.donor].label)} (${esc(byId[r.donor].code)})</span>
+                <span>${r.days===1?'today':r.days+'d ago'}</span>
+              </div>
+            </div>
+          </div>`).join('')}</div>
+      </div>`;
+    }
+
+    root.innerHTML = `<div class="variant-caption">
+        <h1>One accumulating page</h1><span class="key">variant B</span>
+        <p>Everything on a single screen. Dependent dropdowns for the car (the engine list is
+        self-describing, and “all variants” is the default option, not a separate path).
+        Part is one searchable list grouped by heading — no Group step. Results update live below.</p>
+      </div>
+      <div class="b-wrap">${selectors}${results}</div>`;
+
+    root.querySelector('#b-make').onchange = e => { s.makeId=e.target.value||null; s.modelId=null; s.modId=''; render(); };
+    root.querySelector('#b-model').onchange = e => { s.modelId=e.target.value||null; s.modId=''; render(); };
+    const bmod = root.querySelector('#b-mod'); if(bmod) bmod.onchange = e => { s.modId=e.target.value; render(); };
+    root.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => { s.catId=b.dataset.cat; s.catOpen=false; render(); });
+    const sum = root.querySelector('#b-catsum');
+    if(sum) sum.addEventListener('click', () => { s.catOpen = !s.catOpen; });
+    const bs = root.querySelector('#b-sort'); if(bs) bs.onchange = e => { s.sort=e.target.value; render(); };
+    const bw = root.querySelector('#b-widen'); if(bw) bw.onclick = () => { s.modId=''; render(); };
+  }
+  render();
+}
+
+/* ================================================================== VARIANT C */
+function VariantC(root){
+  let s = { phase:'search', makeId:null, modelId:null, modId:null, catId:null, sort:'fit' };
+
+  function renderSearch(){
+    const models = s.makeId ? byId[s.makeId].models : [];
+    root.innerHTML = `<div class="variant-caption">
+        <h1>Results first</h1><span class="key">variant C</span>
+        <p>Get to a results page as fast as possible — just make and model — then narrow with
+        facets on the left. Engine variant and part are facets, not gates: leaving “All variants”
+        set is the no-year, not-sure path. Dense, sortable result rows.</p>
+      </div>
+      <div class="panel c-search">
+        <div class="sel-field"><label class="eyebrow">Make</label>
+          <select id="c-make"><option value="">Choose…</option>${CATALOG.makes.map(mk=>`<option value="${mk.id}"${s.makeId===mk.id?' selected':''}>${mk.name}</option>`).join('')}</select></div>
+        <div class="sel-field"><label class="eyebrow">Model</label>
+          <select id="c-model" ${s.makeId?'':'disabled'}><option value="">Choose…</option>${models.map(md=>`<option value="${md.id}"${s.modelId===md.id?' selected':''}>${md.name}</option>`).join('')}</select></div>
+        <button class="btn btn-primary go" id="c-go" ${s.modelId?'':'disabled'}>See parts ›</button>
+        <p class="hint">The funnel is the only way in — no keyword box in v1. You’ll refine engine &amp; part type on the results page.</p>
+      </div>`;
+    root.querySelector('#c-make').onchange = e => { s.makeId=e.target.value||null; s.modelId=null; renderSearch(); };
+    root.querySelector('#c-model').onchange = e => { s.modelId=e.target.value||null; renderSearch(); root.querySelector('#c-go').disabled=!s.modelId; };
+    const go = root.querySelector('#c-go');
+    if(go) go.onclick = () => { if(s.modelId){ s.phase='results'; render(); } };
+  }
+
+  function render(){
+    if(s.phase==='search') return renderSearch();
+    const mods = byId[s.modelId].mods;
+    const scope = s.modId ? [s.modId] : modsOfModel(s.modelId);
+
+    // counts per category / per modification within current other-facet state
+    const catCount = c => LISTINGS.filter(l => l.cat===c && (l.fitment.some(f=>scope.includes(f)) || scope.includes(l.donor))).length;
+    const modCount = mo => {
+      if(!s.catId) return LISTINGS.filter(l => l.fitment.includes(mo) || l.donor===mo).length;
+      return LISTINGS.filter(l => l.cat===s.catId && (l.fitment.includes(mo) || l.donor===mo)).length;
+    };
+
+    const rows = s.catId ? search({ modelId:s.modelId, modId:s.modId, catId:s.catId,
+      sort: s.sort==='fit' ? 'recency' : s.sort }) : null;
+    // when sort==='fit' we keep the search() default (bucket then recency); otherwise search() already bucketed then applied sort
+
+    const facetRail = `<div class="panel facets">
+      <div class="facet">
+        <h4>Engine variant</h4>
+        <button class="facet-opt${!s.modId?' sel':''}" data-mod="">All variants <span class="n">${modCount ? '' : ''}</span></button>
+        ${!s.modId ? `<div class="mod-detail">No engine picked — parts checked against your exact engine get the ✓ badge; others are “matching car”.</div>` : ''}
+        ${mods.map(mo=>`<button class="facet-opt${s.modId===mo.id?' sel':''}" data-mod="${mo.id}">
+          <span>${mo.label} · ${mo.fuel} ${mo.hp}hp<br><span class="n">${mo.years} · ${mo.body} · ${mo.code}</span></span>
+          <span class="n">${modCount(mo.id)}</span></button>`).join('')}
+      </div>
+      <div class="facet">
+        <h4>Part type</h4>
+        <button class="facet-opt${!s.catId?' sel':''}" data-cat="">All parts</button>
+        ${CATALOG.groups.map(g=>`<div style="margin:6px 0 2px" class="eyebrow">${g.name}</div>${
+          g.cats.map(c=>`<button class="facet-opt${s.catId===c.id?' sel':''}" data-cat="${c.id}">${c.name} <span class="n">${catCount(c.id)}</span></button>`).join('')}`).join('')}
+      </div>
+    </div>`;
+
+    let main;
+    const activeChips = `<div class="c-chips">
+      <span class="active-facet">${esc(byId[s.makeId].name)} ${esc(byId[s.modelId].name)}</span>
+      ${s.modId ? `<span class="active-facet">${esc(byId[s.modId].label)} (${esc(byId[s.modId].code)}) <button data-mod="">×</button></span>` : ''}
+      ${s.catId ? `<span class="active-facet">${esc(byId[s.catId].name)} <button data-cat="">×</button></span>` : ''}
+    </div>`;
+
+    if(!s.catId){
+      const groups = CATALOG.groups.map(g => {
+        const items = g.cats.map(c => ({ c, n: catCount(c.id) })).filter(x => x.n>0);
+        return items.length ? `<tr><td class="c-part">${g.name}<div class="c-sub">${items.map(x=>`${x.c.name} (${x.n})`).join(' · ')}</div></td>
+          <td>${items.map(x=>`<button class="btn" data-cat="${x.c.id}" style="margin:2px 4px 2px 0;padding:4px 10px;font-size:12px">${x.c.name}</button>`).join('')}</td></tr>` : '';
+      }).join('');
+      main = `<div class="c-results">
+        <div class="c-resbar"><h2>Parts for your ${esc(byId[s.modelId].name)}</h2><span class="count">pick a part type to see listings</span></div>
+        ${activeChips}
+        <table class="dense"><tbody>${groups || `<tr><td colspan="2" class="c-sub" style="padding:20px">Nothing in the catalogue matches this car yet.</td></tr>`}</tbody></table>
+      </div>`;
+    } else if(rows.length===0){
+      main = `<div class="c-results">
+        <div class="c-resbar"><h2>${esc(byId[s.catId].name)}</h2><span class="count">0 results</span></div>
+        ${activeChips}
+        <div class="panel empty">
+          <h3>Nothing matches all your filters</h3>
+          <p class="why">No ${esc(byId[s.catId].name.toLowerCase())} is confirmed to fit${s.modId?` the ${esc(byId[s.modId].label)}`:''}, and none came off a matching car.</p>
+          <div class="empty-actions">
+            ${s.modId?`<button class="btn" data-mod="">Widen to all ${esc(byId[s.modelId].name)} variants</button>`:''}
+            <button class="btn" data-cat="">Clear the part filter</button>
+            <button class="btn btn-primary">Notify me</button>
+          </div>
+        </div>
+      </div>`;
+    } else {
+      const arrow = k => s.sort===k ? ' <span class="arrow">▾</span>' : '';
+      main = `<div class="c-results">
+        <div class="c-resbar"><h2>${esc(byId[s.catId].name)}</h2>
+          <span class="count">${rows.length} result${rows.length>1?'s':''} · ${rows.filter(r=>r.bucket==='fit').length} confirmed fit</span></div>
+        ${activeChips}
+        <table class="dense">
+          <thead><tr>
+            <th class="sortable" data-sort="fit">Fit${arrow('fit')}</th>
+            <th>Part</th>
+            <th class="sortable" data-sort="condition">Condition${arrow('condition')}</th>
+            <th>Seller</th>
+            <th class="sortable" data-sort="recency">Listed${arrow('recency')}</th>
+            <th class="sortable" data-sort="price" style="text-align:right">Price${arrow('price')}</th>
+          </tr></thead>
+          <tbody>${rows.map(r=>`<tr>
+            <td class="c-fit">${r.bucket==='fit'
+              ? `<span class="badge fit"><span class="tick">✓</span> Confirmed</span>${buyerNote(r)?`<div class="dense-note">${esc(buyerNote(r))}</div>`:''}`
+              : `<span class="badge prov">Matching car</span>`}</td>
+            <td><div class="c-part">${esc(r.title)}</div><div class="c-sub">${r.code} · off ${esc(byId[r.donor].label)} (${esc(byId[r.donor].code)}) · ${r.photos} photos${r.defects.length?` · ${r.defects.length} noted defect${r.defects.length>1?'s':''}`:''}</div></td>
+            <td>${CONDLABEL[r.condition]}</td>
+            <td>${esc(r.seller)}<div class="c-sub">${esc(r.city)}</div></td>
+            <td>${r.days===1?'today':r.days+'d ago'}</td>
+            <td class="c-price">€${r.priceEur}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+        <p class="hint" style="margin-top:10px;color:var(--muted);font-size:12px">Confirmed-fit rows are held at the top regardless of column sort.</p>
+      </div>`;
+    }
+
+    root.innerHTML = `<div class="variant-caption">
+        <h1>Results first</h1><span class="key">variant C</span>
+        <p>Get to a results page as fast as possible — just make and model — then narrow with
+        facets on the left. Engine variant and part are facets, not gates.</p>
+      </div>
+      <div class="c-layout">${facetRail}${main}</div>`;
+
+    root.querySelectorAll('[data-mod]').forEach(b => b.onclick = () => { s.modId = b.dataset.mod || null; render(); });
+    root.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => { s.catId = b.dataset.cat || null; render(); });
+    root.querySelectorAll('[data-sort]').forEach(b => b.onclick = () => { s.sort = b.dataset.sort; render(); });
+  }
+  render();
+}
+
+/* ------------------------------------------------------------------ switcher */
+const VARIANTS = [
+  { key:'A', name:'Guided wizard',        fn:VariantA },
+  { key:'B', name:'One accumulating page', fn:VariantB },
+  { key:'C', name:'Results first',         fn:VariantC },
+];
+const stage = document.getElementById('stage');
+const swLabel = document.getElementById('swLabel');
+
+function current(){
+  const p = (new URLSearchParams(location.search)).get('variant');
+  const i = VARIANTS.findIndex(v => v.key === (p||'').toUpperCase());
+  return i < 0 ? 0 : i;
+}
+function show(i){
+  const v = VARIANTS[(i + VARIANTS.length) % VARIANTS.length];
+  const url = new URL(location.href);
+  url.searchParams.set('variant', v.key);
+  history.replaceState(null, '', url);
+  swLabel.innerHTML = `<span class="k">${v.key}</span><b>${v.name}</b>`;
+  stage.innerHTML = '';
+  v.fn(stage);
+  window.scrollTo(0, 0);
+}
+document.getElementById('prev').onclick = () => show(current() - 1);
+document.getElementById('next').onclick = () => show(current() + 1);
+document.addEventListener('keydown', e => {
+  if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName) || e.target.isContentEditable) return;
+  if(e.key === 'ArrowLeft') show(current() - 1);
+  if(e.key === 'ArrowRight') show(current() + 1);
+});
+show(current());
+</script>
