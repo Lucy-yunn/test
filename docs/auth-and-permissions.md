@@ -230,7 +230,7 @@ disabled with a short note ("Buying is for buyer accounts").
 | **Messages** — reply in `Thread`s | **write** | [messaging-model.md §5](./messaging-model.md) |
 | **Approve** a pending `CancellationRequest` on own order | **write** | [order-model.md §6.3](./order-model.md) |
 | Change own password | write | §4.2 |
-| Create / edit / price listings; enter fitment; **initiate** a cancellation; see any other seller's data | ✗ | staff-entry only in v1; `CancellationRequest.requestedBy` is `buyer \| staff` |
+| Create / edit / price listings; **initiate** a cancellation; see any other seller's data | ✗ | staff-entry only in v1; `CancellationRequest.requestedBy` is `buyer \| staff` |
 
 The seller center is **read-only except for two write actions**: replying to messages, and
 approving a pending cancellation on one's own order. (This corrects
@@ -245,13 +245,13 @@ English-only (no translated copy; still under `[locale]` for routing uniformity)
 |---|---|
 | **Sellers** — create profile, edit, **provision / unlink login**, **reset password**, **disable / enable login** | ✅ |
 | **Buyers** — view, **reset password** | ✅ |
-| **Parts / PartNumbers / Fitment** — full CRUD, `partStatus` transitions, merges | ✅ |
+| **Parts / PartNumbers** — full CRUD, `partStatus` transitions, merges | ✅ |
 | **Listings / DonorVehicles** — full CRUD, publish checklist, `status` transitions | ✅ |
 | **Orders** — confirm, mark shipped (enter `trackingNumber` + `expectedTimeRange`), mark delivered, enter `shippingCostEur` / `shippingNotes` | ✅ |
 | **Cancellations** — approve any, raise one on a seller's behalf, "Pending cancellations" list | ✅ |
 | **Threads** — read any, post as **IVO Support**, lock / unlock, resolve the report queue | ✅ |
 | **Block** a `User` from messaging (`messagingBlockedAt`) | ✅ |
-| **Vehicle catalogue** — add `VehicleMake` / `VehicleModel` / `Modification` during intake | ✅ |
+| **Vehicle catalogue** — add `VehicleMake` / `VehicleModelGroup` / `VehicleGeneration` during intake | ✅ |
 | Create other **`staff`** accounts | ✗ — seed script only (§5) |
 | Impersonate any user | ✗ — not built (§2.1) |
 
