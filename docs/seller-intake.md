@@ -43,16 +43,24 @@ working tabs plus hidden reference tabs.
 |---|---|---|
 | Vehicle label | ✅ | The seller's own reference for this car (e.g. `Silver Golf 2016`). `Parts` rows point at this label. |
 | Make | ✅ | Dropdown, from the `Makes` reference tab. |
-| Model | ✅ | Dropdown, from the `Models` reference tab (filtered by Make). |
-| Modification | ✅ | Dropdown, from the `Modifications` reference tab (filtered by Model), **or** the `— NOT LISTED —` sentinel (see §2.4). |
-| Not-listed vehicle details | — | Free text — required only when Modification = `— NOT LISTED —`: make, model, year, engine, engine code as the seller knows them. |
+| Model | ✅ | Dropdown, from the `Models` reference tab (filtered by Make) — the grouped Model value (`A4, S4`). |
+| Generation | ✅ | Dropdown, from the `Generations` reference tab (filtered by Model), **or** the `— NOT LISTED —` sentinel (see §2.4). |
+| Not-listed vehicle details | — | Free text — required only when Generation = `— NOT LISTED —`: make, model, year, chassis code, engine, engine code as the seller knows them. |
 | Year | — | Optional. |
 | VIN | — | Optional. Shown **masked** to buyers (#8). |
 | Mileage (km) | — | Optional. |
-| Engine code | — | Optional — as physically stamped. |
+| Engine | — | Optional — e.g. `2.0 TDI 150hp`. Shown on the Listing (#9 §2.1). |
+| Engine code | — | Optional — as physically stamped. Shown on the Listing. |
+| Fuel | — | Optional dropdown: `petrol` / `diesel` / `hybrid` / `electric` / `lpg` / `other`. |
 | Transmission | — | Optional dropdown: `manual` / `automatic` / `other`. |
+| Body style | — | Optional — e.g. `saloon`, `estate/avant`, `hatchback`. |
+| Drivetrain | — | Optional — e.g. `fwd`, `rwd`, `awd/quattro`. |
 | Registration country | — | Optional. |
 | Notes | — | Optional free text for Staff. |
+
+The engine / fuel / transmission / body / drivetrain columns are the structured
+`DonorVehicle` detail (#21) shown to buyers on each Listing — the seller fills what they know;
+Staff key it as-is. They are **not** a catalogue level and never a compatibility claim.
 
 ### 2.2 `Parts` tab — one row per physical part
 
@@ -63,7 +71,7 @@ working tabs plus hidden reference tabs.
 | Category | ✅ | `Part.categoryId` | Dropdown of **leaf** Categories + `Other / not listed` (#3). |
 | Category description | — | — | Free text — required only when Category = `Other / not listed`. |
 | Visible codes / numbers | — | `PartNumber` (staff) | Any numbers the seller can read off the part. |
-| Condition | ✅ | `Listing.condition` | Dropdown: `New` / `Used – Good` / `Needs Repair` (#7 fixed enum). |
+| Condition | ✅ | `Listing.condition` | Dropdown: `New` / `Used – Good` / `Needs Repair` (Q7 fixed enum). |
 | Condition notes | — | `Listing.conditionNotes` | Free text. |
 | Known defects | — | `ListingDefect` rows | Free text, **one fault per line** — Staff split into rows. |
 | Price (EUR) | ✅ | `Listing.priceEur` | The seller's price. Copied **unchanged** (§3). |
@@ -75,24 +83,24 @@ working tabs plus hidden reference tabs.
 
 ### 2.3 Reference tabs (hidden, dropdown-backed)
 
-`Makes`, `Models`, `Modifications`, `Categories`. These drive the data-validation dropdowns
+`Makes`, `Models`, `Generations`, `Categories`. These drive the data-validation dropdowns
 so the seller selects rather than types catalogue values.
 
-**Their contents are not finalised by this ticket.** The exact `Modification` list and the
+**Their contents are not finalised by this ticket.** The exact `Generation` list and the
 exact leaf `Category` list come from the **Seed data plan** (map — *Not yet specified*). This
 ticket fixes the sheet's *structure*; the seed-data plan fills the lists, and Staff refresh
 the reference tabs whenever they extend the catalogue (§2.4).
 
 ### 2.4 Escape hatches — the seller is never blocked
 
-The pilot catalogue is deliberately small (only pilot-donor Modifications, #4). A seller must
-never be unable to finish intake because their car or part type is not in a dropdown yet.
+The pilot catalogue is deliberately small (only pilot-donor Generations, #4 / #21). A seller
+must never be unable to finish intake because their car or part type is not in a dropdown yet.
 
-- **Vehicle not in the list** → Modification = `— NOT LISTED —`, fill *Not-listed vehicle
+- **Vehicle not in the list** → Generation = `— NOT LISTED —`, fill *Not-listed vehicle
   details*, carry on using the seller's own vehicle label on `Parts` rows. During
-  transcription Staff **add the `Modification` to the catalogue** (and the reference tab),
-  then map the row to it. This is the intake-time catalogue growth already established in #8
-  and #7.
+  transcription Staff **add the `VehicleGeneration` to the catalogue** (and the reference
+  tab), then map the row to it. This is the intake-time catalogue growth established in #8
+  (the only source of catalogue growth now that #7's fitment-entry path is gone — #21).
 - **Category not in the list** → Category = `Other / not listed`, fill *Category
   description*. Staff resolve it to a leaf Category (creating one per the #3 rules if needed).
 
@@ -114,15 +122,18 @@ clerk.** Staff **verify** — they do not re-classify, re-price, or rewrite the 
 
 | Data | Seller provides | Staff do |
 |---|---|---|
-| Donor vehicle | Picks Make / Model / Modification, or flags `— NOT LISTED —` + free text | Map to a real `Modification` (extend catalogue if needed); create `DonorVehicle` |
-| VIN / mileage / engine code / transmission | Enters what they know (all optional) | Key as-is; VIN displayed masked |
+| Donor vehicle | Picks Make / Model / Generation, or flags `— NOT LISTED —` + free text | Map to a real `VehicleGeneration` (extend catalogue if needed); create `DonorVehicle` |
+| VIN / mileage / engine / engine code / fuel / transmission / body / drivetrain | Enters what they know (all optional) | Key as-is; VIN displayed masked; engine/fuel/gearbox/drivetrain shown on the Listing (#21) |
 | Part type | Free-text name + picks a leaf `Category` (or `Other`) | Confirm / create the `Part` (#5); resolve `Other` to a leaf |
 | Part numbers | Types any visible codes | Normalize, match-or-create `PartNumber` + `Part`, set `partStatus` / `pnStatus` (#5) |
 | Condition | Picks the enum + writes notes | Check it is honest against the photos; key as-is |
 | Defects | Lists **every** fault, one per line | Split into `ListingDefect` rows; check completeness against the photos |
 | Photos | Takes and supplies (≥ 1), named per convention | Select, order (first = primary), downscale, upload |
 | Price | Sets the price | **Copy unchanged into `priceEur`** — never re-price |
-| Fitment | — (not the seller's to assert) | Staff-only verified assertion (#7); the seller's vehicle pick yields **provenance only** |
+
+There is **no fitment step** — v1 has no `Fitment` entity (#21). The seller's vehicle pick
+yields **provenance only**; buyer discovery is provenance-based and never a compatibility
+guarantee.
 
 The seller's condition notes and defect text are shown to buyers **as written** — Staff check
 them for honesty and completeness, not style.
@@ -155,8 +166,7 @@ admin tool and reviews **while transcribing**. One combined pass per part:
 2. **Honesty / completeness:** photos support the stated condition; every visible fault is in
    the defect list.
 3. **Part work (#5):** match the codes to an existing `Part` or create a provisional one.
-4. **Fitment (#7):** answer the one-click intake fitment prompt for the part.
-5. **Publish**, or hold the part with a note back to the seller.
+4. **Publish**, or hold the part with a note back to the seller.
 
 The seller never touches the application in v1.
 
@@ -171,8 +181,8 @@ that model, but keeps two cheap hedges so the switch is not a rewrite:
   later form ticket starts from it rather than from scratch.
 - **`Listing.status = draft` + the publish checklist already is the approval gate.** A future
   self-serve UI needs only permission to create `draft` `Listing`s and `DonorVehicle` rows;
-  everything downstream (checklist, Fitment, publish) is unchanged. **Do not assume anywhere
-  in the build that only Staff create a draft.**
+  everything downstream (checklist, publish) is unchanged. **Do not assume anywhere in the
+  build that only Staff create a draft.**
 
 Not decided here: whether self-entry is a restricted role inside the admin tool or a separate
 seller listing UI. That is its own future ticket, triggered by the same pressure that would
@@ -184,16 +194,16 @@ justify it — Staff transcription load and photo-storage cost rising with selle
 
 1. Receive the workbook + photo folder into a submission folder on the shared drive; skim for
    completeness.
-2. For each `Vehicles` row: match to a `Modification` (extend catalogue + reference tab if
-   `— NOT LISTED —`); create the `DonorVehicle`.
+2. For each `Vehicles` row: match to a `VehicleGeneration` (extend catalogue + reference tab
+   if `— NOT LISTED —`); create the `DonorVehicle`, keying engine / engine code / fuel /
+   transmission / body / drivetrain as given.
 3. For each `Parts` row: match-or-create the `Part` (#5); create the `Listing` against the
    right `DonorVehicle`; set `condition`, `priceEur` (**unchanged**), `removalNotes`,
    dimensions.
 4. Split *Known defects* into `ListingDefect` rows.
 5. Select, downscale, and upload photos; set the primary.
-6. Answer the `Fitment` prompt (#7) for the part.
-7. Run the publish checklist (§5); publish or hold with a note to the seller.
-8. If the reference tabs changed, send the seller the refreshed template for next time.
+6. Run the publish checklist (§5); publish or hold with a note to the seller.
+7. If the reference tabs changed, send the seller the refreshed template for next time.
 
 ---
 
@@ -205,7 +215,7 @@ justify it — Staff transcription load and photo-storage cost rising with selle
 | **One spreadsheet template as the channel** | Tiny seller count, wildly varying sophistication; one good template plus Staff absorbing the messy cases beats a rigid pipeline or a bespoke form now | A guided web form (= self-serve, deferred); fully unstructured intake |
 | **Seller fills everything — category, defects, price; Staff review-only** | The seller owns their data; Staff are the quality gate, not conceptually the data-entry clerk | Staff re-classify / re-price / rewrite seller copy |
 | **Seller price copied unchanged into `priceEur`** | The seller owns commercial terms; haggling lives in Messages (#8) | Staff set the final price |
-| **Fitment stays Staff-only** | #7 — a `Fitment` row *is* a verified Staff assertion; the seller cannot judge interchangeability or see the catalogue | The seller suggests fitments in the sheet |
+| **No fitment step in intake** | v1 has no `Fitment` entity (#21); the seller's vehicle pick is provenance only | A fitment / compatibility column in the sheet |
 | **Only the curated photo set enters Vercel Blob** | Decouples storage cost from submission volume (founder-flagged) | Keep every seller-supplied photo in Blob |
 | **`— NOT LISTED —` / `Other` escape hatches** | The seller must never be blocked by an incomplete pilot catalogue; Staff extend it during transcription (#8 / #7) | Make the seller wait for a catalogue update before finishing intake |
 
@@ -213,12 +223,11 @@ justify it — Staff transcription load and photo-storage cost rising with selle
 
 ## 9. Related / spun off
 
-- **New map ticket — vehicle-catalogue grain & the buyer-facing label for `Modification`.**
-  The funnel (#9) labels the `Modification` step **"Engine variant"**, which collides with the
-  `CONTEXT.md` _Avoid_ list ("variant", "engine"), and it is unclear whether the pilot
-  catalogue is genuinely engine-grain `Modification` data or only generation-grain
-  (`A4 B5 / 8D / 1994–1999`). That determines whether the fix is a rename or a reopen of
-  #4 / #7 / #9. It does **not** block #14 — the intake sheet's structure is the same either
-  way; only the reference-tab contents differ.
+- **[#21](https://github.com/Lucy-yunn/test/issues/21) — vehicle-catalogue grain & the
+  buyer-facing label** (resolved). Outcome: the catalogue is `VehicleGeneration`-grain over a
+  grouped `VehicleModelGroup` level (`Make → Model → Generation → Category`); the funnel's
+  third step is labelled **"Generation"**; the `Fitment` entity is **removed from v1** and
+  buyer discovery is provenance-only. This doc is amended above accordingly (Generation
+  dropdown, `Generations` reference tab, no fitment step, donor engine/fuel/gearbox columns).
 - **Seed data plan (map — *Not yet specified*)** populates the reference-tab contents (the
-  exact `Modification` and leaf `Category` lists).
+  exact `Generation` and leaf `Category` lists).
