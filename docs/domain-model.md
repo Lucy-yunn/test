@@ -344,6 +344,23 @@ Full rules — the both-sides-login gate, surfaces, unread state, moderation (re
 block), and the `Report` flag entity: [`docs/messaging-model.md`](./messaging-model.md)
 (resolves [#11](https://github.com/Lucy-yunn/test/issues/11)).
 
+#### Notification
+A durable in-app record of one event, addressed to one recipient with a login. The whole v1
+notification mechanism — **there is no notification email in v1**
+([Auth (#12)](https://github.com/Lucy-yunn/test/issues/12) §6). New-message alerting is **not**
+a Notification (it stays on `Message.readAt`).
+
+- `userId` — required; the recipient, whose `role` is `buyer` or `seller` (never `staff`)
+- `type` — enum (`order_placed` | `order_confirmed` | `order_shipped` | `order_delivered` |
+  `cancellation_requested` | `cancellation_warning` | `cancellation_approved`)
+- `subjectType` — `order` | `cancellation_request`; `subjectId` — FK to that row
+- `createdAt`, `readAt` (nullable — set on opening the subject or clearing the feed)
+- Relationships: → 1 `User`
+
+Written by the DAL transition functions in the same transaction as the state change, and by
+the #10 §6.5 cron for `cancellation_warning`. Full event → audience matrix and the feed rules:
+[`docs/notifications.md`](./notifications.md) (resolves [#17](https://github.com/Lucy-yunn/test/issues/17)).
+
 ---
 
 ## Relationship diagram
@@ -383,6 +400,8 @@ erDiagram
     Order ||--o| CancellationRequest : "cancelled via"
 
     Thread ||--o{ Message : contains
+
+    User ||--o{ Notification : receives
 ```
 
 ---
@@ -425,3 +444,4 @@ ADR structure, both hard to reverse and the result of real trade-offs:
 | [In-app messaging model (#11)](https://github.com/Lucy-yunn/test/issues/11) | ✅ **Resolved** — Thread exists only when both parties have a login (no staff relay); `Message` = explicit `senderRole` + `senderUserId`, immutable, text-only; in-app unread via `readAt`; moderation = staff report queue / lock / block. Full spec in [`docs/messaging-model.md`](./messaging-model.md). Email/push notifications split out to a new cross-cutting ticket. |
 | [Auth, roles & permissions (#12)](https://github.com/Lucy-yunn/test/issues/12) | The full permission matrix, seller account provisioning, buyer self-registration flow, the one-role-per-person rule |
 | [Seller center (#13)](https://github.com/Lucy-yunn/test/issues/13) | Which screens and metrics the read-only seller center shows, how they are computed |
+| [Notifications (#17)](https://github.com/Lucy-yunn/test/issues/17) | ✅ **Resolved** — `Notification` above; in-app only (no email in v1), event → audience matrix, the per-user feed in [`docs/notifications.md`](./notifications.md) |
