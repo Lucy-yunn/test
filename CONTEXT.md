@@ -80,38 +80,42 @@ _Avoid_: specs, properties, metadata, fields
 A car manufacturer in the reference catalogue (Volkswagen, BMW).
 _Avoid_: brand, marque, manufacturer
 
-**VehicleModel**:
-A model line under a Make (Golf, 3 Series).
-_Avoid_: series, nameplate
+**Model Group**:
+A buyer-facing grouping of closely-related model designations that share a platform lineage
+(`A4, S4`; `A6, S6`; `80, 90`; `100`). The funnel's second step, labelled simply "Model" in
+the UI. Performance and badge variants (S4, RS4, GTI) are named within the group, never split
+into their own level.
+_Avoid_: model line, series, nameplate, submodel, trim
 
-**Modification**:
-A specific engine/body variant of a Model — engine and engine code, fuel, power, body style,
-production date range, and an optional generation label. The leaf of the vehicle catalogue and
-the funnel's third step. Hand-built in v1, covering only the pilot sellers' donor vehicles.
-_Avoid_: variant, trim, type, version, spec, generation, engine, KType
-
-**Fitment**:
-The set of Modifications a Part is verified compatible with. Lives on the Part. Manually
-entered and staff-verified only — never inferred from a donor vehicle.
-_Avoid_: compatibility, fits, applications, cross-reference, linkage
+**Generation**:
+A generation / platform of a Model Group, identified by its chassis codes and production-date
+range — `A4 S4 B5 8D (1994–1999)`. The leaf of the vehicle catalogue and the funnel's third
+step. Engine, engine code, fuel, gearbox, power and body style do **not** define it — one
+Generation spans all of them. Hand-built in v1, covering only the pilot sellers' donor
+vehicles.
+_Avoid_: modification, engine variant, trim, type, version, spec, KType
 
 **Funnel**:
-The buyer's only search path in v1: Make → Model → Modification → Category, resolving to the
-Listings of compatible Parts. Stopping partway shows a list to continue from.
+The buyer's only search path in v1: Make → Model → Generation → Category, resolving to the
+Listings whose donor vehicle matches the chosen Generation. Stopping partway shows a list to
+continue from.
 _Avoid_: search, filter, finder, wizard
 
 ### Selling and buying
 
 **DonorVehicle**:
 The physical car a Seller dismantled, from which one or more Listings' parts were removed.
-Entered once by staff and always identified down to a Modification; its parts are then added
-as Listings against it.
+Entered once by staff and always identified to a Generation; its parts are then added as
+Listings against it. Carries the structured engine, engine code, fuel, gearbox, body style
+and drivetrain of that specific car.
 _Avoid_: donor car (as the entity name), source vehicle, scrap car, parts car, vehicle
 
 **Provenance**:
-Which DonorVehicle a physical part came from — the Listing's link to its DonorVehicle. Kept
-strictly separate from Fitment.
-_Avoid_: source, origin, history, donor (on its own), pedigree
+Which DonorVehicle a physical part came from — the Listing's link to its DonorVehicle, and the
+sole basis of buyer discovery in v1. Provenance is discovery evidence, not a compatibility
+guarantee; platform-verified cross-vehicle compatibility is out of scope for v1. Buyers check
+part numbers and the donor vehicle's details before purchasing.
+_Avoid_: source, origin, history, donor (on its own), pedigree, fitment
 
 **Listing**:
 One physical used item a single Seller has for sale. Always tied to one Part and one

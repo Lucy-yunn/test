@@ -26,21 +26,24 @@ Why not embedded fields (as the map's Q6 and this ticket originally framed it): 
 is donor-first — enter the car once, then add its parts — and dismantlers list dozens of parts
 per car. Embedding would re-type VIN / mileage / engine code on every Listing.
 
-### 2. How do Part↔Vehicle (fitment) and Listing↔Vehicle (provenance) both relate to one Vehicle entity?
+### 2. How does the catalogue relate a Listing to a vehicle?
 
-Both resolve to **`Modification`**, the leaf of the `VehicleMake → VehicleModel →
-Modification` catalogue.
+**One path only: Provenance.** The vehicle catalogue is `VehicleMake → VehicleModelGroup →
+VehicleGeneration`, and a `Listing` reaches its vehicle through
+`Listing → DonorVehicle → VehicleGeneration` (`DonorVehicle.generationId` is **required** — see
+[Listing model (#8)](https://github.com/Lucy-yunn/test/issues/8); there is no unknown-donor
+case, staff always identify the donor to a Generation, extending the hand-built catalogue
+during intake when needed).
 
-- **Fitment** points at `Modification` **directly and per-Part**: a verified many-to-many join
-  `Part ↔ Modification`.
-- **Provenance** reaches `Modification` **indirectly and per-physical-car**:
-  `Listing → DonorVehicle → Modification` (`DonorVehicle.modificationId` is **required** — see
-  [Listing model (#8)](https://github.com/Lucy-yunn/test/issues/8); there is no unknown-donor
-  case, staff always identify the donor to a Modification, extending the hand-built catalogue
-  during intake when needed).
-
-One shared `Modification` entity, two independent paths to it. Fitment is never inferred from
-Provenance.
+There is **no `Fitment` entity in v1** — no platform-verified `Part ↔ vehicle` compatibility
+assertion. The two-person team does not research, assert, or maintain which other vehicles each
+part fits. Buyer discovery is **provenance-based**: a Listing surfaces for a buyer's chosen
+Generation when its donor vehicle is that Generation. This is discovery evidence, not a
+compatibility guarantee — same-generation provenance does **not** mean the part is
+interchangeable; buyers check the part number and the donor vehicle's structured details
+(engine, engine code, gearbox, drivetrain — all shown on the Listing) before purchasing.
+Cross-vehicle compatibility is deferred (see the map's *Out of scope*); amended by
+[#21](https://github.com/Lucy-yunn/test/issues/21).
 
 ### 3. Is User one entity with a role, or separate Buyer / Seller / Staff entities?
 
@@ -139,7 +142,7 @@ The platform's canonical technical identity of a component. One Part, many Listi
 - `partStatus` — `provisional` (created at intake) | `confirmed` (staff-verified)
 - `pnStatus` — `unknown` | `unverified` | `verified` (summary of its PartNumbers)
 - `notes`, `createdBy`
-- Relationships: → many `PartNumber`, → many `Fitment`, → many `Listing`
+- Relationships: → many `PartNumber`, → many `Listing`
 
 Merge semantics, de-dup workflow, supersession (deferred):
 [Part identity & OEM part-number model (#5)](https://github.com/Lucy-yunn/test/issues/5).
@@ -159,55 +162,45 @@ Cross-brand numbers join the same Part **only after staff verify interchangeabil
 
 ### Vehicles
 
-Hand-built catalogue; only Modifications matching pilot sellers' real donor vehicles. Stored
+Hand-built catalogue; only Generations matching pilot sellers' real donor vehicles. Stored
 as a repo seed fixture; admin CRUD deferred. Detail:
-[Vehicle reference data strategy (#4)](https://github.com/Lucy-yunn/test/issues/4).
+[Vehicle reference data strategy (#4)](https://github.com/Lucy-yunn/test/issues/4). Grain and
+the grouped `VehicleModelGroup` level: [#21](https://github.com/Lucy-yunn/test/issues/21).
 
 #### VehicleMake
 - `name`, `slug`, `country` (nullable, display), `displayOrder`, `isActive`
-- Relationships: → many `VehicleModel`
+- Relationships: → many `VehicleModelGroup`
 
-#### VehicleModel
+#### VehicleModelGroup
+A buyer-facing grouping of closely-related model designations that share a platform lineage —
+`A4, S4`; `A6, S6`; `80, 90`; `100`. The funnel's second step (UI label: "Model"). Performance
+and badge variants are named within the group, not split into their own entries.
+
 - `makeId` — required
-- `name`, `slug`, `displayOrder`, `isActive`
-- Relationships: → many `Modification`
+- `name` — e.g. "A4, S4"
+- `slug`, `displayOrder`, `isActive`
+- Relationships: → many `VehicleGeneration`
 
-#### Modification
-A specific engine/body variant — the vehicle-catalogue leaf and the funnel's third step.
+#### VehicleGeneration
+A generation / platform of a Model Group — the vehicle-catalogue leaf and the funnel's third
+step (UI label: "Generation"). Engine, engine code, fuel, gearbox, power and body style do
+**not** define it; one Generation spans all of them (a single row covers, e.g., a saloon +
+estate + long-wheelbase generation). Facelifts may be split into separate rows by
+production-date range.
 
-- `modelId` — required
-- `label` — e.g. "1.6 TDI (CLHA) 105hp estate"
-- `engine`, `engineCode`, `fuel`, `powerKw`, `powerHp`, `bodyStyle`
+- `modelGroupId` — required
+- `label` — the composed display value, e.g. "A4 S4 B5 8D (1994–1999)"
+- `chassisCodes[]` — the platform / chassis identifiers, e.g. `["B5", "8D"]`
 - `productionStart`, `productionEnd` (nullable = current)
-- `generationLabel` — nullable (folded in from the research doc's separate Generation level)
 - `displayOrder`, `isActive`
-- Relationships: → many `Fitment`, → many `DonorVehicle`
+- Relationships: → many `DonorVehicle`
 
-#### Fitment
-The verified compatibility link. Lives conceptually on the Part. A row **is** a verified
-staff assertion — there is **no status / confidence enum**; if staff aren't sure, no row is
-created.
-
-- `partId`, `modificationId` — unique together
-- `note` — nullable free text ("petrol only", "pre-facelift"); **buyer-visible** (it carries
-  a caveat the Modification grain can't encode)
-- `verifiedBy` (staff User), `verifiedAt` — the audit of the deliberate act, not a workflow
-  state
-- **Grain: Modification only.** A Part fitting a whole model = one Fitment row per
-  Modification. The "fits the whole model" shortcut is a staff-UI concern (pure fan-out to
-  the Model's active Modifications, no forward memory), not a model change.
-- **Never inferred from a `DonorVehicle`.** A part coming off a car of Modification M creates
-  a Fitment only when a staff member positively confirms it (an unchecked one-click prompt at
-  listing intake).
-- Staff may **add a `Modification` to the catalogue purely to hang a Fitment on it** — the
-  Modification catalogue grows from `DonorVehicle` intake **and** fitment entry (widens the
-  #4 framing).
-- Removing a wrong row is a **hard delete** — no tombstone/audit (unlike Part merges).
-
-Full staff entry workflow and the buyer search union (Fitment path ∪ Provenance path, with
-the Provenance-only match shown as a distinct lower-ranked result):
-[`docs/fitment-and-compatibility-search.md`](./fitment-and-compatibility-search.md)
-(resolves [#7](https://github.com/Lucy-yunn/test/issues/7)).
+There is **no `Fitment` entity in v1.** Platform-verified `Part ↔ vehicle` compatibility —
+staff asserting which other vehicles a part fits — is **out of scope** (map's *Out of scope*;
+[#21](https://github.com/Lucy-yunn/test/issues/21) removed it, reversing [#7](https://github.com/Lucy-yunn/test/issues/7)).
+Buyer discovery is provenance-only: see question 2 above, and buyer search in
+[`docs/buyer-funnel-search.md`](./buyer-funnel-search.md) §3 (resolves
+[#9](https://github.com/Lucy-yunn/test/issues/9), absorbs the former Fitment doc).
 
 ### Selling & buying
 
@@ -216,10 +209,15 @@ The physical car a Seller dismantled. Entered once by staff; parts added against
 model resolved by [Listing model (#8)](https://github.com/Lucy-yunn/test/issues/8).
 
 - `sellerId` — required
-- `modificationId` — **required** (no unknown-donor case; catalogue is extended during intake)
+- `generationId` — **required** (no unknown-donor case; catalogue is extended during intake)
 - `label` — required, staff reference ("Silver Golf VII, Plovdiv yard")
-- `donorYear`, `vin`, `vinDerivedNotes`, `mileageKm`, `engineCode`, `transmission`
-  (`manual`/`automatic`/`other`), `registrationCountry`, `notes` — all nullable
+- `donorYear`, `vin`, `vinDerivedNotes`, `mileageKm`, `registrationCountry`, `notes` — all
+  nullable
+- **structured vehicle detail** — `engine`, `engineCode`, `fuel`, `transmission`
+  (`manual`/`automatic`/`other`), `bodyStyle`, `drivetrain` — all nullable; these live per
+  physical car (not on the catalogue Generation) and are shown on the Listing so buyers can
+  compare against their own vehicle. An unknown (null) value is never treated as a match to a
+  buyer's selected Engine / Fuel / Gearbox filter.
 - `createdBy`
 - **No lifecycle status in v1** — it is a data record
 - `vin` is shown to buyers **masked**; `vinDerivedNotes` is staff-only
@@ -342,13 +340,11 @@ erDiagram
     Category ||--o{ Part : classifies
 
     Part ||--o{ PartNumber : "known by"
-    Part ||--o{ Fitment : "fits via"
     Part ||--o{ Listing : "realised as"
 
-    VehicleMake ||--o{ VehicleModel : has
-    VehicleModel ||--o{ Modification : has
-    Modification ||--o{ Fitment : "compatible in"
-    Modification ||--o{ DonorVehicle : "identified as"
+    VehicleMake ||--o{ VehicleModelGroup : has
+    VehicleModelGroup ||--o{ VehicleGeneration : has
+    VehicleGeneration ||--o{ DonorVehicle : "identified as"
 
     DonorVehicle ||--o{ Listing : "provenance of"
     DonorVehicle ||--o{ DonorVehiclePhoto : shows
@@ -379,17 +375,22 @@ erDiagram
 | **`User` + separate `Buyer` / `Seller` profile entities** | Buyer self-registers, Seller is staff-created with an optional login; each profile is a clean home for role-specific data | Single `User.role` with no profiles (no home for delivery address / Location / business identity); fully separate tables with no shared login (Better Auth wants one `User`) |
 | **Staff has no profile entity** | Only two people, no domain data beyond the role | A `Staff` table for symmetry (empty) |
 | **`Group` is a table, not a label on `Category`** | Funnel menu needs stable ordering + slugs; makes leaf-only structural | `group` enum/string on Category |
-| **Fitment grain = `Modification` only** | Trivial, unambiguous fitment resolution; matches the hand-built catalogue | Model-level or year-range Fitment rows (ambiguous unions) |
+| **No `Fitment` entity; vehicle catalogue is `VehicleGeneration`-grain; buyer discovery is provenance-only** ([#21](https://github.com/Lucy-yunn/test/issues/21), reverses [#7](https://github.com/Lucy-yunn/test/issues/7)) | A two-person team cannot research/assert/maintain a compatibility database; generation-grain keeps the hand-built catalogue to ~150 rows, not ~1000; the donor Generation + part number + shown donor details are enough for a provenance-first marketplace | Engine-grain `Modification` catalogue + staff-verified `Fitment` rows + a Fitment ∪ Provenance search union with confirmed-fit badges (the [#4](https://github.com/Lucy-yunn/test/issues/4)/[#7](https://github.com/Lucy-yunn/test/issues/7) design; too much ongoing curation for v1) |
+| **`VehicleModelGroup` groups model designations (`A4, S4`); no per-nameplate level** ([#21](https://github.com/Lucy-yunn/test/issues/21)) | Matches how RRR/Ovoko group these and the founder's mocks; keeps the catalogue at three levels | A distinct `VehicleModel` per nameplate under a family level (an extra buyer-facing click that teaches nothing) |
 | **No cart / `OrderItem` in v1** | Every part is a unique single unit; multi-seller carts split into N orders anyway; checkout is stubbed so one-payment-many-items has no value yet | Cart + `Order → OrderItem` split now |
 | **`Listing.sellerId` kept explicit** (redundant with `donorVehicle.sellerId`) | Nearly every query is "listings/orders by seller"; invariant enforced in the DAL | Derive seller through the DonorVehicle on every query |
-| **`DonorVehicle.modificationId` required** (reverses the "unknown donor allowed" note from #2) | Provenance stays meaningful; enables "parts from this exact car"; the hand-built catalogue already only holds real pilot-donor Modifications, so staff extend it during intake | Nullable modification — but a numberless *and* variant-less part is barely identifiable |
-| **A Part with no `PartNumber` can still be published** (checklist takes "no visible number" tick) | #5's researched position — used-yard parts routinely lack legible numbers; fit-confidence comes from `Fitment`, not the number; a *wrong* forced number generates disputes | Hard-require a number — blocks legitimate parts, slows intake, risks bad data |
+| **`DonorVehicle.generationId` required** (reverses the "unknown donor allowed" note from #2) | Provenance stays meaningful; it is the only buyer-discovery path; the hand-built catalogue already only holds real pilot-donor Generations, so staff extend it during intake | Nullable generation — but then a part is barely discoverable |
+| **A Part with no `PartNumber` can still be published** (checklist takes "no visible number" tick) | #5's researched position — used-yard parts routinely lack legible numbers; identification then rests on provenance + the shown donor-vehicle details; a *wrong* forced number generates disputes | Hard-require a number — blocks legitimate parts, slows intake, risks bad data |
 | **`Listing.status` merges pipeline + stock state; `sold` only at order `delivered`** | One enum, no ambiguity; `reserved` holds the item for the whole order, released on pre-`shipped` cancel | Separate `stockStatus` field; `sold` at `confirmed` |
 | **`sold`/`cancelled`/`archived` listings are fully hidden from buyers** | Keeps the marketplace showing only actionable stock; a completed sale is back-office data | Show sold listings greyed (clutters browse) |
 
-An ADR for the `DonorVehicle` / Provenance decision (hard to reverse, surprising against the
-map's Q6, a real trade-off) should be extracted when the "Final spec assembly" ticket decides
-the deliverable's ADR structure.
+Two ADRs should be extracted when the "Final spec assembly" ticket decides the deliverable's
+ADR structure, both hard to reverse and the result of real trade-offs:
+
+- the `DonorVehicle` / Provenance decision (surprising against the map's Q6);
+- **provenance-first, `VehicleGeneration`-grain, no `Fitment` in v1** ([#21](https://github.com/Lucy-yunn/test/issues/21)) —
+  surprising against Q6's separate Fitment concept and the earlier [#4](https://github.com/Lucy-yunn/test/issues/4)/[#7](https://github.com/Lucy-yunn/test/issues/7)
+  engine-grain + verified-fit design, traded away for a maintainable two-person catalogue.
 
 ---
 
@@ -397,9 +398,9 @@ the deliverable's ADR structure.
 
 | Ticket | Owns |
 |---|---|
-| [Fitment model & staff-entry workflow (#7)](https://github.com/Lucy-yunn/test/issues/7) | ✅ **Resolved** — no status enum (row ⇒ verified); staff workflow (Part page + unchecked intake prompt); search = Fitment ∪ Provenance union with a labelled lower-ranked Provenance-only match. Full spec in [`docs/fitment-and-compatibility-search.md`](./fitment-and-compatibility-search.md). |
-| [Listing model (#8)](https://github.com/Lucy-yunn/test/issues/8) | ✅ **Resolved** — `Listing` / `DonorVehicle` / `ListingPhoto` / `ListingDefect` above; lifecycle, publish checklist, buyer visibility. Seller-facing intake spun off to its own ticket. |
-| [Buyer funnel search UX (#9)](https://github.com/Lucy-yunn/test/issues/9) | How a non-expert buyer picks a `Modification` with no year step; the `Modification → Group → Category` tail |
+| [Fitment model & staff-entry workflow (#7)](https://github.com/Lucy-yunn/test/issues/7) | ⚠️ **Resolved, then amended by [#21](https://github.com/Lucy-yunn/test/issues/21)** — the `Fitment` entity, staff fitment workflow, confirmed-fit badges and the Fitment ∪ Provenance search union are **removed from v1**. `docs/fitment-and-compatibility-search.md` is deleted; its surviving content (the provenance match query, partial-funnel widening) moved into [`docs/buyer-funnel-search.md`](./buyer-funnel-search.md) §3. |
+| [Listing model (#8)](https://github.com/Lucy-yunn/test/issues/8) | ✅ **Resolved** — `Listing` / `DonorVehicle` / `ListingPhoto` / `ListingDefect` above; lifecycle, publish checklist, buyer visibility. Seller-facing intake spun off to its own ticket. `DonorVehicle` gained structured `engine`/`fuel`/`bodyStyle`/`drivetrain` and `generationId` replaced `modificationId` ([#21](https://github.com/Lucy-yunn/test/issues/21)). |
+| [Buyer funnel search UX (#9)](https://github.com/Lucy-yunn/test/issues/9) | ✅ **Resolved** ([`docs/buyer-funnel-search.md`](./buyer-funnel-search.md)) — funnel `Make → Model → Generation → Category`; provenance-only results, no fit badges ([#21](https://github.com/Lucy-yunn/test/issues/21)); Engine/Fuel/Gearbox as provenance-narrowing facets. |
 | [Order model & stubbed checkout (#10)](https://github.com/Lucy-yunn/test/issues/10) | ✅ **Resolved** — `Order` + `CancellationRequest` above; full lifecycle, checkout flow, cancellation flow, shipping, visibility in [`docs/order-model.md`](./order-model.md) |
 | [In-app messaging model (#11)](https://github.com/Lucy-yunn/test/issues/11) | `Message.sender` representation, notifications, moderation |
 | [Auth, roles & permissions (#12)](https://github.com/Lucy-yunn/test/issues/12) | The full permission matrix, seller account provisioning, buyer self-registration flow, the one-role-per-person rule |
