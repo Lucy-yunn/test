@@ -90,7 +90,9 @@ Permission matrix and session detail: [Auth, roles & permissions (#12)](https://
 A party who browses and purchases. Created automatically when a person self-registers.
 
 - `userId` — 1:1, required
-- delivery address fields, contact phone (final list: [Order model (#10)](https://github.com/Lucy-yunn/test/issues/10))
+- **saved delivery address** — `recipientName`, `phone`, `addressLine1`, `addressLine2?`,
+  `city`, `postcode`, `country`; editable in buyer settings, snapshotted onto each `Order` at
+  checkout (see [`docs/order-model.md`](./order-model.md))
 - Relationships: → many `Order`, → many `Favorite`, → many `Thread`
 
 #### Seller
@@ -251,16 +253,46 @@ A single known defect, entered separately (transparency — buyer sees a bullete
 
 #### Order
 A Buyer's purchase of exactly one Listing. **No cart, no line items, no `OrderItem`** in v1.
+Full model, lifecycle, checkout + cancellation flows: [`docs/order-model.md`](./order-model.md)
+(resolves [#10](https://github.com/Lucy-yunn/test/issues/10)).
 
-- `buyerId`, `sellerId`, `listingId` — required
+- `internalCode` — readable, e.g. `ORD-000123`, unique
+- `buyerId`, `sellerId` (denormalised from the Listing), `listingId` — required
+- `itemPriceEur` — snapshot of `Listing.priceEur` at placement
+- `shippingCostEur`, `shippingNotes` — nullable; staff-entered in the admin tool, display-only
+  (checkout is stubbed, nothing is charged)
 - `status` — `placed` | `confirmed` | `shipped` | `delivered` | `cancelled`
-- `lastReachedStatus` — preserved above `cancelled` in the UI (Q17)
-- `expectedTimeRange` (free text, nullable), `trackingNumber` (free text, nullable)
-- delivery address snapshot, `placedAt`
-- Stubbed checkout — "Buy" creates the Order in `placed`, no payment
+- `lastReachedStatus` — set only on cancellation; preserved above `cancelled` in the UI (Q17)
+- `expectedTimeRange` (free text, nullable — set at `shipped`), `trackingNumber` (free text,
+  nullable — set at `shipped`)
+- delivery-address snapshot — `recipientName`, `phone`, `addressLine1`, `addressLine2?`,
+  `city`, `postcode`, `country` (a flat group / embedded value, never an FK to a mutable row)
+- `placedAt`, and per-transition timestamps (`confirmedAt` / `shippedAt` / `deliveredAt` /
+  `cancelledAt`)
+- Stubbed checkout — "Buy" creates the Order in `placed`, no payment, no staff approval gate;
+  the Listing transitions `published → reserved`
+- Relationships: → 1 `Buyer`, → 1 `Seller`, → 1 `Listing`, → 0..1 `CancellationRequest`
 
-Full lifecycle, expected-time-range display, cancel rules, what "Buy" does:
-[Order model & stubbed checkout (#10)](https://github.com/Lucy-yunn/test/issues/10).
+**Lifecycle:** `placed → confirmed → shipped → delivered`, plus `cancelled` from `placed` or
+`confirmed` only (pre-ship). All transitions manual (no carrier integration). `delivered` and
+`cancelled` are terminal. Listing coupling (locked in #8): `placed` → Listing `reserved`;
+`delivered` → Listing `sold`; cancellation approved → Listing back to `published`.
+
+#### CancellationRequest
+A Buyer's request to cancel an Order before it ships. One-way: it always ends in `approved` —
+the only variable is when (seller approves, staff approve, or auto-approve **7 days** after
+`createdAt`). No reject; the buyer cannot withdraw. Full rules: [`docs/order-model.md`](./order-model.md).
+
+- `orderId` — required; **0..1 per Order**
+- `requestedBy` — `buyer` | `staff`
+- `reason` — enum (`found_elsewhere` | `no_longer_needed` | `seller_too_slow` |
+  `condition_or_fitment_concern` | `ordered_by_mistake` | `other`)
+- `reasonDetail` — nullable free text; required when `reason = other`
+- `state` — `pending` | `approved`
+- `createdAt`, `autoApproveAt` (`createdAt + 7 days`), `resolvedAt` (nullable),
+  `resolvedBy` (nullable — `seller` | `staff` | `auto`)
+- While a request is `pending` the Order may still go `placed → confirmed` but **cannot** go
+  to `shipped`.
 
 #### Favorite
 - `buyerId`, `listingId` — unique together
@@ -318,6 +350,8 @@ erDiagram
     Seller ||--o{ Order : fulfils
     Seller ||--o{ Thread : answers
 
+    Order ||--o| CancellationRequest : "cancelled via"
+
     Thread ||--o{ Message : contains
 ```
 
@@ -352,7 +386,7 @@ the deliverable's ADR structure.
 | [Fitment model & staff-entry workflow (#7)](https://github.com/Lucy-yunn/test/issues/7) | `Fitment` verification status, the staff entry workflow, how buyer search unions Fitment + Provenance |
 | [Listing model (#8)](https://github.com/Lucy-yunn/test/issues/8) | ✅ **Resolved** — `Listing` / `DonorVehicle` / `ListingPhoto` / `ListingDefect` above; lifecycle, publish checklist, buyer visibility. Seller-facing intake spun off to its own ticket. |
 | [Buyer funnel search UX (#9)](https://github.com/Lucy-yunn/test/issues/9) | How a non-expert buyer picks a `Modification` with no year step; the `Modification → Group → Category` tail |
-| [Order model & stubbed checkout (#10)](https://github.com/Lucy-yunn/test/issues/10) | `Order` lifecycle, delivery-address capture, shipping cost, expected-time-range display, cancel behaviour, what "Buy" does |
+| [Order model & stubbed checkout (#10)](https://github.com/Lucy-yunn/test/issues/10) | ✅ **Resolved** (pending Q16–Q18) — `Order` + `CancellationRequest` above; full lifecycle, checkout flow, cancellation flow, shipping, visibility in [`docs/order-model.md`](./order-model.md) |
 | [In-app messaging model (#11)](https://github.com/Lucy-yunn/test/issues/11) | `Message.sender` representation, notifications, moderation |
 | [Auth, roles & permissions (#12)](https://github.com/Lucy-yunn/test/issues/12) | The full permission matrix, seller account provisioning, buyer self-registration flow, the one-role-per-person rule |
 | [Seller center (#13)](https://github.com/Lucy-yunn/test/issues/13) | Which screens and metrics the read-only seller center shows, how they are computed |

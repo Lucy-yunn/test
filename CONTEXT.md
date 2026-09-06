@@ -129,9 +129,15 @@ buyer sees a bulleted list. Distinct from the free-text condition notes.
 _Avoid_: fault, issue, flaw, damage note
 
 **Order**:
-A buyer's purchase of exactly one Listing, moving through a fixed lifecycle
+A Buyer's purchase of exactly one Listing, moving through a fixed lifecycle
 (placed → confirmed → shipped → delivered, or cancelled). No payment in v1.
 _Avoid_: transaction, purchase, sale, checkout, cart
+
+**Cancellation request**:
+A Buyer's request to cancel an Order before it ships. Carries a reason. Always ends in
+approval — by the Seller, by Staff, or automatically after seven days; it is never rejected
+and the Buyer cannot withdraw it.
+_Avoid_: cancellation (as the action), refund request, return, dispute
 
 **Favorite**:
 A Buyer's saved reference to a Listing. Feeds the seller-center favourites count.
