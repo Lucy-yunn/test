@@ -38,8 +38,9 @@ A Seller's single physical place of business. One Seller has one Location in v1.
 _Avoid_: address, branch, warehouse, site
 
 **Seller center**:
-The read-only area where a Seller with a login views their own Orders and product
-performance. Listing is never done here.
+The area where a Seller with a login views their own Orders and product performance.
+Read-only except for two actions: replying to a buyer's Messages, and approving a
+Cancellation request on one of their Orders. Listing is never done here.
 _Avoid_: seller dashboard, seller portal, vendor console
 
 **Admin tool**:
