@@ -184,16 +184,30 @@ A specific engine/body variant — the vehicle-catalogue leaf and the funnel's t
 - Relationships: → many `Fitment`, → many `DonorVehicle`
 
 #### Fitment
-The verified compatibility link. Lives conceptually on the Part.
+The verified compatibility link. Lives conceptually on the Part. A row **is** a verified
+staff assertion — there is **no status / confidence enum**; if staff aren't sure, no row is
+created.
 
 - `partId`, `modificationId` — unique together
-- `note` — nullable free text ("petrol only", "pre-facelift")
-- `verifiedBy` (staff User), `verifiedAt`
+- `note` — nullable free text ("petrol only", "pre-facelift"); **buyer-visible** (it carries
+  a caveat the Modification grain can't encode)
+- `verifiedBy` (staff User), `verifiedAt` — the audit of the deliberate act, not a workflow
+  state
 - **Grain: Modification only.** A Part fitting a whole model = one Fitment row per
-  Modification. The "fits the whole model" shortcut is a staff-UI concern, not a model change.
+  Modification. The "fits the whole model" shortcut is a staff-UI concern (pure fan-out to
+  the Model's active Modifications, no forward memory), not a model change.
+- **Never inferred from a `DonorVehicle`.** A part coming off a car of Modification M creates
+  a Fitment only when a staff member positively confirms it (an unchecked one-click prompt at
+  listing intake).
+- Staff may **add a `Modification` to the catalogue purely to hang a Fitment on it** — the
+  Modification catalogue grows from `DonorVehicle` intake **and** fitment entry (widens the
+  #4 framing).
+- Removing a wrong row is a **hard delete** — no tombstone/audit (unlike Part merges).
 
-Staff entry workflow and how buyer search combines Fitment + Provenance:
-[Fitment model & staff-entry workflow (#7)](https://github.com/Lucy-yunn/test/issues/7).
+Full staff entry workflow and the buyer search union (Fitment path ∪ Provenance path, with
+the Provenance-only match shown as a distinct lower-ranked result):
+[`docs/fitment-and-compatibility-search.md`](./fitment-and-compatibility-search.md)
+(resolves [#7](https://github.com/Lucy-yunn/test/issues/7)).
 
 ### Selling & buying
 
@@ -383,7 +397,7 @@ the deliverable's ADR structure.
 
 | Ticket | Owns |
 |---|---|
-| [Fitment model & staff-entry workflow (#7)](https://github.com/Lucy-yunn/test/issues/7) | `Fitment` verification status, the staff entry workflow, how buyer search unions Fitment + Provenance |
+| [Fitment model & staff-entry workflow (#7)](https://github.com/Lucy-yunn/test/issues/7) | ✅ **Resolved** — no status enum (row ⇒ verified); staff workflow (Part page + unchecked intake prompt); search = Fitment ∪ Provenance union with a labelled lower-ranked Provenance-only match. Full spec in [`docs/fitment-and-compatibility-search.md`](./fitment-and-compatibility-search.md). |
 | [Listing model (#8)](https://github.com/Lucy-yunn/test/issues/8) | ✅ **Resolved** — `Listing` / `DonorVehicle` / `ListingPhoto` / `ListingDefect` above; lifecycle, publish checklist, buyer visibility. Seller-facing intake spun off to its own ticket. |
 | [Buyer funnel search UX (#9)](https://github.com/Lucy-yunn/test/issues/9) | How a non-expert buyer picks a `Modification` with no year step; the `Modification → Group → Category` tail |
 | [Order model & stubbed checkout (#10)](https://github.com/Lucy-yunn/test/issues/10) | ✅ **Resolved** — `Order` + `CancellationRequest` above; full lifecycle, checkout flow, cancellation flow, shipping, visibility in [`docs/order-model.md`](./order-model.md) |
