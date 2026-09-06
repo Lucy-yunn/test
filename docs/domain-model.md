@@ -222,6 +222,10 @@ model resolved by [Listing model (#8)](https://github.com/Lucy-yunn/test/issues/
 - **No lifecycle status in v1** — it is a data record
 - `vin` is shown to buyers **masked**; `vinDerivedNotes` is staff-only
 - Relationships: → many `Listing`, → many `DonorVehiclePhoto` (0..n, optional)
+- Buyer surface: the listing detail page carries a **"More parts from the same car"** section
+  listing the other `published` / `reserved` `Listing`s that share a `donorVehicleId`. Spec:
+  [`docs/donor-vehicle-parts.md`](./donor-vehicle-parts.md) (resolves
+  [#23](https://github.com/Lucy-yunn/test/issues/23)). No new model element.
 
 #### Listing
 One physical used item one Seller has for sale. A single unique unit. Full model resolved by
