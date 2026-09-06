@@ -36,9 +36,9 @@ founder's original `UI/` mock).
   cards (§1.2); the Part panel is the grouped category list.
 - Search is **never a dead control**: until Make + Model are set it opens the next empty
   step; once they are set it navigates to **Browse** (`/browse?...`).
-- Below the hero, in order: **"What's in stock right now"** — category tiles with live
-  in-stock counts (the v1 discovery surface) — then the **Most Viewed** carousel, which is
-  **v2**, not first release.
+- Below the hero, in order: the **Most Viewed** carousel (**v2**, not first release), then
+  **"What's in stock right now"** — category tiles with live in-stock counts (the v1
+  discovery surface).
 - **No "How IVO works" explainer block.**
 
 ### 1.1 The four steps

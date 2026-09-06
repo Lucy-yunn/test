@@ -777,7 +777,7 @@ function VariantA(root){
     root.innerHTML = `
       <div class="vcap"><div class="shell">
         <div class="row"><h2>Their mock, realized</h2><span class="k">variant A</span><span class="k" style="background:var(--gold);color:var(--gold-ink)">chosen homepage</span></div>
-        <p>Faithful to <span class="mono">UI/Homepage</span>: purple chrome, the headline, a horizontal 4-slot bar. Tapping a slot drops a panel below it. Engine variant is spec cards. Below: <b>What&rsquo;s in stock right now</b> (category tiles with live counts), then the Most&nbsp;Viewed carousel (v2). No &ldquo;How IVO works&rdquo; block.</p>
+        <p>Faithful to <span class="mono">UI/Homepage</span>: purple chrome, the headline, a horizontal 4-slot bar. Tapping a slot drops a panel below it. Engine variant is spec cards. Below: the Most&nbsp;Viewed carousel (v2), then <b>What&rsquo;s in stock right now</b> (category tiles with live counts). No &ldquo;How IVO works&rdquo; block.</p>
       </div></div>
       <section class="hero"><div class="shell">
         <div class="a-hero-grid">
@@ -800,8 +800,8 @@ function VariantA(root){
           </div>
         </div>
       </div></section>
-      ${categoryTilesHTML()}
-      ${mostViewed(true)}`;
+      ${mostViewed(true)}
+      ${categoryTilesHTML()}`;
     wireFunnel(root, s, render);
     wireTiles(root, s, render);
     wireCarousel(root);
@@ -932,8 +932,8 @@ function VariantC(root){
           </aside>
         </div>
       </div></section>
-      ${categoryTilesHTML()}
-      ${mostViewed(true)}`;
+      ${mostViewed(true)}
+      ${categoryTilesHTML()}`;
     wireFunnel(root, s, render);
     wireTiles(root, s, render);
     wireCarousel(root);
