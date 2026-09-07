@@ -435,6 +435,9 @@ model Listing {
   removalNotes   String?
   sellerSku      String?
   warehouseLocation String?
+  // Publish-checklist acknowledgement: the part legitimately has no visible
+  // number (#8). Satisfies the checklist in place of a PartNumber.
+  noVisiblePartNumber Boolean @default(false)
 
   lengthCm        Decimal? @db.Decimal(8, 2)
   widthCm         Decimal? @db.Decimal(8, 2)
