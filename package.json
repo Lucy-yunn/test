@@ -19,7 +19,8 @@
     "db:migrate:test": "tsx scripts/with-test-db.ts prisma migrate deploy",
     "db:seed:test": "tsx scripts/with-test-db.ts prisma db seed",
     "postinstall": "prisma generate",
-    "db:seed:staff": "dotenv -e .env.local -- tsx prisma/seed-staff.ts"
+    "db:seed:staff": "dotenv -e .env.local -- tsx prisma/seed-staff.ts",
+    "build:vehicle-fixture": "tsx scripts/build-vehicle-fixture.ts"
   },
   "prisma": {
     "seed": "node --import tsx prisma/seed.ts"

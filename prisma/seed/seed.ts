@@ -202,14 +202,14 @@ export async function seedDatabase(db: PrismaClient): Promise<SeedCounts> {
   // --- Donor vehicles ----------------------------------------------------
   const genSlugs = [...generationBySlug.keys()];
   const donorSpecs = [
-    { seller: 0, gen: "vw-golf-mk6-5k", label: "Silver Golf Mk6 1.6 TDI, Sofia yard", engine: "1.6 TDI", engineCode: "CAYC", fuel: "Diesel", transmission: "manual" as const, bodyStyle: "Hatchback", drivetrain: "FWD", year: 2011, km: 214000 },
+    { seller: 0, gen: "volkswagen-golf-golf-vi-5k-aj-5k1-aj5", label: "Silver Golf Mk6 1.6 TDI, Sofia yard", engine: "1.6 TDI", engineCode: "CAYC", fuel: "Diesel", transmission: "manual" as const, bodyStyle: "Hatchback", drivetrain: "FWD", year: 2011, km: 214000 },
     { seller: 0, gen: "audi-a4-b8-8k", label: "Black A4 B8 2.0 TDI Avant", engine: "2.0 TDI", engineCode: "CAGA", fuel: "Diesel", transmission: "automatic" as const, bodyStyle: "Estate", drivetrain: "FWD", year: 2012, km: 268000 },
-    { seller: 0, gen: "bmw-3-e90", label: "Blue 320d E91 Touring", engine: "2.0d", engineCode: "N47D20", fuel: "Diesel", transmission: "automatic" as const, bodyStyle: "Estate", drivetrain: "RWD", year: 2010, km: 240000 },
-    { seller: 0, gen: "vw-passat-b7-36", label: "Grey Passat B7 2.0 TDI saloon", engine: "2.0 TDI", engineCode: "CFFB", fuel: "Diesel", transmission: "manual" as const, bodyStyle: "Saloon", drivetrain: "FWD", year: 2013, km: 190000 },
-    { seller: 0, gen: "opel-astra-j", label: "White Astra J 1.7 CDTI", engine: "1.7 CDTI", engineCode: "A17DTR", fuel: "Diesel", transmission: "manual" as const, bodyStyle: "Hatchback", drivetrain: "FWD", year: 2012, km: 205000 },
-    { seller: 1, gen: "mb-c-w204", label: "C220 CDI W204", engine: "2.2 CDI", engineCode: "OM651", fuel: "Diesel", transmission: "automatic" as const, bodyStyle: "Saloon", drivetrain: "RWD", year: 2011, km: 230000 },
-    { seller: 2, gen: "ford-focus-mk3", label: "Red Focus Mk3 1.6 TDCi", engine: "1.6 TDCi", engineCode: "T1DB", fuel: "Diesel", transmission: "manual" as const, bodyStyle: "Hatchback", drivetrain: "FWD", year: 2013, km: 176000 },
-    { seller: 3, gen: "toyota-corolla-e15", label: "Corolla E150 1.4 D-4D", engine: "1.4 D-4D", engineCode: "1ND-TV", fuel: "Diesel", transmission: "manual" as const, bodyStyle: "Saloon", drivetrain: "FWD", year: 2009, km: 260000 },
+    { seller: 0, gen: "bmw-3-series-e9x-e90-e91-e92-e93", label: "Blue 320d E91 Touring", engine: "2.0d", engineCode: "N47D20", fuel: "Diesel", transmission: "automatic" as const, bodyStyle: "Estate", drivetrain: "RWD", year: 2010, km: 240000 },
+    { seller: 0, gen: "volkswagen-passat-b7-3c-362-365", label: "Grey Passat B7 2.0 TDI saloon", engine: "2.0 TDI", engineCode: "CFFB", fuel: "Diesel", transmission: "manual" as const, bodyStyle: "Saloon", drivetrain: "FWD", year: 2013, km: 190000 },
+    { seller: 0, gen: "opel-astra-astra-j-p10", label: "White Astra J 1.7 CDTI", engine: "1.7 CDTI", engineCode: "A17DTR", fuel: "Diesel", transmission: "manual" as const, bodyStyle: "Hatchback", drivetrain: "FWD", year: 2012, km: 205000 },
+    { seller: 1, gen: "mercedes-benz-c-class-w204-s204-w204-s204", label: "C220 CDI W204", engine: "2.2 CDI", engineCode: "OM651", fuel: "Diesel", transmission: "automatic" as const, bodyStyle: "Saloon", drivetrain: "RWD", year: 2011, km: 230000 },
+    { seller: 2, gen: "ford-focus-mk3-europe-c346", label: "Red Focus Mk3 1.6 TDCi", engine: "1.6 TDCi", engineCode: "T1DB", fuel: "Diesel", transmission: "manual" as const, bodyStyle: "Hatchback", drivetrain: "FWD", year: 2013, km: 176000 },
+    { seller: 3, gen: "toyota-corolla-corolla-x-european-sedan-scope-e140-e150", label: "Corolla E150 1.4 D-4D", engine: "1.4 D-4D", engineCode: "1ND-TV", fuel: "Diesel", transmission: "manual" as const, bodyStyle: "Saloon", drivetrain: "FWD", year: 2009, km: 260000 },
   ];
   const donors = await Promise.all(
     donorSpecs.map((d) =>
