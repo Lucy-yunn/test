@@ -97,6 +97,10 @@ Wayfinding is complete; the build has started. Progress against
   photo upload — `sharp` downscale on ingest, Vercel Blob behind an injected
   store, soft cap 15, reorder/primary (4d). Follow-up: Part hard-merge (needs an
   `AuditLog` table).
-- [ ] 5. Buyer funnel & Browse · 6. Favourites · 7. Checkout & orders ·
-  8. Cancellation · 9. Messaging · 10. Seller center · 11. Notifications ·
-  12. Shell & polish
+- [~] **5. Buyer funnel & Browse** — data layer done (5a): `lib/services/catalogue.ts`
+  (funnel reads, `resolveBrowseContext`, "what's in stock"), `lib/services/browse.ts`
+  (the provenance match — status ∈ {published,reserved} ∧ category ∧ donor
+  generation; faceted counts, sort, pagination; **no Fitment, no union**). Next:
+  homepage funnel bar + `/browse` (5b), `/listing/[id]` + shell/footer (5c).
+- [ ] 6. Favourites · 7. Checkout & orders · 8. Cancellation · 9. Messaging ·
+  10. Seller center · 11. Notifications · 12. Shell & polish
