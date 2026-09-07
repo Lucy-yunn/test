@@ -1,9 +1,10 @@
 # Seed catalogue & fixtures — build step 1
 
-> Status: **done, on placeholder vehicle data.** The frozen taxonomy is final.
-> The vehicle catalogue is a **placeholder** pending the founder's real
-> pilot-donor list. The demo dataset has been run against the Neon `development`
-> branch (idempotent — re-running produces identical counts).
+> Status: **done.** Frozen taxonomy is final. The vehicle catalogue is the
+> founder's real Bulgarian used-parts catalogue v1 (14 makes / 50 model groups /
+> 138 generations) — 12 open questions in the confirmation queue, imported as-is
+> for v1. The demo dataset has been run against the Neon `development` branch
+> (idempotent).
 
 Build step 1 in [`README.md`](./README.md) §6 must be complete before any funnel /
 Browse / search work — the funnel steps, facets and "what's in stock" all read
@@ -14,7 +15,9 @@ from this data.
 | File | Contents | State |
 |---|---|---|
 | `prisma/seed/taxonomy.ts` | 13 display Groups + "Other", and every selectable leaf `Category` (73 leaves + 1 catch-all), en-GB, immutable kebab-case slugs, synonyms | **Final** — from research [#3](https://github.com/Lucy-yunn/test/issues/3). Only staff add categories later. |
-| `prisma/seed/vehicles.ts` | 9 makes → 13 model groups → 29 generations (VW, Audi, BMW, Mercedes, Opel, Renault, Peugeot, Ford, Toyota) | **Placeholder.** Plausible common Bulgarian-dismantler stock; chassis codes / date ranges are best-effort, not verified. |
+| `prisma/seed/data/vehicle-catalogue.csv` | Founder's Bulgarian used-parts vehicle catalogue v1 — 138 generation rows with market evidence + sources + priority. **The source of truth.** | Supplied 2026-09-07. |
+| `prisma/seed/data/vehicle-catalogue-confirmation-queue.csv` | 12 open questions for the Bulgarian dismantlers (facelift-as-generation, year basis, make coverage, LHD/RHD, …). 15/138 rows flagged `local_confirmation_required`. | Not blocking — imported as-is for v1. |
+| `prisma/seed/vehicles.ts` | **GENERATED** from the CSV by `npm run build:vehicle-fixture` — 14 makes / 50 model groups / 138 generations. Do not hand-edit. | Final for v1. |
 | `prisma/seed.ts` + `prisma/seed/seed.ts` | Thin `prisma db seed` entrypoint + the node-safe seed logic (`seedDatabase(db)`). Full demo dataset: 2 staff, 3 buyers, 4 sellers (1 with a login), 8 donor vehicles, 19 listings across all 6 statuses, 5 favourites, 5 orders across the lifecycle, 1 pending `CancellationRequest`, 3 threads (2 with unread messages), 15 notifications | **Run — idempotent.** Seed logic is decoupled from `lib/auth.ts` (password hashing via `better-auth/crypto`) so it runs under plain Node. |
 | `prisma/seed/fixtures.test.ts` | Vitest checks on the static fixtures (unique slugs, valid references, slug format) | Passing. |
 | `prisma/seed/seed.node-safety.test.ts` | Regression: the seed's import graph never reaches `server-only` / a Next-only module | Passing. |
@@ -24,13 +27,12 @@ Every demo account's password is `demo-password-123` (printed by the seed run).
 
 ## What still needs the founder
 
-1. **The real vehicle catalogue.** Ask the Bulgarian contacts for the actual
-   cars their yards are cutting. For each: make, the model designation(s) that
-   share a generation (e.g. `A4, S4`), the generation/platform with its chassis
-   codes and production years. Replace `GENERATIONS` in `prisma/seed/vehicles.ts`.
-   Target ~10–20 makes / ~40–70 model groups / ~80–140 generations
-   ([#4](https://github.com/Lucy-yunn/test/issues/4)). No open-dataset import —
-   hand-built only.
+1. ~~The real vehicle catalogue~~ — **done** (`vehicle-catalogue.csv`, 2026-09-07).
+   Still to resolve with the dismantlers: the 12 items in
+   `vehicle-catalogue-confirmation-queue.csv` (mostly facelift boundaries, year
+   basis, and which additional makes — Dacia, SEAT, Hyundai, Kia, Volvo, Mazda —
+   have enough partner inventory to add). Update the CSV, re-run
+   `npm run build:vehicle-fixture`, re-run `db:seed`.
 2. **Neon branches wired in.** Create the project (EU region) with `development`,
    `test` and `production` branches, then run `bash scripts/setup-neon.sh` — it
    pastes the development branch into `.env.local`, the test branch into
