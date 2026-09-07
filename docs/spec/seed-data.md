@@ -1,9 +1,9 @@
 # Seed catalogue & fixtures — build step 1
 
-> Status: **partially done.** The frozen taxonomy is final. The vehicle catalogue
-> is a **placeholder** pending the founder's real pilot-donor list. Demo fixtures
-> are written and cover every seller-center surface, but have **not been run
-> against a database** (no Neon instance yet).
+> Status: **done, on placeholder vehicle data.** The frozen taxonomy is final.
+> The vehicle catalogue is a **placeholder** pending the founder's real
+> pilot-donor list. The demo dataset has been run against the Neon `development`
+> branch (idempotent — re-running produces identical counts).
 
 Build step 1 in [`README.md`](./README.md) §6 must be complete before any funnel /
 Browse / search work — the funnel steps, facets and "what's in stock" all read
@@ -15,8 +15,10 @@ from this data.
 |---|---|---|
 | `prisma/seed/taxonomy.ts` | 13 display Groups + "Other", and every selectable leaf `Category` (73 leaves + 1 catch-all), en-GB, immutable kebab-case slugs, synonyms | **Final** — from research [#3](https://github.com/Lucy-yunn/test/issues/3). Only staff add categories later. |
 | `prisma/seed/vehicles.ts` | 9 makes → 13 model groups → 29 generations (VW, Audi, BMW, Mercedes, Opel, Renault, Peugeot, Ford, Toyota) | **Placeholder.** Plausible common Bulgarian-dismantler stock; chassis codes / date ranges are best-effort, not verified. |
-| `prisma/seed.ts` | Full demo dataset: 2 staff, 3 buyers, 4 sellers (1 with a login), 8 donor vehicles, 19 listings across all 6 statuses, favourites, 5 orders across the lifecycle, 1 pending `CancellationRequest`, 3 threads (2 with unread messages), notification rows | **Written, not executed.** |
+| `prisma/seed.ts` + `prisma/seed/seed.ts` | Thin `prisma db seed` entrypoint + the node-safe seed logic (`seedDatabase(db)`). Full demo dataset: 2 staff, 3 buyers, 4 sellers (1 with a login), 8 donor vehicles, 19 listings across all 6 statuses, 5 favourites, 5 orders across the lifecycle, 1 pending `CancellationRequest`, 3 threads (2 with unread messages), 15 notifications | **Run — idempotent.** Seed logic is decoupled from `lib/auth.ts` (password hashing via `better-auth/crypto`) so it runs under plain Node. |
 | `prisma/seed/fixtures.test.ts` | Vitest checks on the static fixtures (unique slugs, valid references, slug format) | Passing. |
+| `prisma/seed/seed.node-safety.test.ts` | Regression: the seed's import graph never reaches `server-only` / a Next-only module | Passing. |
+| `prisma/migrations/` | Initial migration from `schema.prisma`, applied to the `development` and `test` branches | Committed. |
 
 Every demo account's password is `demo-password-123` (printed by the seed run).
 

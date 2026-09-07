@@ -73,9 +73,10 @@ Wayfinding is complete; the build has started. Progress against
 [`docs/spec/README.md`](docs/spec/README.md) §6:
 
 - [x] **0. Project setup** — stack wired, schema, DAL skeleton, i18n, health check
-- [~] **1. Seed catalogue & fixtures** — taxonomy final; vehicle catalogue is a
-  placeholder pending the founder's real pilot-donor list; fixtures written, not
-  yet run against a DB. See [`docs/spec/seed-data.md`](docs/spec/seed-data.md).
+- [~] **1. Seed catalogue & fixtures** — taxonomy final; demo dataset run against
+  the Neon dev branch (idempotent); vehicle catalogue is still a placeholder
+  pending the founder's real pilot-donor list. See
+  [`docs/spec/seed-data.md`](docs/spec/seed-data.md).
 - [ ] 2. Schema & DAL · 3. Auth & accounts · 4. Admin intake · 5. Buyer funnel &
   Browse · 6. Favourites · 7. Checkout & orders · 8. Cancellation · 9. Messaging ·
   10. Seller center · 11. Notifications · 12. Shell & polish
