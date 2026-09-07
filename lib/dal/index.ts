@@ -19,6 +19,7 @@
 export * from "./actor";
 export * from "./guards";
 export * from "./ownership";
+export * from "./role-home";
 export * from "./errors";
 export * from "./transitions";
 export * from "./part-number";

@@ -10,22 +10,28 @@ import { dirname, resolve } from "node:path";
  * module, no `better-auth/next-js`. Those resolve only inside Next's bundler.
  */
 
-const SEED_ENTRY = resolve(import.meta.dirname, "../seed.ts");
+const ENTRYPOINTS = [
+  resolve(import.meta.dirname, "../seed.ts"),
+  resolve(import.meta.dirname, "../seed-staff.ts"),
+];
 
-describe("prisma seed is node-safe", () => {
-  it("imports without reaching server-only / a Next-only module", async () => {
+describe("prisma seed scripts are node-safe", () => {
+  it("the seed module imports without reaching server-only / a Next-only module", async () => {
     // Before the fix this threw at import: Cannot find module 'server-only'.
     const mod = await import("./seed");
     expect(typeof mod.seedDatabase).toBe("function");
     expect(typeof mod.DEMO_PASSWORD).toBe("string");
   });
 
-  it("no file in the seed's local import graph touches server-only / next", () => {
-    const graph = collectLocalGraph(SEED_ENTRY);
-    // Sanity: the collector actually walked the graph (guards a false pass).
-    expect(graph.size).toBeGreaterThanOrEqual(4); // seed.ts + seed/seed.ts + taxonomy + vehicles
-    expect([...graph].some((f) => f.endsWith("seed.ts"))).toBe(true);
-    expect([...graph].some((f) => f.endsWith("vehicles.ts"))).toBe(true);
+  it("the staff seed module imports cleanly", async () => {
+    const mod = await import("./staff");
+    expect(typeof mod.seedStaff).toBe("function");
+    expect(typeof mod.parseStaffFromEnv).toBe("function");
+  });
+
+  it.each(ENTRYPOINTS)("no file in %s's local import graph touches server-only / next", (entry) => {
+    const graph = collectLocalGraph(entry);
+    expect(graph.size).toBeGreaterThanOrEqual(2); // entry + at least one local module
 
     const offenders: string[] = [];
     for (const file of graph) {

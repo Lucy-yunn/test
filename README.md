@@ -49,6 +49,7 @@ schema validation; pass `SKIP_ENV_VALIDATION=1` to build without real secrets).
 | `db:migrate` / `db:deploy` | Prisma migrations on the **development** branch (reads `.env.local`) |
 | `db:migrate:test` / `db:seed:test` | same, on the **test** branch (reads `.env.test.local`) |
 | `db:seed` | Load demo fixtures into the development branch |
+| `db:seed:staff` | Create/update the founder staff accounts (`STAFF_<n>_*` env vars) |
 | `db:studio` | Prisma Studio |
 
 ## Layout
@@ -84,6 +85,11 @@ Wayfinding is complete; the build has started. Progress against
   `normalizePartNumber`, and the DB-backed invariants (`sellerId ==
   donorVehicle.sellerId`, category-delete, intake de-dup). Node-safe parts are
   unit-tested; DB parts are `*.integration.test.ts`.
-- [ ] 3. Auth & accounts · 4. Admin intake · 5. Buyer funnel & Browse ·
-  6. Favourites · 7. Checkout & orders · 8. Cancellation · 9. Messaging ·
-  10. Seller center · 11. Notifications · 12. Shell & polish
+- [x] **3. Auth & accounts** — buyer `/register` (atomic `User` + `Buyer` in one
+  transaction), `/login` → role redirect, logout, `/account/settings`
+  (name / password / delivery address; email + delete disabled). Staff accounts:
+  `npm run db:seed:staff` (idempotent, `STAFF_<n>_*` env vars). Services in
+  `lib/services/accounts.ts`, TDD'd against the test branch.
+- [ ] 4. Admin intake · 5. Buyer funnel & Browse · 6. Favourites ·
+  7. Checkout & orders · 8. Cancellation · 9. Messaging · 10. Seller center ·
+  11. Notifications · 12. Shell & polish
