@@ -58,7 +58,8 @@ app/[locale]/         buyer site + /account + /seller + /admin (all locale-prefi
 app/api/auth/         Better Auth route handler
 app/api/health/       health check (the only other v1 route handler)
 i18n/                 next-intl routing / navigation / request config
-lib/                  db · auth · dal (the authz boundary) · storage · env
+lib/                  db · auth · storage · env · connection-string
+lib/dal/              authz boundary + behavioural invariants (session.ts is server-only)
 messages/             en.json (complete) · bg.json (scaffold)
 prisma/schema.prisma  full v1 schema
 prisma/seed*          demo catalogue + fixtures
@@ -77,6 +78,12 @@ Wayfinding is complete; the build has started. Progress against
   the Neon dev branch (idempotent); vehicle catalogue is still a placeholder
   pending the founder's real pilot-donor list. See
   [`docs/spec/seed-data.md`](docs/spec/seed-data.md).
-- [ ] 2. Schema & DAL · 3. Auth & accounts · 4. Admin intake · 5. Buyer funnel &
-  Browse · 6. Favourites · 7. Checkout & orders · 8. Cancellation · 9. Messaging ·
+- [x] **2. Schema & DAL** — `lib/dal/`: session guards (`verifySession` /
+  `requireBuyer|Seller|Staff`, seller needs a linked login), pure role +
+  ownership decisions, typed errors, order/listing/part status machines,
+  `normalizePartNumber`, and the DB-backed invariants (`sellerId ==
+  donorVehicle.sellerId`, category-delete, intake de-dup). Node-safe parts are
+  unit-tested; DB parts are `*.integration.test.ts`.
+- [ ] 3. Auth & accounts · 4. Admin intake · 5. Buyer funnel & Browse ·
+  6. Favourites · 7. Checkout & orders · 8. Cancellation · 9. Messaging ·
   10. Seller center · 11. Notifications · 12. Shell & polish
