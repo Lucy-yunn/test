@@ -1,0 +1,632 @@
+// v1 schema — used auto parts marketplace.
+// Authoritative sources: docs/domain-model.md, docs/order-model.md, docs/messaging-model.md,
+// docs/notifications.md, docs/auth-and-permissions.md, docs/adr/0001-0008.
+//
+// Structural invariants (has-a, leaf-only, uniqueness) live here.
+// Behavioural invariants (status transitions, de-dup, merges, sellerId == donorVehicle.sellerId,
+// messaging block) live in the DAL — NOT as DB triggers/checks (domain-model.md §4).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Neon pooled connection for the app; direct connection for migrations (ADR-0001).
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum UserRole {
+  buyer
+  seller
+  staff
+}
+
+enum Condition {
+  new
+  used_good
+  needs_repair
+}
+
+enum ListingStatus {
+  draft
+  published
+  reserved
+  sold
+  cancelled
+  archived
+}
+
+enum OrderStatus {
+  placed
+  confirmed
+  shipped
+  delivered
+  cancelled
+}
+
+enum PartStatus {
+  provisional
+  confirmed
+}
+
+enum PnStatus {
+  unknown
+  unverified
+  verified
+}
+
+enum NumberType {
+  oem
+  aftermarket
+  casting
+  trade
+  other
+}
+
+enum Transmission {
+  manual
+  automatic
+  other
+}
+
+enum CancellationReason {
+  found_elsewhere
+  no_longer_needed
+  seller_too_slow
+  condition_or_fitment_concern
+  ordered_by_mistake
+  other
+}
+
+enum CancellationState {
+  pending
+  approved
+}
+
+enum CancellationActor {
+  buyer
+  seller
+  staff
+  auto
+}
+
+enum SenderRole {
+  buyer
+  seller
+  staff
+}
+
+enum NotificationType {
+  order_placed
+  order_confirmed
+  order_shipped
+  order_delivered
+  cancellation_requested
+  cancellation_warning
+  cancellation_approved
+}
+
+enum NotificationSubjectType {
+  order
+  cancellation_request
+}
+
+enum ReportState {
+  open
+  resolved
+}
+
+// ---------------------------------------------------------------------------
+// Better Auth (ADR-0001, docs/auth-and-permissions.md)
+// Field names follow Better Auth's expected Prisma schema; the `admin` plugin
+// adds role / banned / banReason / banExpires on User and impersonatedBy on Session.
+// ---------------------------------------------------------------------------
+
+model User {
+  id                 String    @id @default(cuid())
+  name               String
+  email              String    @unique
+  emailVerified      Boolean   @default(false)
+  image              String?
+  role               UserRole  @default(buyer)
+  banned             Boolean   @default(false)
+  banReason          String?
+  banExpires         DateTime?
+  // Staff-set bar on all messaging (docs/messaging-model.md §8).
+  messagingBlockedAt DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  sessions       Session[]
+  accounts       Account[]
+  buyer          Buyer?
+  seller         Seller?
+  notifications  Notification[]
+  sentMessages   Message[]      @relation("MessageSender")
+  lockedThreads  Thread[]       @relation("ThreadLockedBy")
+  reportsMade    Report[]       @relation("ReportBy")
+  reportsClosed  Report[]       @relation("ReportResolvedBy")
+
+  @@index([role])
+  @@map("user")
+}
+
+model Session {
+  id             String   @id @default(cuid())
+  token          String   @unique
+  userId         String
+  expiresAt      DateTime
+  ipAddress      String?
+  userAgent      String?
+  impersonatedBy String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  idToken               String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// ---------------------------------------------------------------------------
+// Profiles
+// ---------------------------------------------------------------------------
+
+model Buyer {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  // Saved delivery address — snapshotted onto each Order at checkout.
+  recipientName String?
+  phone         String?
+  addressLine1  String?
+  addressLine2  String?
+  city          String?
+  postcode      String?
+  country       String? @default("BG")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders    Order[]
+  favorites Favorite[]
+  threads   Thread[]
+}
+
+model Seller {
+  id     String  @id @default(cuid())
+  userId String? @unique // attached when a login is provisioned (two-phase)
+
+  displayName  String
+  contactName  String
+  contactEmail String
+  contactPhone String?
+
+  // Embedded Location — one per Seller in v1.
+  locationName    String?
+  locationLine1   String?
+  locationCity    String
+  locationPostcode String?
+  locationCountry String  @default("BG")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user          User?          @relation(fields: [userId], references: [id])
+  donorVehicles DonorVehicle[]
+  listings      Listing[]
+  orders        Order[]
+  threads       Thread[]
+}
+
+// ---------------------------------------------------------------------------
+// Category taxonomy (#3)
+// ---------------------------------------------------------------------------
+
+model Group {
+  id           String     @id @default(cuid())
+  name         String
+  slug         String     @unique
+  displayOrder Int
+  categories   Category[]
+}
+
+model Category {
+  id                    String   @id @default(cuid())
+  groupId               String
+  name                  String
+  slug                  String   @unique
+  synonyms              String[] @default([])
+  tecdocGenericArticleIds Int[]  @default([])
+  displayOrder          Int
+  isActive              Boolean  @default(true)
+
+  group Group  @relation(fields: [groupId], references: [id])
+  parts Part[]
+
+  @@index([groupId])
+}
+
+model Part {
+  id           String     @id @default(cuid())
+  internalCode String     @unique // PRT-000123
+  categoryId   String
+  name         String
+  attributes   Json       @default("{}") // validated per-Category via Zod in the DAL
+  partStatus   PartStatus @default(provisional)
+  pnStatus     PnStatus   @default(unknown)
+  notes        String?
+  createdBy    String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  category    Category     @relation(fields: [categoryId], references: [id])
+  partNumbers PartNumber[]
+  listings    Listing[]
+
+  @@index([categoryId])
+}
+
+model PartNumber {
+  id         String     @id @default(cuid())
+  partId     String
+  raw        String
+  normalized String // separators stripped — the match key
+  numberType NumberType @default(oem)
+  brand      String?
+  isPrimary  Boolean    @default(false)
+  verified   Boolean    @default(false)
+  note       String?
+  createdBy  String?
+
+  part Part @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  @@index([partId])
+  @@index([normalized])
+}
+
+// ---------------------------------------------------------------------------
+// Vehicle catalogue (#4, #21) — hand-built seed fixture; admin CRUD deferred.
+// Make -> VehicleModelGroup -> VehicleGeneration. No Fitment entity in v1.
+// ---------------------------------------------------------------------------
+
+model VehicleMake {
+  id           String               @id @default(cuid())
+  name         String
+  slug         String               @unique
+  country      String?
+  displayOrder Int                  @default(0)
+  isActive     Boolean              @default(true)
+  modelGroups  VehicleModelGroup[]
+}
+
+model VehicleModelGroup {
+  id           String               @id @default(cuid())
+  makeId       String
+  name         String // e.g. "A4, S4"
+  slug         String               @unique
+  displayOrder Int                  @default(0)
+  isActive     Boolean              @default(true)
+
+  make        VehicleMake          @relation(fields: [makeId], references: [id])
+  generations VehicleGeneration[]
+
+  @@index([makeId])
+}
+
+model VehicleGeneration {
+  id              String   @id @default(cuid())
+  modelGroupId    String
+  label           String // "A4 S4 B5 8D (1994–1999)"
+  slug            String   @unique
+  chassisCodes    String[] @default([])
+  productionStart Int?
+  productionEnd   Int?
+  displayOrder    Int      @default(0)
+  isActive        Boolean  @default(true)
+
+  modelGroup     VehicleModelGroup @relation(fields: [modelGroupId], references: [id])
+  donorVehicles  DonorVehicle[]
+
+  @@index([modelGroupId])
+}
+
+// ---------------------------------------------------------------------------
+// Selling & buying
+// ---------------------------------------------------------------------------
+
+model DonorVehicle {
+  id           String  @id @default(cuid())
+  sellerId     String
+  generationId String // REQUIRED (#8/#21) — no unknown-donor case
+  label        String
+
+  donorYear           Int?
+  vin                 String?
+  vinDerivedNotes     String? // staff-only
+  mileageKm           Int?
+  registrationCountry String?
+  notes               String?
+
+  // Structured detail — per physical car, shown on the Listing (#21).
+  engine       String?
+  engineCode   String?
+  fuel         String?
+  transmission Transmission?
+  bodyStyle    String?
+  drivetrain   String?
+
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  seller     Seller              @relation(fields: [sellerId], references: [id])
+  generation VehicleGeneration   @relation(fields: [generationId], references: [id])
+  listings   Listing[]
+  photos     DonorVehiclePhoto[]
+
+  @@index([sellerId])
+  @@index([generationId])
+}
+
+model DonorVehiclePhoto {
+  id             String  @id @default(cuid())
+  donorVehicleId String
+  url            String
+  displayOrder   Int     @default(0)
+  caption        String?
+
+  donorVehicle DonorVehicle @relation(fields: [donorVehicleId], references: [id], onDelete: Cascade)
+
+  @@index([donorVehicleId])
+}
+
+model Listing {
+  id             String        @id @default(cuid())
+  internalCode   String        @unique // LST-000123
+  partId         String
+  sellerId       String // invariant: == donorVehicle.sellerId (DAL-enforced)
+  donorVehicleId String
+  priceEur       Decimal       @db.Decimal(10, 2)
+  negotiable     Boolean       @default(false)
+  condition      Condition
+  conditionNotes String?
+  removalNotes   String?
+  sellerSku      String?
+  warehouseLocation String?
+
+  lengthCm        Decimal? @db.Decimal(8, 2)
+  widthCm         Decimal? @db.Decimal(8, 2)
+  heightCm        Decimal? @db.Decimal(8, 2)
+  weightKg        Decimal? @db.Decimal(8, 3)
+  packageSizeNotes String?
+
+  status      ListingStatus @default(draft)
+  publishedAt DateTime?
+  reviewedBy  String?
+  createdBy   String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  part         Part          @relation(fields: [partId], references: [id])
+  seller       Seller        @relation(fields: [sellerId], references: [id])
+  donorVehicle DonorVehicle  @relation(fields: [donorVehicleId], references: [id])
+  photos       ListingPhoto[]
+  defects      ListingDefect[]
+  favorites    Favorite[]
+  threads      Thread[]
+  order        Order?
+
+  @@index([partId])
+  @@index([sellerId])
+  @@index([donorVehicleId])
+  @@index([status])
+}
+
+model ListingPhoto {
+  id           String  @id @default(cuid())
+  listingId    String
+  url          String
+  displayOrder Int     @default(0)
+  caption      String?
+
+  listing Listing         @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  defects ListingDefect[]
+
+  @@index([listingId])
+}
+
+model ListingDefect {
+  id           String  @id @default(cuid())
+  listingId    String
+  description  String
+  photoId      String?
+  displayOrder Int     @default(0)
+
+  listing Listing       @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  photo   ListingPhoto? @relation(fields: [photoId], references: [id])
+
+  @@index([listingId])
+}
+
+model Order {
+  id           String      @id @default(cuid())
+  internalCode String      @unique // ORD-000123
+  buyerId      String
+  sellerId     String // denormalised from the Listing
+  listingId    String      @unique
+  itemPriceEur Decimal     @db.Decimal(10, 2)
+
+  shippingCostEur Decimal? @db.Decimal(10, 2)
+  shippingNotes   String?
+
+  status            OrderStatus  @default(placed)
+  lastReachedStatus OrderStatus? // set only on cancellation
+  expectedTimeRange String?
+  trackingNumber    String?
+
+  // Delivery-address snapshot (flat, never an FK).
+  recipientName String
+  phone         String
+  addressLine1  String
+  addressLine2  String?
+  city          String
+  postcode      String
+  country       String @default("BG")
+
+  placedAt    DateTime  @default(now())
+  confirmedAt DateTime?
+  shippedAt   DateTime?
+  deliveredAt DateTime?
+  cancelledAt DateTime?
+
+  buyer               Buyer                @relation(fields: [buyerId], references: [id])
+  seller              Seller               @relation(fields: [sellerId], references: [id])
+  listing             Listing              @relation(fields: [listingId], references: [id])
+  cancellationRequest CancellationRequest?
+
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([status])
+}
+
+model CancellationRequest {
+  id           String             @id @default(cuid())
+  orderId      String             @unique
+  requestedBy  CancellationActor // buyer | staff (DAL-restricted)
+  reason       CancellationReason
+  reasonDetail String? // required when reason = other (DAL-enforced)
+  state        CancellationState  @default(pending)
+  createdAt    DateTime           @default(now())
+  autoApproveAt DateTime // createdAt + 7 days
+  resolvedAt   DateTime?
+  resolvedBy   CancellationActor? // seller | staff | auto
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([state])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  buyerId   String
+  listingId String
+  createdAt DateTime @default(now())
+
+  buyer   Buyer   @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([buyerId, listingId])
+  @@index([listingId])
+}
+
+model Thread {
+  id            String    @id @default(cuid())
+  listingId     String
+  buyerId       String
+  sellerId      String // invariant: == listing.sellerId
+  createdAt     DateTime  @default(now())
+  lastMessageAt DateTime  @default(now())
+  lockedAt      DateTime?
+  lockedById    String?
+
+  listing  Listing   @relation(fields: [listingId], references: [id])
+  buyer    Buyer     @relation(fields: [buyerId], references: [id])
+  seller   Seller    @relation(fields: [sellerId], references: [id])
+  lockedBy User?     @relation("ThreadLockedBy", fields: [lockedById], references: [id])
+  messages Message[]
+  reports  Report[]
+
+  @@unique([listingId, buyerId])
+  @@index([sellerId])
+  @@index([lastMessageAt])
+}
+
+model Message {
+  id           String     @id @default(cuid())
+  threadId     String
+  senderRole   SenderRole // stored, not derived
+  senderUserId String
+  body         String // ~4000 char cap enforced in the DAL
+  sentAt       DateTime   @default(now())
+  readAt       DateTime?
+
+  thread Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender User   @relation("MessageSender", fields: [senderUserId], references: [id])
+
+  @@index([threadId])
+}
+
+model Report {
+  id             String      @id @default(cuid())
+  threadId       String
+  reportedById   String
+  reportedByRole SenderRole // buyer | seller
+  reason         String
+  state          ReportState @default(open)
+  createdAt      DateTime    @default(now())
+  resolvedAt     DateTime?
+  resolvedById   String?
+
+  thread     Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  reportedBy User   @relation("ReportBy", fields: [reportedById], references: [id])
+  resolvedBy User?  @relation("ReportResolvedBy", fields: [resolvedById], references: [id])
+
+  @@index([threadId])
+  @@index([state])
+}
+
+model Notification {
+  id          String                 @id @default(cuid())
+  userId      String // recipient — role is buyer or seller, never staff
+  type        NotificationType
+  subjectType NotificationSubjectType
+  subjectId   String
+  createdAt   DateTime               @default(now())
+  readAt      DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+}
