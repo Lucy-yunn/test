@@ -109,6 +109,7 @@ function candidateSelect() {
         generation: {
           select: {
             id: true,
+            slug: true,
             label: true,
             modelGroup: {
               select: { name: true, make: { select: { name: true } } },
@@ -190,7 +191,7 @@ export async function browseListings(
     pageCount,
     facets: {
       categories: tally(candidates, (c) => passesAllBut(c, "category"), (c) => [c.part.category.slug, c.part.category.name]),
-      generations: tally(candidates, (c) => passesAllBut(c, "generation"), (c) => [c.donorVehicle.generation.id, c.donorVehicle.generation.label]),
+      generations: tally(candidates, (c) => passesAllBut(c, "generation"), (c) => [c.donorVehicle.generation.slug, c.donorVehicle.generation.label]),
       engines: tally(candidates, (c) => passesAllBut(c, "engine"), (c) => (c.donorVehicle.engine ? [c.donorVehicle.engine, c.donorVehicle.engine] : null)),
       fuels: tally(candidates, (c) => passesAllBut(c, "fuel"), (c) => (c.donorVehicle.fuel ? [c.donorVehicle.fuel, c.donorVehicle.fuel] : null)),
       transmissions: tally(candidates, (c) => passesAllBut(c, "transmission"), (c) => (c.donorVehicle.transmission ? [c.donorVehicle.transmission, TRANSMISSION_LABEL[c.donorVehicle.transmission]] : null)),
