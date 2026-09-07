@@ -91,11 +91,11 @@ Wayfinding is complete; the build has started. Progress against
   `npm run db:seed:staff` (idempotent, `STAFF_<n>_*` env vars). Services in
   `lib/services/accounts.ts`, TDD'd against the test branch.
 - [~] **4. Admin tool — intake path** — `/admin` shell (`requireStaff` per page,
-  not layout). Done: Sellers, Vehicle catalogue, Buyers (4a); Parts &
-  PartNumbers — search, create with de-dup surfacing, per-category `attributes`
-  Zod, `partStatus`/`pnStatus` rules, primary/verified toggles (4b). Next: the
-  DonorVehicle/Listing editor + publish checklist + photo upload (4c). Part
-  hard-merge (tombstone + audit) is a follow-up (needs an `AuditLog` table).
+  not layout). Done: Sellers, Vehicle catalogue, Buyers (4a); Parts & PartNumbers
+  (4b); DonorVehicle editor, Listing editor + `ListingDefect`s + the publish
+  checklist (the only `draft → published` gate) + staff status transitions (4c).
+  Next: photo upload (4d). Part hard-merge (tombstone + audit) is a follow-up
+  (needs an `AuditLog` table).
 - [ ] 5. Buyer funnel & Browse · 6. Favourites · 7. Checkout & orders ·
   8. Cancellation · 9. Messaging · 10. Seller center · 11. Notifications ·
   12. Shell & polish
