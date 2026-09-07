@@ -8,6 +8,12 @@ import { ListingForm } from "../listing-form";
 import { Defects } from "../defects";
 import { PublishPanel } from "../publish-panel";
 import { loadPartOptions } from "../parts-options";
+import { PhotoManager } from "../../_components/photo-manager";
+import {
+  uploadListingPhotoAction,
+  removeListingPhotoAction,
+  moveListingPhotoAction,
+} from "../photo-actions";
 
 const s = (v: unknown) => (v == null ? "" : String(v));
 
@@ -42,6 +48,10 @@ export default async function ListingDetailPage({
       seller: { select: { displayName: true } },
       part: { select: { internalCode: true, name: true } },
       defects: { orderBy: { displayOrder: "asc" }, select: { id: true, description: true } },
+      photos: {
+        orderBy: { displayOrder: "asc" },
+        select: { id: true, url: true, caption: true },
+      },
       _count: { select: { photos: true } },
     },
   });
@@ -68,11 +78,18 @@ export default async function ListingDetailPage({
       <section>
         <h2 className="mb-3 text-lg font-semibold">Publish</h2>
         <PublishPanel listingId={listing.id} status={listing.status} checklist={checklist} />
-        {listing._count.photos === 0 ? (
-          <p className="mt-2 text-sm text-zinc-500">
-            Photo upload is a separate build step — the count above drives the checklist.
-          </p>
-        ) : null}
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-lg font-semibold">Photos ({listing._count.photos})</h2>
+        <PhotoManager
+          ownerField="listingId"
+          ownerId={listing.id}
+          photos={listing.photos}
+          uploadAction={uploadListingPhotoAction}
+          removeAction={removeListingPhotoAction}
+          moveAction={moveListingPhotoAction}
+        />
       </section>
 
       <section>
