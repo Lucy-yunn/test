@@ -113,6 +113,58 @@ export async function getGenerations(
   return rows;
 }
 
+export interface FunnelTree {
+  makes: {
+    slug: string;
+    name: string;
+    modelGroups: {
+      slug: string;
+      name: string;
+      generations: GenerationCard[];
+    }[];
+  }[];
+  categoryGroups: GroupedCategories[];
+}
+
+/**
+ * The whole active catalogue for the homepage funnel bar, in one payload — the
+ * demo catalogue is small (~14/50/138) and this lets the funnel run entirely
+ * client-side with no round-trips as the buyer drills down.
+ */
+export async function getFunnelTree(db: PrismaClient): Promise<FunnelTree> {
+  const makes = await db.vehicleMake.findMany({
+    where: { isActive: true },
+    orderBy: [{ displayOrder: "asc" }, { name: "asc" }],
+    select: {
+      slug: true,
+      name: true,
+      modelGroups: {
+        where: { isActive: true },
+        orderBy: [{ displayOrder: "asc" }, { name: "asc" }],
+        select: {
+          slug: true,
+          name: true,
+          generations: {
+            where: { isActive: true },
+            orderBy: [{ productionStart: "asc" }, { label: "asc" }],
+            select: {
+              slug: true,
+              label: true,
+              chassisCodes: true,
+              productionStart: true,
+              productionEnd: true,
+            },
+          },
+        },
+      },
+    },
+  });
+  return {
+    makes: makes.filter((m) => m.modelGroups.length > 0),
+    categoryGroups: await getGroupedCategories(db),
+  };
+}
+
 /** The Part step: one list, grouped by Group heading (#3). */
 export async function getGroupedCategories(
   db: PrismaClient,
