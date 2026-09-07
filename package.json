@@ -18,7 +18,8 @@
     "db:studio": "dotenv -e .env.local -- prisma studio",
     "db:migrate:test": "tsx scripts/with-test-db.ts prisma migrate deploy",
     "db:seed:test": "tsx scripts/with-test-db.ts prisma db seed",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "db:seed:staff": "dotenv -e .env.local -- tsx prisma/seed-staff.ts"
   },
   "prisma": {
     "seed": "node --import tsx prisma/seed.ts"

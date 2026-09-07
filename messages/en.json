@@ -53,5 +53,42 @@
     "forbiddenTitle": "Not allowed",
     "forbiddenBody": "Your account doesn't have access to this page.",
     "backHome": "Back to home"
+  },
+  "Auth": {
+    "registerTitle": "Create your account",
+    "loginTitle": "Sign in",
+    "name": "Full name",
+    "email": "Email",
+    "password": "Password",
+    "acceptTerms": "I accept the Terms & Privacy Policy",
+    "registerCta": "Create account",
+    "loginCta": "Sign in",
+    "logout": "Sign out",
+    "haveAccount": "Already have an account?",
+    "noAccount": "Need an account?",
+    "troubleSigningIn": "Trouble signing in? Contact us."
+  },
+  "Account": {
+    "orders": "Orders",
+    "favourites": "Favourites",
+    "messages": "Messages",
+    "settings": "Settings",
+    "profile": "Profile",
+    "deliveryAddress": "Delivery address",
+    "name": "Full name",
+    "email": "Email",
+    "emailLocked": "Contact us to change your email.",
+    "recipientName": "Recipient name",
+    "phone": "Phone",
+    "addressLine1": "Address line 1",
+    "addressLine2": "Address line 2 (optional)",
+    "city": "City",
+    "postcode": "Postcode",
+    "country": "Country",
+    "changePassword": "Change password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm new password",
+    "save": "Save"
   }
 }

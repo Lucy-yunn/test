@@ -31,3 +31,13 @@ export class InvariantError extends Error {
     this.name = "InvariantError";
   }
 }
+
+/** A uniqueness rule blocks the write (email already registered, one-role
+ *  collision, …). Surfaced back to the user as a form error, not a 500. */
+export class ConflictError extends Error {
+  readonly code = "CONFLICT";
+  constructor(message: string) {
+    super(message);
+    this.name = "ConflictError";
+  }
+}
