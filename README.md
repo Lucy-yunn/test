@@ -90,6 +90,12 @@ Wayfinding is complete; the build has started. Progress against
   (name / password / delivery address; email + delete disabled). Staff accounts:
   `npm run db:seed:staff` (idempotent, `STAFF_<n>_*` env vars). Services in
   `lib/services/accounts.ts`, TDD'd against the test branch.
-- [ ] 4. Admin intake · 5. Buyer funnel & Browse · 6. Favourites ·
-  7. Checkout & orders · 8. Cancellation · 9. Messaging · 10. Seller center ·
-  11. Notifications · 12. Shell & polish
+- [~] **4. Admin tool — intake path** — `/admin` shell (`requireStaff` per page,
+  not layout). Done: Sellers (profile + provision/disable/unlink login + reset
+  password, one-role collision check), Vehicle catalogue (add make/group/
+  generation, activate/deactivate), Buyers (view + reset password). Next:
+  Parts/PartNumbers, then the DonorVehicle/Listing editor + publish checklist +
+  photo upload.
+- [ ] 5. Buyer funnel & Browse · 6. Favourites · 7. Checkout & orders ·
+  8. Cancellation · 9. Messaging · 10. Seller center · 11. Notifications ·
+  12. Shell & polish
