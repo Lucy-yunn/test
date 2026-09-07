@@ -188,6 +188,33 @@ TOTAL_STAGES=7
 
 NEON_CONSOLE="https://console.neon.tech/app/projects"
 
+# read_conn KEY "Prompt" — hidden read for a connection string, with validation
+# and retry. Hidden input gives no echo, so a human who re-pastes (thinking the
+# first paste didn't register) silently concatenates copies. This rejects that,
+# plus wrapping quotes / a "KEY=" prefix / a stray CR from a Windows paste.
+read_conn() {
+  local key="$1" prompt="$2" input schemes
+  while true; do
+    printf '  %s%s%s ' "$BOLD" "$prompt" "$RESET"
+    read -rs input || true
+    printf '\n'
+    input="${input//$'\r'/}"
+    input="${input#DATABASE_URL=}"; input="${input#DIRECT_URL=}"; input="${input#TEST_DATABASE_URL=}"
+    input="${input%\"}"; input="${input#\"}"
+    input="${input%\'}"; input="${input#\'}"
+    if [[ -z "$input" ]]; then warn "empty — paste the connection string, then Enter"; continue; fi
+    if [[ "$input" == *[[:space:]]* ]]; then warn "contains a space — extra text got pasted; try again"; continue; fi
+    if [[ "$input" != postgres*://* ]]; then warn "must start with postgres:// or postgresql://; try again"; continue; fi
+    schemes=$(grep -o '://' <<<"$input" | grep -c '')
+    if [[ "$schemes" != "1" ]]; then
+      warn "found $schemes '://' — the value was pasted more than once. Paste it ONCE, then Enter."
+      continue
+    fi
+    break
+  done
+  printf -v "$key" '%s' "$input"
+}
+
 banner "Connect Neon (development + test) to this repo"
 
 # ── Stage 1 · Preflight ──────────────────────────────────────────────────
@@ -224,14 +251,12 @@ step "Open your project, then the Branches tab, then the 'development' branch."
 step "Click 'Connect to your database' (top right)."
 step "Database: neondb.  Role: pick your app role.  Turn 'Connection pooling' ON."
 step "Copy the connection string (starts postgresql://, host ends -pooler...neon.tech)."
-ask_secret DATABASE_URL "Paste the POOLED development connection string:"
-[[ -n "$DATABASE_URL" ]] || { warn "empty — aborting"; exit 1; }
+read_conn DATABASE_URL "Paste the POOLED development connection string:"
 write_env DATABASE_URL "$DATABASE_URL"
 printf '\n'
 step "Back in the Connect dialog, turn 'Connection pooling' OFF (direct connection)."
 step "Copy that string (host has NO -pooler)."
-ask_secret DIRECT_URL "Paste the DIRECT development connection string:"
-[[ -n "$DIRECT_URL" ]] || { warn "empty — aborting"; exit 1; }
+read_conn DIRECT_URL "Paste the DIRECT development connection string:"
 write_env DIRECT_URL "$DIRECT_URL"
 
 # ── Stage 3 · Auth secret → .env.local ───────────────────────────────────
@@ -255,8 +280,7 @@ step "Open the Branches tab, then the 'test' branch."
 step "Click 'Connect to your database'."
 step "Turn 'Connection pooling' OFF — use the DIRECT connection string."
 step "Copy it (host has NO -pooler)."
-ask_secret TEST_DATABASE_URL "Paste the DIRECT test connection string:"
-[[ -n "$TEST_DATABASE_URL" ]] || { warn "empty — aborting"; exit 1; }
+read_conn TEST_DATABASE_URL "Paste the DIRECT test connection string:"
 if [[ "$TEST_DATABASE_URL" == "$DIRECT_URL" || "$TEST_DATABASE_URL" == "$DATABASE_URL" ]]; then
   printf '  %s✖ that is the development string — the test branch must be a different database.%s\n' "$RED" "$RESET"
   exit 1

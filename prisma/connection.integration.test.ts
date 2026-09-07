@@ -1,25 +1,32 @@
 import { describe, it, expect, afterAll } from "vitest";
-import { PrismaClient } from "@prisma/client";
+import { db } from "../lib/db";
 
 /**
- * Smoke test — proves the integration suite is wired to a reachable database
- * (the Neon `test` branch, via vitest.integration.setup.ts) and that it is NOT
- * the development database.
+ * Proves the REAL app runtime DB path works end to end against the Neon `test`
+ * branch (via vitest.integration.setup.ts): the same `lib/db` client a route
+ * handler uses, including the `assertPostgresUrl` guard and explicit
+ * `datasourceUrl`.
+ *
+ * Regression for the "GET /api/health -> db: unreachable" report — a corrupted
+ * DATABASE_URL (pasted twice) that `new URL()` still parsed.
  */
-const prisma = new PrismaClient();
-
 afterAll(async () => {
-  await prisma.$disconnect();
+  await db.$disconnect();
 });
 
-describe("integration database", () => {
-  it("is reachable", async () => {
-    const rows = await prisma.$queryRaw<{ ok: number }[]>`SELECT 1 as ok`;
+describe("app runtime database path", () => {
+  it("lib/db can run a query (what /api/health does)", async () => {
+    const rows = await db.$queryRaw<{ ok: number }[]>`SELECT 1 as ok`;
     expect(rows[0].ok).toBe(1);
   });
 
-  it("is the test branch, not development", () => {
+  it("is pointed at the test branch, not development", () => {
     expect(process.env.NODE_ENV).toBe("test");
     expect(process.env.DATABASE_URL).toBe(process.env.TEST_DATABASE_URL);
+  });
+
+  it("DATABASE_URL is a single connection string", () => {
+    const schemes = (process.env.DATABASE_URL?.match(/:\/\//g) ?? []).length;
+    expect(schemes).toBe(1);
   });
 });
