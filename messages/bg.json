@@ -1,0 +1,57 @@
+{
+  "Meta": {
+    "title": "IVO — Used auto parts",
+    "description": "Used OEM parts from Bulgarian dismantlers. Every listing checked by our team before it goes live."
+  },
+  "Nav": {
+    "contacts": "Contacts",
+    "help": "Help",
+    "sell": "Sell",
+    "joinUs": "Join us",
+    "followUs": "Follow us",
+    "logIn": "Log in",
+    "register": "Register",
+    "account": "My account",
+    "messages": "Messages",
+    "favorites": "Favourites",
+    "deliveryTo": "Delivery to {place}"
+  },
+  "LocaleSwitcher": {
+    "label": "Language",
+    "en": "English",
+    "bg": "Български",
+    "notTranslated": "This language isn't available yet — showing English."
+  },
+  "Home": {
+    "headline": "Find the part you need, without the wait.",
+    "subhead": "Used OEM parts from Bulgarian dismantlers — every listing checked by our team before it goes live.",
+    "funnelHeading": "Parts you need",
+    "make": "Make",
+    "model": "Model",
+    "generation": "Generation",
+    "part": "Part",
+    "choose": "Choose",
+    "optional": "Optional",
+    "search": "Search"
+  },
+  "Browse": {
+    "resultsCount": "{count, plural, =0 {No parts found} one {# part found} other {# parts found}}",
+    "clearFilters": "Clear filters",
+    "sortBy": "Sort by",
+    "sortNewest": "Newest first",
+    "takenFrom": "Taken from: {vehicle}",
+    "fitNote": "Same generation doesn't guarantee a fit — open a part to check its details.",
+    "seller": "Seller"
+  },
+  "Footer": {
+    "tagline": "Used auto parts marketplace — Bulgaria.",
+    "legalNote": "Placeholder legal copy — not reviewed. Do not rely on it."
+  },
+  "Errors": {
+    "notFoundTitle": "Page not found",
+    "notFoundBody": "The page you're looking for doesn't exist or has moved.",
+    "forbiddenTitle": "Not allowed",
+    "forbiddenBody": "Your account doesn't have access to this page.",
+    "backHome": "Back to home"
+  }
+}
