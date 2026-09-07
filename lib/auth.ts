@@ -11,7 +11,7 @@ import { db } from "./db";
 import { env } from "./env";
 
 // Minimal access-control wiring the `admin` plugin needs to accept "staff" as an
-// admin role. Application authorization does NOT use this — it lives in lib/dal.ts.
+// admin role. Application authorization does NOT use this — it lives in lib/dal/.
 const ac = createAccessControl({ ...defaultStatements });
 const roles = {
   staff: ac.newRole({ ...adminAc.statements }),
@@ -25,7 +25,7 @@ const roles = {
  * The `admin` plugin adds `role` / `banned` / `banReason` / `banExpires` to the user
  * model and powers staff user-management (createUser / banUser / listUsers / reset).
  * Its access-control roles are plugin wiring only — ALL application authorization
- * lives in the DAL (lib/dal.ts), never in Better Auth ACL.
+ * lives in the DAL (lib/dal/), never in Better Auth ACL.
  *
  * No transactional email in v1: no email verification, no "forgot password" flow —
  * staff reset passwords from the admin tool (docs/auth-and-permissions.md §6).
