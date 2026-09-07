@@ -17,7 +17,14 @@ import {
  * (never `reserved` / `sold` — those are order-driven).
  */
 
-const clean = (s?: string | null) => s?.trim() || null;
+/**
+ * Blank or whitespace-only → `null`; any real value (including `"0"` / `"0.00"`)
+ * is trimmed and kept. Used for BOTH free-text and decimal-string columns —
+ * Prisma's `Decimal` input rejects `""` ("Failed to parse empty string"), so an
+ * unknown measurement must reach it as `null`, never `""`.
+ */
+export const blankToNull = (s?: string | null): string | null =>
+  s?.trim() || null;
 
 export interface CreateListingInput {
   donorVehicleId: string;
@@ -70,16 +77,16 @@ export async function createListing(
           donorVehicleId: input.donorVehicleId,
           priceEur: input.priceEur,
           condition: input.condition,
-          conditionNotes: clean(input.conditionNotes),
-          removalNotes: clean(input.removalNotes),
+          conditionNotes: blankToNull(input.conditionNotes),
+          removalNotes: blankToNull(input.removalNotes),
           negotiable: input.negotiable ?? false,
-          sellerSku: clean(input.sellerSku),
-          warehouseLocation: clean(input.warehouseLocation),
-          lengthCm: input.lengthCm ?? null,
-          widthCm: input.widthCm ?? null,
-          heightCm: input.heightCm ?? null,
-          weightKg: input.weightKg ?? null,
-          packageSizeNotes: clean(input.packageSizeNotes),
+          sellerSku: blankToNull(input.sellerSku),
+          warehouseLocation: blankToNull(input.warehouseLocation),
+          lengthCm: blankToNull(input.lengthCm),
+          widthCm: blankToNull(input.widthCm),
+          heightCm: blankToNull(input.heightCm),
+          weightKg: blankToNull(input.weightKg),
+          packageSizeNotes: blankToNull(input.packageSizeNotes),
           noVisiblePartNumber: input.noVisiblePartNumber ?? false,
           createdBy: createdBy ?? null,
         },
@@ -114,16 +121,16 @@ export async function updateListing(
   }
   if (patch.priceEur !== undefined) data.priceEur = patch.priceEur;
   if (patch.condition !== undefined) data.condition = patch.condition;
-  if (patch.conditionNotes !== undefined) data.conditionNotes = clean(patch.conditionNotes);
-  if (patch.removalNotes !== undefined) data.removalNotes = clean(patch.removalNotes);
+  if (patch.conditionNotes !== undefined) data.conditionNotes = blankToNull(patch.conditionNotes);
+  if (patch.removalNotes !== undefined) data.removalNotes = blankToNull(patch.removalNotes);
   if (patch.negotiable !== undefined) data.negotiable = patch.negotiable;
-  if (patch.sellerSku !== undefined) data.sellerSku = clean(patch.sellerSku);
-  if (patch.warehouseLocation !== undefined) data.warehouseLocation = clean(patch.warehouseLocation);
-  if (patch.lengthCm !== undefined) data.lengthCm = patch.lengthCm ?? null;
-  if (patch.widthCm !== undefined) data.widthCm = patch.widthCm ?? null;
-  if (patch.heightCm !== undefined) data.heightCm = patch.heightCm ?? null;
-  if (patch.weightKg !== undefined) data.weightKg = patch.weightKg ?? null;
-  if (patch.packageSizeNotes !== undefined) data.packageSizeNotes = clean(patch.packageSizeNotes);
+  if (patch.sellerSku !== undefined) data.sellerSku = blankToNull(patch.sellerSku);
+  if (patch.warehouseLocation !== undefined) data.warehouseLocation = blankToNull(patch.warehouseLocation);
+  if (patch.lengthCm !== undefined) data.lengthCm = blankToNull(patch.lengthCm);
+  if (patch.widthCm !== undefined) data.widthCm = blankToNull(patch.widthCm);
+  if (patch.heightCm !== undefined) data.heightCm = blankToNull(patch.heightCm);
+  if (patch.weightKg !== undefined) data.weightKg = blankToNull(patch.weightKg);
+  if (patch.packageSizeNotes !== undefined) data.packageSizeNotes = blankToNull(patch.packageSizeNotes);
   if (patch.noVisiblePartNumber !== undefined) data.noVisiblePartNumber = patch.noVisiblePartNumber;
 
   await db.listing.update({ where: { id: listingId }, data });
