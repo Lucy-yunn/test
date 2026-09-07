@@ -212,6 +212,10 @@ read_conn() {
     fi
     break
   done
+  # Neon compute scales to zero; give the first connection time to wake it.
+  if [[ "$input" != *connect_timeout=* ]]; then
+    [[ "$input" == *\?* ]] && input="${input}&connect_timeout=15" || input="${input}?connect_timeout=15"
+  fi
   printf -v "$key" '%s' "$input"
 }
 
