@@ -120,6 +120,49 @@ describe("createListing — sellerId == donorVehicle.sellerId", () => {
   it("rejects a part that doesn't exist", async () => {
     await expect(mkListing({ partId: "nope" })).rejects.toBeInstanceOf(NotFoundError);
   });
+
+  it("creates a listing with unknown (blank / whitespace / null / undefined) measurements", async () => {
+    const l = await mkListing({
+      lengthCm: "",
+      widthCm: "   ",
+      heightCm: null,
+      weightKg: undefined,
+      packageSizeNotes: "",
+    });
+    const row = await db.listing.findUnique({
+      where: { id: l.id },
+      select: { lengthCm: true, widthCm: true, heightCm: true, weightKg: true, packageSizeNotes: true },
+    });
+    expect(row?.lengthCm).toBeNull();
+    expect(row?.widthCm).toBeNull();
+    expect(row?.heightCm).toBeNull();
+    expect(row?.weightKg).toBeNull();
+    expect(row?.packageSizeNotes).toBeNull();
+  });
+
+  it("keeps supplied decimal measurements, including zero", async () => {
+    const l = await mkListing({ lengthCm: "42.50", widthCm: "0", weightKg: "0.750" });
+    const row = await db.listing.findUnique({
+      where: { id: l.id },
+      select: { lengthCm: true, widthCm: true, weightKg: true },
+    });
+    expect(Number(row?.lengthCm)).toBe(42.5);
+    expect(Number(row?.widthCm)).toBe(0);
+    expect(Number(row?.weightKg)).toBe(0.75);
+  });
+
+  it("updateListing clears a set measurement when passed a blank string", async () => {
+    const l = await mkListing({ lengthCm: "10.00" });
+    expect(Number((await db.listing.findUnique({ where: { id: l.id }, select: { lengthCm: true } }))?.lengthCm)).toBe(10);
+
+    await updateListing(db, l.id, { lengthCm: "", weightKg: "  " });
+    const row = await db.listing.findUnique({
+      where: { id: l.id },
+      select: { lengthCm: true, weightKg: true },
+    });
+    expect(row?.lengthCm).toBeNull();
+    expect(row?.weightKg).toBeNull();
+  });
 });
 
 describe("publish checklist", () => {
