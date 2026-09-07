@@ -26,9 +26,10 @@ Out of this ticket:
 - **Notifications** (email vs in-app, for status changes and cancellations) — remains map fog,
   a dedicated cross-cutting ticket. The flow below works demo-wise with in-app state only.
 - **Returns & refunds** — out of scope (map). v1 has pre-ship cancellation only.
-- The **admin tool** and **seller center** *screens* — owned by the final spec assembly and
-  by [Seller center (#13)](https://github.com/Lucy-yunn/test/issues/13). This document fixes
-  the order-side data and rules those screens act on.
+- The **admin tool** and **seller center** *screens* — in
+  [`docs/spec/admin-tool.md`](./spec/admin-tool.md) and
+  [Seller center (#13)](https://github.com/Lucy-yunn/test/issues/13). This document fixes the
+  order-side data and rules those screens act on.
 
 ---
 
@@ -354,5 +355,7 @@ Invariants (DAL, per #2's "behavioural invariants → the DAL" rule):
   screen and metrics.
 - **Messaging (#11)** — the "Message seller" link and the pending-cancellation conversation
   use its `Thread`.
-- **Final spec assembly** (map fog) — the admin tool's Order Management screens; whether an
-  ADR is warranted for the always-approves cancellation model.
+- **Final spec assembly ([#26](https://github.com/Lucy-yunn/test/issues/26))** — done: the
+  admin Order Management + Pending-cancellations screens are in
+  [`docs/spec/admin-tool.md`](./spec/admin-tool.md) §7–8; the always-approves cancellation
+  model is [ADR-0005](./adr/0005-always-approves-cancellation.md).

@@ -5,7 +5,7 @@ on the [Wayfinder map (#1)](https://github.com/Lucy-yunn/test/issues/1).
 
 Builds on [Core domain model (#2)](https://github.com/Lucy-yunn/test/issues/2) (the party
 model — `User` / `Buyer` / `Seller` / `staff`) and the architecture baseline
-([draft ADR-0001](./adr/0001-architecture-baseline.md); auth checks in the Data Access Layer).
+([ADR-0001](./adr/0001-architecture-baseline.md); auth checks in the Data Access Layer).
 Vocabulary is governed by [`CONTEXT.md`](../CONTEXT.md); the entity/field skeleton lives in
 [`docs/domain-model.md`](./domain-model.md). This document owns **the auth engine
 configuration, the buyer self-registration flow, the seller account-provisioning flow, the
@@ -39,9 +39,8 @@ Out of this ticket:
 
 ## 2. Auth engine
 
-**Better Auth** (settled on the map; the Auth.js line in draft ADR-0001 is stale and is to be
-corrected when that ADR is finalised), email + password, Prisma adapter, session in an
-`httpOnly` / `secure` / `sameSite=lax` cookie, verified in the DAL.
+**Better Auth** ([ADR-0001](./adr/0001-architecture-baseline.md)), email + password, Prisma
+adapter, session in an `httpOnly` / `secure` / `sameSite=lax` cookie, verified in the DAL.
 
 ### 2.1 The `admin` plugin
 
@@ -63,7 +62,7 @@ revocation server-side without an email round-trip. v1 uses it with:
 
 The `admin` plugin's access-control roles exist only to satisfy the plugin. **Every
 application authorization decision — the whole permission matrix in §7 — is made in our Data
-Access Layer**, next to `verifySession()`, per draft ADR-0001. We do not route app
+Access Layer**, next to `verifySession()`, per ADR-0001. We do not route app
 authorization through Better Auth's `hasPermission` / statement checks. Rationale: a 3-role
 app needs role checks and ownership checks, not a resource/action ACL, and keeping one
 authorization mechanism (the DAL) avoids two sources of truth.
@@ -270,9 +269,9 @@ see every seller's data in the admin tool).
   email for both. If an email already belongs to a `buyer` `User`, staff cannot provision a
   `seller` login with that same email — a second email is required.* There is no
   buyer→seller conversion and no role switching in v1.
-- **ADR candidate:** *"One role per `User` in v1"* is logged for the **final spec assembly**
-  ADR set — it is hard to reverse, surprising to a future reader, and a real trade-off against
-  a future marketplace where the same person acts as both buyer and seller. Not written now.
+- **ADR:** [ADR-0004 — One role per `User` in v1](./adr/0004-one-role-per-user.md). Hard to
+  reverse, surprising to a future reader, and a real trade-off against a future marketplace
+  where the same person acts as both buyer and seller.
 
 ---
 
@@ -287,7 +286,7 @@ which v1 needs to solve for a fictional-user demo.
 
 ## 10. Enforcement
 
-Per draft ADR-0001: **auth checks live in the DAL and in every Server Action — not in
+Per ADR-0001: **auth checks live in the DAL and in every Server Action — not in
 layouts.**
 
 | Layer | Responsibility |
@@ -317,7 +316,7 @@ buyer-only.
 - **[Messaging model (#11)](https://github.com/Lucy-yunn/test/issues/11)** — its §5 "one write
   action" wording needs to become "two" (messaging **and** cancellation approval). Noted on
   PR #16 rather than edited on that unmerged branch.
-- **Draft [ADR-0001](./adr/0001-architecture-baseline.md)** — the "Auth.js (NextAuth v5)" line
-  should read **Better Auth** when the ADR is finalised.
-- **Final spec assembly** (map fog) — the *"One role per `User` in v1"* ADR (§8); the admin
-  tool and seller center screen inventories.
+- **[ADR-0001](./adr/0001-architecture-baseline.md)** — finalised with **Better Auth** (the
+  draft's Auth.js line is corrected).
+- **[Final spec assembly (#26)](https://github.com/Lucy-yunn/test/issues/26)** — [ADR-0004](./adr/0004-one-role-per-user.md)
+  (§8); the [admin-tool spec](./spec/admin-tool.md) and [screen inventory](./spec/screens.md).
