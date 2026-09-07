@@ -20,15 +20,22 @@ scaffolded) · Vercel Blob (behind `lib/storage.ts`) · Zod · Vitest · Vercel.
 
 ```bash
 npm install
-cp .env.example .env.local          # then fill in real values
-npm run db:migrate                  # first Prisma migration (needs a Neon DB)
-npm run db:seed                     # demo data — see docs/spec/seed-data.md
+bash scripts/setup-neon.sh          # guided: wires the Neon development + test
+                                    # branches into .env.local / .env.test.local,
+                                    # runs the first migration, seeds dev data
 npm run dev                         # http://localhost:3000
 ```
+
+`.env.local` → Neon **development** branch (`DATABASE_URL` pooled, `DIRECT_URL`
+direct). `.env.test.local` → Neon **test** branch (`TEST_DATABASE_URL`, direct);
+integration tests use this and nothing else — it never falls back to
+`DATABASE_URL`. Templates: `.env.example`, `.env.test.example`. Production is
+never configured locally.
 
 Without a database you can still run `npm run build`, `npm run typecheck`,
 `npm run lint` and `npm run test` (a local placeholder `.env` covers Prisma
 schema validation; pass `SKIP_ENV_VALIDATION=1` to build without real secrets).
+`npm run test:integration` needs the test branch.
 
 ## Scripts
 
@@ -37,9 +44,11 @@ schema validation; pass `SKIP_ENV_VALIDATION=1` to build without real secrets).
 | `dev` / `build` / `start` | Next.js (Turbopack) |
 | `typecheck` | `tsc --noEmit` |
 | `lint` | ESLint (flat config) |
-| `test` / `test:watch` | Vitest |
-| `db:migrate` / `db:deploy` | Prisma migrations (dev / prod) |
-| `db:seed` | Load demo fixtures |
+| `test` / `test:watch` | Vitest — unit only, no DB |
+| `test:integration` | Vitest — `*.integration.test.ts` against the Neon test branch |
+| `db:migrate` / `db:deploy` | Prisma migrations on the **development** branch (reads `.env.local`) |
+| `db:migrate:test` / `db:seed:test` | same, on the **test** branch (reads `.env.test.local`) |
+| `db:seed` | Load demo fixtures into the development branch |
 | `db:studio` | Prisma Studio |
 
 ## Layout
@@ -53,6 +62,8 @@ lib/                  db · auth · dal (the authz boundary) · storage · env
 messages/             en.json (complete) · bg.json (scaffold)
 prisma/schema.prisma  full v1 schema
 prisma/seed*          demo catalogue + fixtures
+scripts/setup-neon.sh guided Neon wiring wizard
+scripts/*-test-db*    integration-test DB resolver (test branch only, no fallback)
 proxy.ts              locale routing + optimistic cookie auth redirect
 ```
 

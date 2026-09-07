@@ -23,6 +23,12 @@ const schema = z.object({
     .default("development"),
 });
 
+// Integration-test database (Neon `test` branch). NOT consumed here — the app
+// never reads it. `scripts/resolve-test-db-env.ts` maps it onto DATABASE_URL for
+// the test process only, and throws if it is missing (no fallback). Listed here
+// only so the full env surface lives in one file.
+//   TEST_DATABASE_URL, TEST_DIRECT_URL  → see .env.test.example
+
 const raw = {
   DATABASE_URL: process.env.DATABASE_URL,
   DIRECT_URL: process.env.DIRECT_URL,

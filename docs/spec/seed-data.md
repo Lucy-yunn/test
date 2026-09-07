@@ -29,13 +29,12 @@ Every demo account's password is `demo-password-123` (printed by the seed run).
    Target ~10–20 makes / ~40–70 model groups / ~80–140 generations
    ([#4](https://github.com/Lucy-yunn/test/issues/4)). No open-dataset import —
    hand-built only.
-2. **A Neon database.** Create the project (EU region), put the pooled URL in
-   `DATABASE_URL` and the direct URL in `DIRECT_URL` (`.env.local`), then:
-   ```
-   npm run db:migrate      # first migration from prisma/schema.prisma
-   npm run db:seed
-   ```
-   This is a `wizard` candidate — see the `mattpocock-skills:wizard` skill.
+2. **Neon branches wired in.** Create the project (EU region) with `development`,
+   `test` and `production` branches, then run `bash scripts/setup-neon.sh` — it
+   pastes the development branch into `.env.local`, the test branch into
+   `.env.test.local` (`TEST_DATABASE_URL`, never falls back to `DATABASE_URL`),
+   creates the first migration, and seeds the development branch. Production is
+   configured later, in Vercel — never locally.
 3. **A Vercel Blob store** (for real listing photos later — build step 4). The
    seed uses `placehold.co` placeholder URLs; add the real hostname to
    `next.config.ts` `images.remotePatterns` and drop `placehold.co`.
