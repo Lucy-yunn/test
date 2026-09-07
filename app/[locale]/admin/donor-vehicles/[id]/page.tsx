@@ -5,6 +5,8 @@ import { requireStaff } from "@/lib/dal/session";
 import { Link } from "@/i18n/navigation";
 import { DonorVehicleForm } from "../donor-vehicle-form";
 import { loadSellerOptions, loadGenerationOptions } from "../options";
+import { PhotoManager } from "../../_components/photo-manager";
+import { uploadDonorPhotoAction, removeDonorPhotoAction } from "../photo-actions";
 
 const s = (v: string | number | null) => (v == null ? "" : String(v));
 
@@ -34,6 +36,10 @@ export default async function DonorVehicleDetailPage({
       transmission: true,
       bodyStyle: true,
       drivetrain: true,
+      photos: {
+        orderBy: { displayOrder: "asc" },
+        select: { id: true, url: true, caption: true },
+      },
       listings: {
         orderBy: { createdAt: "desc" },
         select: { id: true, internalCode: true, status: true, part: { select: { name: true } } },
@@ -82,6 +88,17 @@ export default async function DonorVehicleDetailPage({
             bodyStyle: s(dv.bodyStyle),
             drivetrain: s(dv.drivetrain),
           }}
+        />
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-lg font-semibold">Photos ({dv.photos.length})</h2>
+        <PhotoManager
+          ownerField="donorVehicleId"
+          ownerId={dv.id}
+          photos={dv.photos}
+          uploadAction={uploadDonorPhotoAction}
+          removeAction={removeDonorPhotoAction}
         />
       </section>
 

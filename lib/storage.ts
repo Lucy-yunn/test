@@ -1,36 +1,22 @@
 import "server-only";
-import { put, del, type PutBlobResult } from "@vercel/blob";
+import { put, del } from "@vercel/blob";
+import type { PhotoStore } from "./services/photos";
 
 /**
- * Thin abstraction over the photo store (ADR-0001). The database stores only the
- * URL + metadata this returns — never the bytes. Only curated, downscaled staff
- * uploads reach the store; raw seller dumps stay in a shared drive.
- *
- * Swapping Vercel Blob for S3/R2 later means reimplementing this file only.
+ * Vercel Blob — the concrete photo store (ADR-0001). The database stores only
+ * the URL this returns, never the bytes. Swapping for S3/R2 later means
+ * reimplementing this file only. `BLOB_READ_WRITE_TOKEN` is injected by Vercel.
  */
-export interface StoredImage {
-  url: string;
-  pathname: string;
-  contentType: string | undefined;
-}
-
-export async function uploadImage(
-  key: string,
-  data: Buffer | Blob | ArrayBuffer,
-  contentType?: string,
-): Promise<StoredImage> {
-  const result: PutBlobResult = await put(key, data, {
-    access: "public",
-    contentType,
-    addRandomSuffix: true,
-  });
-  return {
-    url: result.url,
-    pathname: result.pathname,
-    contentType: result.contentType,
-  };
-}
-
-export async function deleteImage(url: string): Promise<void> {
-  await del(url);
-}
+export const blobPhotoStore: PhotoStore = {
+  async upload(key, data, contentType) {
+    const result = await put(key, data, {
+      access: "public",
+      contentType,
+      addRandomSuffix: false,
+    });
+    return { url: result.url };
+  },
+  async delete(url) {
+    await del(url);
+  },
+};

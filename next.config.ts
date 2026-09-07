@@ -10,11 +10,15 @@ const nextConfig: NextConfig = {
   turbopack: { root: path.resolve() },
   // Portable by construction (ADR-0001): standard Node output, no Vercel-only APIs.
   output: "standalone",
+  // `sharp` (photo downscale on ingest) is a native module — keep it external.
+  serverExternalPackages: ["sharp"],
   images: {
     // Curated listing photos are served from Vercel Blob (ADR-0001). The exact
     // hostname is set once the store exists — see .env.example / docs/spec/seed-data.md.
     remotePatterns: [
       { protocol: "https", hostname: "*.public.blob.vercel-storage.com" },
+      // Seed / demo placeholder images only.
+      { protocol: "https", hostname: "placehold.co" },
     ],
   },
 };
