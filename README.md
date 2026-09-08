@@ -97,11 +97,12 @@ Wayfinding is complete; the build has started. Progress against
   photo upload — `sharp` downscale on ingest, Vercel Blob behind an injected
   store, soft cap 15, reorder/primary (4d). Follow-up: Part hard-merge (needs an
   `AuditLog` table).
-- [~] **5. Buyer funnel & Browse** — data layer (5a) + homepage funnel bar,
-  `/browse` (breadcrumb, faceted filter rail, result rows, sort, numbered
-  pagination, chips, empty states), the buyer-site shell (`(shop)` route group:
-  purple header with the locale `<select>` + auth-aware nav, commerce footer +
-  policy block), and `/info/[slug]` placeholder pages (5b). Next: `/listing/[id]`
-  + "more parts from the same car" (5c).
+- [x] **5. Buyer funnel & Browse** — data layer (5a); homepage funnel bar +
+  `/browse` (faceted rail, sort, pagination, chips, empty states) + buyer-site
+  shell (`(shop)` route group, purple header + commerce footer) (5b);
+  `/listing/[code]` — photo gallery, part + part numbers, donor vehicle (masked
+  VIN), defects, Buy/Save/Message states per the permission matrix (wired in
+  6/7/9), and **"More parts from the same car"** (donor siblings, badge-free,
+  8 + See-all, hidden when none) (5c).
 - [ ] 6. Favourites · 7. Checkout & orders · 8. Cancellation · 9. Messaging ·
   10. Seller center · 11. Notifications · 12. Shell & polish
