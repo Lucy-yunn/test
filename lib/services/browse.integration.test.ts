@@ -79,7 +79,7 @@ beforeAll(async () => {
 
   sellerId = (await db.seller.create({ data: { displayName: S("Seller"), contactName: "S", contactEmail: `${TAG}@x.test`, locationCity: "Sofia" } })).id;
 
-  const dA1 = await donor(genA, { engine: "1.6 TDI", fuel: "Diesel", transmission: "manual" });
+  const dA1 = await donor(genA, { engine: "1.6 TDI", fuel: "Diesel", transmission: "manual", mileageKm: 214000 });
   const dA2 = await donor(genA, { engine: "2.0 TDI", fuel: "Diesel", transmission: "automatic" });
   const dB1 = await donor(genB, { engine: "1.4 TSI", fuel: "Petrol", transmission: "manual" });
 
@@ -138,6 +138,14 @@ describe("browseListings — provenance match", () => {
     const r = await browseListings(db, { categoryId: catAlt, generationId: genA });
     expect(r.total).toBe(2); // the two gen-A alternators, not the gen-B one, not the draft
     expect(r.rows.every((x) => x.title === S("part"))).toBe(true);
+  });
+
+  it("row carries donor mileage, null when the donor has none", async () => {
+    const r = await browseListings(db, { categoryId: catAlt, generationId: genA });
+    const withKm = r.rows.find((x) => Number(x.priceEur) === 100);
+    const noKm = r.rows.find((x) => Number(x.priceEur) === 250);
+    expect(withKm?.donor.mileageKm).toBe(214000);
+    expect(noKm?.donor.mileageKm).toBeNull();
   });
 
   it("partial funnel: any generation of the model group", async () => {

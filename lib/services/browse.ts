@@ -54,6 +54,7 @@ export interface BrowseRow {
     engineCode: string | null;
     fuel: string | null;
     transmission: Transmission | null;
+    mileageKm: number | null;
   };
   seller: { name: string; city: string; country: string };
 }
@@ -106,6 +107,7 @@ function candidateSelect() {
         engineCode: true,
         fuel: true,
         transmission: true,
+        mileageKm: true,
         generation: {
           select: {
             id: true,
@@ -241,6 +243,7 @@ function toRow(c: Candidate): BrowseRow {
       engineCode: c.donorVehicle.engineCode,
       fuel: c.donorVehicle.fuel,
       transmission: c.donorVehicle.transmission,
+      mileageKm: c.donorVehicle.mileageKm,
     },
     seller: {
       name: c.seller.displayName,

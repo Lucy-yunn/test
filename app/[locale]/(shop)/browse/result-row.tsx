@@ -10,7 +10,13 @@ const CONDITION_LABEL: Record<string, string> = {
 
 export function ResultRow({ row }: { row: BrowseRow }) {
   const d = row.donor;
-  const donorDetail = [d.engine, d.engineCode, d.fuel, d.transmission]
+  const donorDetail = [
+    d.engine,
+    d.engineCode,
+    d.fuel,
+    d.transmission,
+    d.mileageKm != null ? `${d.mileageKm.toLocaleString()} km` : null,
+  ]
     .filter(Boolean)
     .join(" · ");
 
