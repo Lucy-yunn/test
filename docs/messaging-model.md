@@ -3,6 +3,14 @@
 Resolves [In-app messaging model (#11)](https://github.com/Lucy-yunn/test/issues/11)
 on the [Wayfinder map (#1)](https://github.com/Lucy-yunn/test/issues/1).
 
+> **Amended 2026-09-19.** Messaging stays in v1. Every seller now has a login
+> ([`auth-and-permissions.md`](./auth-and-permissions.md) §4.4), so the "login-less seller" case
+> in §2 no longer arises and the "Messaging isn't available for this seller" text is used only
+> for a seller whose login is disabled. A Thread is still tied to one Listing; the seller-profile
+> chat button uses a "which part?" picker ([`seller-profile.md`](./seller-profile.md) §7). Sellers
+> also write to the seller center's **Messages** as one of its several write actions, not "the
+> one write action" as §5 says.
+
 Builds on [Core domain model (#2)](https://github.com/Lucy-yunn/test/issues/2). Vocabulary is
 governed by [`CONTEXT.md`](../CONTEXT.md); the entity/field skeleton lives in
 [`docs/domain-model.md`](./domain-model.md). This document owns **who can message whom, the

@@ -1,361 +1,321 @@
-# v1 Order Model & Stubbed Checkout
+# v1 Order Model — reservation, seller-operated lifecycle, cash on delivery
 
-Resolves [Order model & stubbed checkout (#10)](https://github.com/Lucy-yunn/test/issues/10)
-on the [Wayfinder map (#1)](https://github.com/Lucy-yunn/test/issues/1).
+Originally resolved [Order model & stubbed checkout (#10)](https://github.com/Lucy-yunn/test/issues/10)
+on the [Wayfinder map (#1)](https://github.com/Lucy-yunn/test/issues/1). **Revised 2026-09-19**
+by the founders' v1 scope change: payment is cash on delivery outside the platform, and the
+seller (not staff) operates the order. Decision record: [ADR-0009](./adr/0009-seller-operated-orders-cash-on-delivery.md).
 
 Builds on [Core domain model (#2)](https://github.com/Lucy-yunn/test/issues/2) and
 [Listing model (#8)](https://github.com/Lucy-yunn/test/issues/8). Vocabulary is governed by
 [`CONTEXT.md`](../CONTEXT.md); the entity/field skeleton lives in
-[`docs/domain-model.md`](./domain-model.md). This document owns the **lifecycle, the checkout
-flow, the cancellation flow, shipping, and the visibility rules** — the procedural detail the
-domain model defers.
+[`docs/domain-model.md`](./domain-model.md). This document owns **the lifecycle, the reserve
+flow, the cancellation flow, and the visibility rules**.
+
+The three roles are used exactly as defined in `CONTEXT.md`: **buyer**, **seller**, **staff**.
 
 ---
 
 ## 1. Scope
 
-An **Order** is a Buyer's purchase of **exactly one Listing**. No cart, no line items, no
-`OrderItem` (locked in #2 — every part is a unique single unit; multi-seller carts split into
-N orders anyway; the checkout is stubbed so one-payment-many-items has no value yet).
+An **Order** is a buyer's reservation of **exactly one Listing**. No cart, no line items.
 
-**Stubbed checkout:** "Buy" creates the Order in `placed` with **no payment step, no escrow,
-no staff approval gate**. Payment, escrow, and cross-border settlement are a separate business
-problem, deferred (map "Out of scope").
+**No payment on the platform.** The buyer pays the seller's price and the courier fee to the
+courier on handover, after inspecting the part (Bulgaria's "inspect, then pay" delivery). The
+platform records who reserved what and what happened, and nothing else. There is **no
+shipping, tracking, expected-time, or receipt-confirmation flow**.
 
-Out of this ticket:
-- **Notifications** (email vs in-app, for status changes and cancellations) — remains map fog,
-  a dedicated cross-cutting ticket. The flow below works demo-wise with in-app state only.
-- **Returns & refunds** — out of scope (map). v1 has pre-ship cancellation only.
-- The **admin tool** and **seller center** *screens* — in
-  [`docs/spec/admin-tool.md`](./spec/admin-tool.md) and
-  [Seller center (#13)](https://github.com/Lucy-yunn/test/issues/13). This document fixes the
-  order-side data and rules those screens act on.
+Out of scope:
+- **Returns and refunds** after handover. A buyer who declines at the courier is `refused`
+  (§3); anything later is a matter between buyer and seller.
+- **Notifications** — [`notifications.md`](./notifications.md).
+- The seller-center and admin screens — [`seller-center.md`](./seller-center.md),
+  [`spec/admin-tool.md`](./spec/admin-tool.md). This document fixes the order-side data and
+  rules those screens act on.
 
 ---
 
-## 2. The "Buy" action (checkout)
+## 2. The reserve action
 
 The buyer is on a Listing page whose `status` is `published`.
 
-1. Buyer clicks **Buy**.
-   - **Not signed in** → send to login / register, then return to this step.
-   - **Signed in as `seller` or `staff`** → the Buy button is disabled with a short note
-     ("Buying is for buyer accounts"). Only `role = buyer` can purchase.
-2. **Checkout confirmation page** — a single lightweight page, no multi-step wizard:
+1. Buyer clicks **Reserve this part**.
+   - **Not signed in** → sent to login or register, then returned to this step.
+   - **Signed in as `seller` or `staff`** → the button is disabled with a short note
+     ("Reserving is for buyer accounts").
+   - **The Listing's seller has no active login** → the button is disabled with
+     "This seller is temporarily unavailable" (see [`auth-and-permissions.md`](./auth-and-permissions.md) §4.4).
+2. **Confirmation page** — a single lightweight page:
    - the item (primary photo, auto-composed title, condition, `priceEur`);
-   - the buyer's **saved delivery address**, with an **Edit** control;
-   - shipping shown as "arranged with the seller after purchase" (no cost yet — see §5);
-   - a **Place order** button.
-3. Buyer confirms (optionally editing the address first) and clicks **Place order**:
+   - the buyer's **saved delivery address**, with an **Edit** control. The city is
+     pre-filled from the buyer's confirmed delivery city ([`buyer-funnel-search.md`](./buyer-funnel-search.md) §6);
+   - a plain statement: **cash on delivery — you pay the seller after inspecting the part at
+     the courier; the price shown excludes the courier fee, which you pay to the courier**;
+   - a **Reserve this part** button.
+3. Buyer confirms. Then:
    - an `Order` is created with `status = placed`;
-   - `itemPriceEur` and the **delivery-address snapshot** are written onto the Order
-     (see §4);
-   - `placedAt` is set;
-   - the `Listing` transitions `published → reserved`;
+   - `itemPriceEur` and the **delivery-address snapshot** are written onto the Order (§4);
+   - `placedAt` is set and the `Listing` transitions `published → reserved`;
+   - the seller receives a notification;
    - the buyer lands on the **order detail page** (§7).
 
 ### Concurrency
 
-Only a `published` Listing is buyable. The transition to `reserved` is the gate: a second
-buyer who reaches **Place order** after the Listing is already `reserved` (or `sold`) gets
-"This item is no longer available" and no Order is created. First to place wins.
+Only a `published` Listing can be reserved. The `published → reserved` transition is the gate:
+a second buyer who reaches the button after the Listing is already `reserved` or `sold` sees
+"This item is no longer available" and no Order is created. First to reserve wins.
 
 ---
 
 ## 3. Lifecycle
 
 ```
-                 ┌─────────┐      ┌───────────┐      ┌─────────┐      ┌───────────┐
-   place order → │ placed  │ ───▶ │ confirmed │ ───▶ │ shipped │ ───▶ │ delivered │  (terminal)
-                 └────┬────┘      └─────┬─────┘      └─────────┘      └───────────┘
-                      │                 │
-                      │  cancellation   │  cancellation
-                      │  approved       │  approved
-                      ▼                 ▼
-                 ┌───────────────────────────┐
-                 │        cancelled          │  (terminal)
-                 │  lastReachedStatus kept   │
-                 └───────────────────────────┘
+                 ┌─────────┐       ┌───────────┐       ┌───────────┐
+ reserve  ─────▶ │ placed  │ ────▶ │ confirmed │ ────▶ │ completed │  (terminal)
+                 └────┬────┘       └─────┬─────┘       └───────────┘
+                      │                  │  └────────▶ refused        (terminal)
+                      │ buyer cancels    │ cancellation approved
+                      ▼                  ▼
+                 ┌─────────────────────────────┐
+                 │          cancelled          │  (terminal)
+                 │   lastReachedStatus kept    │
+                 └─────────────────────────────┘
 ```
 
-`Order.status` enum (locked, Q17): `placed | confirmed | shipped | delivered | cancelled`.
-All transitions are **manual** — there is no carrier integration and no timed progression
-(the one timer in the system is the cancellation auto-approve, §6).
+`Order.status` enum: `placed | confirmed | completed | cancelled | refused`.
+All transitions are manual and made by a person. The only automated transition is the 7-day
+cancellation auto-approve (§6).
 
 | From | To | Trigger | Actor | Guard | Side effects |
 |---|---|---|---|---|---|
-| — | `placed` | **Place order** (checkout) | Buyer | Listing is `published`; actor is `role = buyer` | Listing → `reserved`; `itemPriceEur` + address snapshot written; `placedAt` set |
-| `placed` | `confirmed` | **Confirm order** (admin tool) | Staff | — (allowed even with a pending cancellation request) | `confirmedAt` set; staff may now enter `shippingCostEur` + `shippingNotes` (§5) |
-| `confirmed` | `shipped` | **Mark shipped** (admin tool) | Staff | **no pending `CancellationRequest`** | staff enters `expectedTimeRange` + `trackingNumber` (both required at this step); `shippedAt` set |
-| `shipped` | `delivered` | **Confirm receipt** (buyer) *or* **Mark delivered** (admin tool) | Buyer or Staff | — | Listing → `sold`; `deliveredAt` set |
-| `placed` / `confirmed` | `cancelled` | a `CancellationRequest` is **approved** (§6) | Seller / Staff / system (auto) | a `pending` request exists | Listing → `published`; `cancelledAt` set; `lastReachedStatus` = the status the order was in |
+| — | `placed` | **Reserve this part** | buyer | Listing is `published`; actor is `role = buyer`; seller has an active login | Listing → `reserved`; `itemPriceEur` + address snapshot; `placedAt` |
+| `placed` | `confirmed` | **Confirm order** | seller | own order | `confirmedAt` |
+| `placed` | `cancelled` | **Cancel order** | buyer | own order | see §6.1: Listing → `published`; `cancelledAt` |
+| `confirmed` | `completed` | **Mark completed** | seller | own order; **no pending `CancellationRequest`** | Listing → `sold`; `completedAt` |
+| `confirmed` | `refused` | **Mark refused** | seller | own order; **no pending `CancellationRequest`** | Listing → `published`; `refusedAt`; optional `refusalNote` |
+| `confirmed` | `cancelled` | a `CancellationRequest` is **approved** (§6.2) | seller, or the system after 7 days | a `pending` request exists | Listing → `published`; `cancelledAt`; `lastReachedStatus = confirmed` |
 
-**Meaning of each status** (Q22):
-- `placed` — the buyer has committed; the item is held (`reserved`). Nothing paid.
-- `confirmed` — staff have checked with the seller: the part still exists and will ship.
-- `shipped` — staff have entered the seller's expected-delivery window (free text) and a
-  tracking number (free text).
-- `delivered` — the buyer confirmed receipt, or staff marked it (buyer unresponsive).
-- `cancelled` — a pre-ship cancellation was approved. Terminal.
+**Meaning of each status**
+- `placed` — the buyer has committed and the item is held (`reserved`). Nothing paid.
+- `confirmed` — the **seller** checked that the part still exists and will hand it to the courier.
+- `completed` — the **seller** marked that the buyer took the part and paid. The sale is done.
+- `refused` — the **seller** marked that the buyer inspected the part at the courier and declined it. The Listing is on sale again.
+- `cancelled` — cancelled before handover, by the buyer directly (`placed`) or by an approved request (`confirmed`).
 
-**Terminal states:** `delivered` and `cancelled`. No transitions out of either. A problem after
-`delivered` is a return / refund — out of scope for v1.
+**Terminal states:** `completed`, `refused`, `cancelled`. No transitions out of any of them.
 
-**Staff never set `sold` on the Listing by hand** (locked in #8). An offline sale is handled
-as *cancel the order + note*, not by forcing the order forward.
+**Staff never advance an order and never set `sold` on the Listing.** Staff cannot observe the
+facts these statuses assert. Staff see every order read-only (§11).
+
+**A stuck order stays stuck.** There is no timeout on `placed` or `confirmed`. If a seller never
+responds, the Listing stays `reserved` until the buyer cancels. Staff see the age of every open
+order in the admin list and chase the seller themselves.
 
 ### `lastReachedStatus`
 
-Stored on the Order. Set only when the order moves to `cancelled`, to whichever status the
-order held at that moment (`placed` or `confirmed`). The buyer's tracker renders the pipeline
-as "done" up to `lastReachedStatus`, then shows the **Cancelled** marker below it (Q17).
+Stored on the Order and set only when it moves to `cancelled`, to the status it held (`placed`
+or `confirmed`). The buyer tracker renders the pipeline as done up to `lastReachedStatus`, then
+shows a **Cancelled** marker below it.
 
 ---
 
 ## 4. Delivery address & contact
 
-The `Buyer` profile holds a **saved delivery address**, editable in buyer settings. At
-checkout the buyer confirms or edits it; the final values are **snapshotted onto the Order**
-so a later profile edit never rewrites the history of a placed order.
-
-**Field set** — identical on `Buyer` (saved) and `Order` (snapshot):
+The `Buyer` profile holds a **saved delivery address**, editable in buyer settings. At the
+confirmation page the buyer confirms or edits it; the final values are **snapshotted onto the
+Order** so a later profile edit never rewrites a placed order. The seller uses the snapshot to
+book the courier.
 
 | Field | Required | Notes |
 |---|---|---|
 | `recipientName` | yes | |
-| `phone` | yes | the seller needs it to arrange delivery |
+| `phone` | yes | the seller and courier need it |
 | `addressLine1` | yes | |
 | `addressLine2` | no | |
-| `city` | yes | |
+| `city` | yes | pre-filled from the buyer's confirmed delivery city |
 | `postcode` | yes | |
-| `country` | yes | free selection; defaults to Bulgaria |
+| `country` | yes | defaults to Bulgaria |
 
-The snapshot lives on the Order as a flat group of columns (or an embedded value — a build
-decision), never a foreign key to a mutable address row.
+The snapshot is a flat group of columns or an embedded value, never a foreign key to a mutable
+address row.
+
+The Listing keeps its optional `lengthCm` / `widthCm` / `heightCm` / `weightKg` /
+`packageSizeNotes`, displayed on the listing page so the buyer can estimate the courier fee.
+Nothing computes a price from them. **There are no shipping-cost fields on the Order.**
 
 ---
 
-## 5. Shipping cost (v1 = option B)
+## 5. (removed)
 
-The `Listing` carries optional `lengthCm` / `widthCm` / `heightCm` / `weightKg` /
-`packageSizeNotes` (from #8). In v1 those are **displayed on the listing page** for buyer
-reference and nothing computes a price from them.
-
-The `Order` gains:
-- `shippingCostEur` — nullable decimal;
-- `shippingNotes` — nullable free text ("courier to be arranged", "buyer collects", …).
-
-Both are **entered by staff in the admin tool, at or after the `confirmed` step**, and are
-**display-only** — nothing is charged (the checkout is stubbed). The buyer sees, on the order
-detail page: *"Shipping: €25.00 — arranged with the seller"* (or just the note if no amount is
-set). The order **total** shown to the buyer is `itemPriceEur + shippingCostEur` (falling back
-to `itemPriceEur` alone while shipping is unset).
-
-Rejected: a shipping price on the Listing (option C) — it would reopen the closed #8.
+Shipping cost, tracking and expected-time were removed with the shipped/delivered states
+([ADR-0009](./adr/0009-seller-operated-orders-cash-on-delivery.md)). Section numbering is kept
+so external links to §6 onwards still resolve.
 
 ---
 
 ## 6. Cancellation
 
-### 6.1 When cancellation is possible
+### 6.1 When it is possible
 
-Only while the order is `placed` or `confirmed` — i.e. **pre-ship** (locked, Q23). Once the
-order is `shipped`, there is **no cancellation**; the buyer's only route is the returns /
-refunds flow, which is **out of scope for v1**.
+Only while the order is `placed` or `confirmed`, that is, before handover. After `confirmed`
+the only remaining outcomes are `completed` and `refused`, both set by the seller.
 
-### 6.2 The cancellation request
+**Every cancellation records a reason** chosen by the buyer:
 
-Cancellation is **not** an instant buyer action. It is a one-way request:
+| Reason (enum) | Label shown |
+|---|---|
+| `found_elsewhere` | Found the part cheaper / elsewhere |
+| `no_longer_needed` | No longer need the part |
+| `seller_too_slow` | Seller took too long to confirm |
+| `condition_or_fitment_concern` | Concerns about the part's condition or fitment |
+| `ordered_by_mistake` | Ordered by mistake |
+| `other` | Other, free text, **required** when chosen |
 
-1. On the order detail page (status `placed` or `confirmed`), the buyer clicks **Cancel
-   order** and must choose a **reason**:
+### 6.2 Two paths, one record
 
-   | Reason (enum) | Label shown |
-   |---|---|
-   | `found_elsewhere` | Found the part cheaper / elsewhere |
-   | `no_longer_needed` | No longer need the part |
-   | `seller_too_slow` | Seller took too long to confirm |
-   | `condition_or_fitment_concern` | Concerns about the part's condition or fitment |
-   | `ordered_by_mistake` | Ordered by mistake |
-   | `other` | Other — free text, **required** when chosen |
+Both paths create a **`CancellationRequest`** so the reason is stored the same way.
 
-2. A **`CancellationRequest`** is created with `state = pending`. The order's `status` does
-   **not** change (it stays `placed` / `confirmed`); the pending request shows as a **banner**
-   on the order tracker for both sides — *"Cancellation requested — awaiting the seller.
-   Auto-approves 13 Sep."* The `Listing` stays `reserved` throughout.
+- **Order is `placed` — instant.** The buyer clicks **Cancel order**, picks a reason, and the
+  request is created already `approved` with `resolvedBy = buyer`. The Order goes straight to
+  `cancelled` and the Listing to `published`. The seller has not committed yet, so no approval is
+  needed.
+- **Order is `confirmed` — by request.** The request is created `pending`. The order's status
+  does **not** change and the Listing stays `reserved`. A banner shows on the buyer and seller
+  order pages: *"Cancellation requested. Auto-approves 13 Sep."* The pending window is a chance
+  for the seller and buyer to talk (Messages).
 
-3. The chosen reason + free text is shown to the seller (and staff). The pending window is
-   deliberately a **chance for the seller and buyer to talk** (via Messages).
+### 6.3 Resolution of a pending request — approval only
 
-### 6.3 Resolution — one outcome only
+A pending request **always ends in approval**; only the timing varies:
 
-The request **always ends in approval**. The only variable is *when*:
+- **The seller approves** (seller center) — immediate.
+- **Auto-approve** — **7 days after `createdAt`**, `resolvedBy = auto`.
 
-- **Seller approves** (seller center) — immediate.
-- **Staff approve** (admin tool) — any time; and staff are the **only** actor for a seller
-  with no login (`Seller.userId` is optional — #2).
-- **Auto-approve** — **7 days after `CancellationRequest.createdAt`**, `resolvedBy = auto`.
-
-There is **no reject** (it would only ever mean "keep persuading" — identical to doing
-nothing, since the request auto-approves anyway) and the **buyer cannot withdraw** the
-request. A buyer who changes their mind places a **new order** once the Listing is back to
-`published` — and is advised on-screen to message the seller first.
-
-On approval (any path):
-- `Order.status → cancelled`; `lastReachedStatus` = the status held; `cancelledAt` set;
-- `CancellationRequest.state → approved`; `resolvedAt`, `resolvedBy` set;
-- `Listing` transitions `reserved → published` (re-listed, buyable again — locked in #8).
+**Staff cannot approve and cannot raise a cancellation.** There is **no reject** and the buyer
+**cannot withdraw**; a buyer who changes their mind reserves the part again once it is
+`published`. On approval:
+- `Order.status → cancelled`, `lastReachedStatus = confirmed`, `cancelledAt` set;
+- `CancellationRequest.state → approved`, `resolvedAt`, `resolvedBy` set;
+- `Listing` → `published`.
 
 ### 6.4 What a pending request blocks
 
-- Staff **may** still advance `placed → confirmed` while a request is pending — it does not
-  affect cancellability.
-- Staff / seller **cannot** advance the order to `shipped` while a request is pending.
-  Shipping an order the buyer is trying to cancel is exactly what the grace period exists to
-  prevent. The request must resolve first (→ the order is cancelled) — in practice a pending
-  request means the order will be cancelled.
+While a request is `pending` the seller **cannot** mark the order `completed` or `refused`. The
+request must resolve first. In practice a pending request means the order will be cancelled.
 
 ### 6.5 The 7-day timer
 
-- The deadline is `CancellationRequest.createdAt + 7 days`, stored as `autoApproveAt`.
-- Mechanism: a **scheduled job (Vercel Cron, daily)** sweeps `pending` requests past their
-  `autoApproveAt` and approves them. As a safety net, the order detail page and the admin
-  list also **resolve an overdue request lazily on read**.
-- Staff get a **"Pending cancellations"** list in the admin tool, showing each request's
-  reason and `autoApproveAt`.
-- *(Build note: the cron wiring is an implementation detail for the build effort; the rule is
-  what this spec fixes.)*
+- The deadline is `createdAt + 7 days`, stored as `autoApproveAt`.
+- A daily **Vercel Cron** job approves every `pending` request past its deadline. As a safety
+  net, the order pages and the admin list also resolve an overdue request lazily on read.
+- The old "2 days before" warning notification is dropped ([`notifications.md`](./notifications.md)).
 
 ---
 
 ## 7. The order detail page (buyer)
 
-Reachable by the buyer who placed the order, only for their own orders. Shows:
+Reachable only by the buyer who placed the order.
 
-- **Status tracker** — the four pipeline steps, with the **expected-time line** directly
-  beneath the current step (§8); or, if cancelled, the pipeline "done" up to
-  `lastReachedStatus` with a **Cancelled** marker below and the cancellation reason.
-- **The item** — primary photo, title, condition, and key Part details, **read through to the
-  retained Listing** (§10.3). The Listing is never deleted — it goes `sold` / `cancelled` and
-  drops out of browse, but the buyer with an order still renders it from here. The Order
-  snapshots only what can drift or must be preserved: `itemPriceEur` and the delivery address.
-- **Shipping** — `shippingCostEur` + `shippingNotes` when set; order total.
-- **Delivery address** — the Order snapshot.
-- **Seller** — display name + Location city / country only (§11) — never the seller's full
-  address.
-- **Tracking number** — once `shipped`.
+- **Status tracker** — `placed → confirmed → completed`. A short static line under the current
+  step: `placed` "The seller will confirm shortly", `confirmed` "The seller is arranging the
+  courier — pay on delivery after inspecting", `completed` none. If `refused`, the tracker ends
+  with a **Refused** marker. If `cancelled`, the pipeline is done up to `lastReachedStatus` with
+  a **Cancelled** marker and the reason below.
+- **The item** — read through to the retained Listing, because the Listing is never deleted.
+  The Order snapshots only `itemPriceEur` and the delivery address.
+- **Payment note** — the cash-on-delivery statement from §2.
+- **Delivery address** — the snapshot.
+- **Seller** — display name, avatar, rating and city, linking to the seller profile. The phone
+  number follows the profile rule: shown because the buyer is signed in.
 - **Actions**, contextual:
-  - **Cancel order** — when `placed` / `confirmed` and no request is pending (§6);
-  - **Confirm receipt** — when `shipped` (§Q7 → moves to `delivered`);
-  - **Message seller** — always; opens or creates the buyer↔seller `Thread` for this Listing
-    (the [messaging model (#11)](https://github.com/Lucy-yunn/test/issues/11) owns the Thread).
+  - **Cancel order** — when `placed` (instant) or `confirmed` with no pending request (§6);
+  - **Message seller** — always; opens or creates the `Thread` for this Listing;
+  - **Leave a review** — when `completed` and not yet reviewed ([`reviews.md`](./reviews.md)).
 
-**Placing an order does _not_ auto-create a `Thread`.** The buyer reaches messaging through the
-explicit link above.
+Placing an order does not auto-create a `Thread`.
 
 ---
 
-## 8. Expected-time display
+## 8. (removed)
 
-Two layers, shown as a single line under the current status in the tracker:
-
-1. **Static copy per status**, baked into the UI, always present:
-   - `placed` — "The seller usually confirms within 1–2 days."
-   - `confirmed` — "Being prepared for shipping."
-   - `shipped` — "Typically arrives in 3–7 days." *(fallback, see layer 2)*
-   - `delivered` — (no line)
-2. **Staff free-text override at `shipped`** — the `expectedTimeRange` field the staff enter
-   when marking the order shipped (e.g. *"Arriving 12–15 Sep"*). When set, it **replaces** the
-   static `shipped` copy.
-
-`expectedTimeRange` is a single nullable free-text column; it is only populated at the
-`shipped` step in v1.
+Expected-time copy was removed with the shipping fields. See §5 for the numbering note.
 
 ---
 
-## 9. `delivered` (Q7)
+## 9. (removed)
 
-- The order detail page shows a **Confirm receipt** button once the order is `shipped`.
-  The buyer clicking it moves the order `shipped → delivered` (→ Listing `sold`).
-- Staff can also **Mark delivered** in the admin tool (for an unresponsive buyer).
-- There is **no automatic or timed** transition to `delivered`.
+The buyer "Confirm receipt" action was removed. `completed` is set only by the seller. See §5.
 
 ---
 
 ## 10. Entities
 
-### Order (expanded)
+### Order
 
 | Field | Type | Notes |
 |---|---|---|
-| `internalCode` | string, unique | readable staff code, `ORD-000123` (cf. `PRT-` / `LST-`) |
+| `internalCode` | string, unique | readable code, `ORD-000123` |
 | `buyerId` | FK → Buyer, required | |
-| `sellerId` | FK → Seller, required | denormalised from the Listing (nearly every query is "orders by seller") |
-| `listingId` | FK → Listing, required | the one purchased Listing |
-| `itemPriceEur` | decimal, required | **snapshot** of `Listing.priceEur` at placement |
-| `shippingCostEur` | decimal, nullable | staff-entered, display-only (§5) |
-| `shippingNotes` | text, nullable | staff-entered (§5) |
-| `status` | enum, required | `placed \| confirmed \| shipped \| delivered \| cancelled` |
+| `sellerId` | FK → Seller, required | denormalised from the Listing |
+| `listingId` | FK → Listing, required | the one reserved Listing |
+| `itemPriceEur` | decimal, required | snapshot of `Listing.priceEur` at placement |
+| `status` | enum, required | `placed \| confirmed \| completed \| cancelled \| refused` |
 | `lastReachedStatus` | enum, nullable | set only on cancellation (§3) |
-| `expectedTimeRange` | text, nullable | staff free text, set at `shipped` (§8) |
-| `trackingNumber` | text, nullable | staff free text, set at `shipped` |
-| delivery-address snapshot | 7 columns / embedded value | `recipientName`, `phone`, `addressLine1`, `addressLine2?`, `city`, `postcode`, `country` (§4) |
+| `refusalNote` | text, nullable | optional note when the seller marks `refused` |
+| delivery-address snapshot | 7 columns / embedded value | see §4 |
 | `placedAt` | timestamp, required | |
-| `confirmedAt` `shippedAt` `deliveredAt` `cancelledAt` | timestamp, nullable | dedicated columns, one per transition — enough for the tracker; a full `OrderEvent` audit log is deferred (fog) |
+| `confirmedAt` `completedAt` `cancelledAt` `refusedAt` | timestamp, nullable | one column per transition |
 
-Relationships: → 1 `Buyer`, → 1 `Seller`, → 1 `Listing`, → 0..1 `CancellationRequest`.
+Relationships: → 1 `Buyer`, → 1 `Seller`, → 1 `Listing`, → 0..1 `CancellationRequest`,
+→ 0..1 `Review` (the review linked to this order).
 
-#### 10.3 Item display after the Listing is hidden
+**Removed:** `shippingCostEur`, `shippingNotes`, `expectedTimeRange`, `trackingNumber`,
+`shippedAt`, `deliveredAt`.
 
-The `Listing` is never deleted — once the order completes it goes `sold` (or `cancelled`) and
-drops out of the funnel / browse, but the row stays. The buyer's order detail page **reads
-through** to it for the photo, title, condition, and Part details. The Order does **not**
-snapshot the item's display fields; it snapshots only `itemPriceEur` (which could otherwise be
-edited on a re-published Listing after a cancellation) and the delivery address. A future full
-`OrderEvent` / snapshot model is fog.
+#### Item display after the Listing is hidden
 
-### CancellationRequest (new)
+A `Listing` is never deleted. Once `sold` it drops out of Browse, but the row stays and the
+buyer's order page reads through to it. The Order does not snapshot display fields.
+
+### CancellationRequest
 
 | Field | Type | Notes |
 |---|---|---|
-| `orderId` | FK → Order, required | **0..1 per Order** — one request, one outcome |
-| `requestedBy` | enum | `buyer \| staff` (staff can raise one on a seller's behalf) |
-| `reason` | enum | see §6.2 table |
+| `orderId` | FK → Order, required | **0..1 per Order** |
+| `reason` | enum | see §6.1 |
 | `reasonDetail` | text, nullable | **required** when `reason = other` |
-| `state` | enum | `pending \| approved` — no other terminal state |
+| `state` | enum | `pending \| approved` |
 | `createdAt` | timestamp, required | |
-| `autoApproveAt` | timestamp, required | `createdAt + 7 days` |
+| `autoApproveAt` | timestamp, required | `createdAt + 7 days` (unused when created `approved`) |
 | `resolvedAt` | timestamp, nullable | |
-| `resolvedBy` | enum, nullable | `seller \| staff \| auto` |
+| `resolvedBy` | enum, nullable | `buyer \| seller \| auto` |
 
-Invariants (DAL, per #2's "behavioural invariants → the DAL" rule):
-- a `CancellationRequest` may be created only while the Order is `placed` or `confirmed`;
-- at most one `CancellationRequest` per Order;
-- while a request is `pending`, the Order cannot transition to `shipped`;
-- approving a request is the only way an Order reaches `cancelled`.
+**Removed:** `requestedBy` — only the buyer raises a request.
+
+Invariants, enforced in the DAL:
+- created only while the Order is `placed` or `confirmed`, and at most one per Order;
+- at `placed` it is created `approved` with `resolvedBy = buyer`; at `confirmed`, `pending`;
+- while `pending`, the Order cannot move to `completed` or `refused`;
+- approving a request is the only way an order reaches `cancelled` from `confirmed`.
 
 ---
 
 ## 11. Visibility
 
-| Viewer | Sees |
-|---|---|
-| **Staff** (admin tool) | everything — full delivery-address snapshot, buyer name + phone, every status/timestamp, the `CancellationRequest` + reason |
-| **Seller** (seller center — screen owned by #13, data rule here) | full delivery-address snapshot + buyer phone (needed to ship), the item, status, tracking, the `CancellationRequest` + reason |
-| **Buyer** (order detail page) | their own order only — seller **display name** + Location **city / country** (not the seller's full address), the status tracker, tracking number, shipping cost + total |
-| any other buyer | nothing |
+| Viewer | Sees | Can do |
+|---|---|---|
+| **staff** (admin tool) | every order, read-only: the delivery snapshot, buyer name and phone, every status and timestamp, the age of open orders, the cancellation and its reason | nothing — no buttons on orders |
+| **seller** (seller center) | own orders: full delivery snapshot, buyer phone, item, status, cancellation and reason | confirm, mark completed, mark refused, approve a pending cancellation |
+| **buyer** (order page) | own orders only: seller name, avatar, rating, city and (signed in) phone; never the seller's street address | cancel, message, leave a review |
+| any other buyer | nothing | — |
 
 ---
 
-## 12. Downstream / fog touched by this ticket
+## 12. Downstream
 
-- **Notifications** (map fog) — order-status-change and cancellation-request notifications
-  (email vs in-app) are still unspecified; this ticket deliberately leaves them out.
-- **Seller center (#13)** — consumes the `Order` and `CancellationRequest` here; owns the
-  screen and metrics.
-- **Messaging (#11)** — the "Message seller" link and the pending-cancellation conversation
-  use its `Thread`.
-- **Final spec assembly ([#26](https://github.com/Lucy-yunn/test/issues/26))** — done: the
-  admin Order Management + Pending-cancellations screens are in
-  [`docs/spec/admin-tool.md`](./spec/admin-tool.md) §7–8; the always-approves cancellation
-  model is [ADR-0005](./adr/0005-always-approves-cancellation.md).
+- **Seller center** owns the screens that carry the seller's actions — [`seller-center.md`](./seller-center.md).
+- **Reviews** hang off completed orders — [`reviews.md`](./reviews.md).
+- **Credits** are not touched by orders: a cancelled order returns the Listing to `published`
+  with no new credit charge — [`seller-credits.md`](./seller-credits.md).
+- **Notifications** — [`notifications.md`](./notifications.md).
+- Decision records: [ADR-0005](./adr/0005-always-approves-cancellation.md) (amended),
+  [ADR-0009](./adr/0009-seller-operated-orders-cash-on-delivery.md).

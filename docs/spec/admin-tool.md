@@ -8,25 +8,28 @@ This document defines **what each screen shows, what it does, and which rules it
 within** — not pixel layout. Every rule below is already fixed by a closed ticket; the build
 assembles CRUD over the entities.
 
-**Admin scope (Q20):** Order Management + Product Management, plus the operational surfaces
-that accreted — Sellers, Buyers, Vehicle catalogue, Cancellations, Threads. Nothing else:
-no marketing / finance / CS / store-management / subscription modules, no ad analytics, no
-staff-management UI, no impersonation.
+**Admin scope:** Product Management (sellers, donor vehicles, listings, parts), plus the
+operational surfaces Vehicle catalogue, Buyers, Threads, **Credits** and **Reviews**, and a
+**read-only** Orders view. Staff **cannot act on orders** ([ADR-0009](../adr/0009-seller-operated-orders-cash-on-delivery.md)).
+Still out: marketing / customer-service / store-management modules, ad analytics, payout and
+invoicing, staff-management UI, impersonation.
 
-There is **no staff-facing notification feed** — staff work entirely from the queues and lists
-below ([`notifications.md`](../notifications.md) §4).
+There is **no staff-facing notification feed** — staff work from the lists below
+([`notifications.md`](../notifications.md) §4).
 
 ---
 
 ## 1. `/admin` — Dashboard
 
-Three action queues, each a filtered list with a count:
+Read-only counts, each linking to a filtered list:
 
-| Queue | Contents | Links to |
+| Item | Contents | Links to |
 |---|---|---|
-| **Needs confirmation** | `Order.status = placed` | `/admin/orders/[code]` |
-| **Pending cancellations** | `CancellationRequest.state = pending`, sorted by `autoApproveAt` ascending | `/admin/orders/[code]` (cancellation panel) |
-| **Reported threads** | `Report` rows not yet resolved | `/admin/threads/[id]` |
+| **Awaiting seller** | `Order.status = placed`, with the age of the oldest | `/admin/orders` filtered |
+| **Awaiting completion** | `Order.status = confirmed`, with the age of the oldest | `/admin/orders` filtered |
+| **Pending cancellations** | `CancellationRequest.state = pending` | `/admin/orders` filtered |
+| **Reported threads** | `Report` rows not yet resolved. **The only item staff act on.** | `/admin/threads/[id]` |
+| **Low credits** | sellers with a balance of 5 or fewer | `/admin/sellers` sorted by balance |
 
 No charts, no revenue, no time series.
 
@@ -34,26 +37,29 @@ No charts, no revenue, no time series.
 
 ## 2. `/admin/sellers`
 
-**List** — every `Seller`: `displayName`, Location city, has-login flag, counts of active
-listings / open orders.
+**List** — every `Seller`: `displayName`, Location city, has-login flag, **credit balance**,
+counts of active listings / open orders. Sortable by balance.
 
 **`/admin/sellers/new`** — Phase 1 provisioning ([`auth-and-permissions.md`](../auth-and-permissions.md) §4.1):
-create the `Seller` profile — `displayName`, contact name / email / phone, embedded **Location**
-(name, address line, city, postcode, country). **No `User` created.** The Seller can be given
-`DonorVehicle`s and `Listing`s immediately.
+create the `Seller` profile — `displayName`, contact name / email / phone, **avatar** (optional
+upload), embedded **Location** (name, address line, city, postcode, country). **No `User` yet.**
+The Seller can be given `DonorVehicle`s and draft `Listing`s immediately, but **cannot publish
+until a login is provisioned** ([`auth-and-permissions.md`](../auth-and-permissions.md) §4.4).
 
-**`/admin/sellers/[id]`** — profile + Location editor, listing/order/thread counts, and the
-login controls:
+**`/admin/sellers/[id]`** — profile + Location + avatar editor, listing/order/thread counts, the
+**Credits panel** (§7b), and the login controls:
 
 | Action | Effect | Rule |
 |---|---|---|
 | **Provision login** | enter a login email (pre-filled from contact email). **Collision check** — reject if the email belongs to **any** `User`. On success: create `User{role:seller}`, link `Seller.userId`, **show a random initial password once** for staff to relay. Not force-rotated. | [`auth-and-permissions.md`](../auth-and-permissions.md) §4.2, [ADR-0004](../adr/0004-one-role-per-user.md) |
 | **Disable / Enable login** | Better Auth ban toggle. Profile, listings, orders, messages untouched. | §4.3 |
-| **Unlink login** | clear `Seller.userId` **and** disable that `User` (never hard-delete). Seller reverts to login-less (no messaging). | §4.3 |
+| **Unlink login** | clear `Seller.userId` **and** disable that `User` (never hard-delete). Seller becomes unavailable until a login is provisioned again. | §4.3, §4.4 |
 | **Reset password** | new random password shown once to staff. Works on any `User`. | §4.3, §6 |
 
-A disabled / unlinked seller behaves as **login-less** on the buyer site — no *Message seller*
-button, no `Thread` ([ADR-0006](../adr/0006-both-sides-login-messaging.md)).
+A disabled / unlinked seller is **unavailable**: their listings can no longer be reserved, their
+public profile is hidden, and no new `Thread` can start ([`auth-and-permissions.md`](../auth-and-permissions.md)
+§4.4, [ADR-0006](../adr/0006-both-sides-login-messaging.md)). **Disable** and **Unlink** first
+show a warning when the seller has open orders, because nobody can then confirm or complete them.
 
 ---
 
@@ -115,6 +121,9 @@ Per `Vehicles` row on the sheet:
   `VehicleGeneration` in §4), `label` (staff reference).
 - Nullable: `donorYear`, `vin` (shown **masked** to buyers), `vinDerivedNotes` (staff-only),
   `mileageKm`, `registrationCountry`, `notes`.
+- **`scrapReason`** — nullable **free text**, the seller's own words on why the car was scrapped.
+  The field's placeholder suggests examples (accident, flood, end of life) but accepts anything.
+  It is shown to buyers on the donor-vehicle page.
 - **Structured detail** (nullable, shown to buyers on the Listing): `engine`, `engineCode`,
   `fuel`, `transmission`, `bodyStyle`, `drivetrain`.
 - `DonorVehiclePhoto` 0..n (optional).
@@ -134,12 +143,14 @@ Per `Parts` row:
    edge), order (first = primary), soft cap ~15. Only these enter Vercel Blob.
 4. **Publish checklist** — `draft → published` requires: ≥1 photo · `condition` set ·
    `priceEur > 0` · `Part` linked with a leaf `Category` · `DonorVehicle` linked · ≥1
-   `PartNumber` **or** "no visible number" ticked. There is **no review state / approval
-   queue** — the checklist is the gate.
-5. **Status transitions** — `draft → published`; `published ↔ cancelled`;
-   `published` / `cancelled → archived`. Staff **never** set `sold` by hand (an offline sale
-   = cancel the order + note). `published → reserved → sold` is driven by the order lifecycle
-   only.
+   `PartNumber` **or** "no visible number" ticked · **the seller is available** (has an active
+   login) · **the seller has at least one credit**. Publishing charges one credit in the same
+   transaction ([`seller-credits.md`](../seller-credits.md) §3). There is **no review state /
+   approval queue** — the checklist is the gate.
+5. **Status transitions** — `draft → published` (one credit); `published ↔ cancelled`
+   (`cancelled → published` costs one credit); `published` / `cancelled → archived` (terminal).
+   Staff **never** set `sold` by hand. `published → reserved → sold` and `reserved → published`
+   are driven by the order lifecycle only, and cost no credit.
 
 **Build note:** the editor must not assume only staff create a `draft` — the future
 self-serve path reuses `draft` + the checklist as its approval gate ([ADR-0007](../adr/0007-staff-entry-no-submission-entity.md)).
@@ -151,39 +162,46 @@ required for v1 volume.
 
 ---
 
-## 7. `/admin/orders` — Order Management ([`order-model.md`](../order-model.md))
+## 7. `/admin/orders` — Orders (**read-only**, [`order-model.md`](../order-model.md))
 
-**List** — every `Order`. Filters over `status` (`placed` / `confirmed` / `shipped` /
-`delivered` / `cancelled`) plus a **"needs confirmation"** shortcut (`status = placed`).
-Newest first.
+**List** — every `Order`, newest first. Columns: code, item, buyer, seller, status, placed date
+and **age** for open orders, and a badge for a pending cancellation. Filters over `status`
+(`placed` / `confirmed` / `completed` / `cancelled` / `refused`), by seller, and **"cancellation
+pending"**. Sortable by age, so stuck orders float to the top.
 
-**`/admin/orders/[code]`** — full visibility (everything: delivery snapshot, buyer name +
-phone, every timestamp, the `CancellationRequest` + reason). Transition controls:
+**`/admin/orders/[code]`** — full visibility: delivery snapshot, buyer name and phone, seller,
+every timestamp, the `CancellationRequest` and its reason, the `refusalNote`.
 
-| Action | From → To | Requires |
-|---|---|---|
-| **Confirm order** | `placed → confirmed` | allowed even with a pending cancellation; sets `confirmedAt`. Staff may now enter `shippingCostEur` + `shippingNotes` (display-only, nothing charged). |
-| **Mark shipped** | `confirmed → shipped` | **no pending `CancellationRequest`**; staff enter `expectedTimeRange` **and** `trackingNumber` (both required); sets `shippedAt`. |
-| **Mark delivered** | `shipped → delivered` | for an unresponsive buyer (the buyer can also self-confirm). Sets `deliveredAt`; `Listing → sold`. |
+**There are no action buttons.** Staff cannot confirm, complete, refuse, cancel, approve a
+cancellation, or raise one; only the seller (and, for cancellation, the buyer and the 7-day timer)
+can ([ADR-0009](../adr/0009-seller-operated-orders-cash-on-delivery.md)). When an order is stuck
+the staff contact the seller by phone.
 
-Each transition also writes the buyer/seller `Notification` rows in the same transaction
-([`notifications.md`](../notifications.md) §3.1).
+The old `/admin/cancellations` page is removed. Its data is the "cancellation pending" filter
+above. The daily **Vercel Cron** sweep still auto-approves requests past `autoApproveAt`, and
+overdue requests also resolve lazily on read ([ADR-0005](../adr/0005-always-approves-cancellation.md)).
 
 ---
 
-## 8. `/admin/cancellations` — Pending cancellations
+## 7b. Credits — `/admin/credit-bundles` and the seller Credits panel
 
-List of `CancellationRequest.state = pending`, each with the `reason` (+ `reasonDetail`) and
-`autoApproveAt`, sorted by `autoApproveAt`. Actions:
+- **`/admin/credit-bundles`** — CRUD over `CreditBundle` (`name`, `credits`, `priceEur`,
+  `isActive`, `displayOrder`). Inactive bundles cannot be chosen for a new top-up.
+- **Credits panel** on `/admin/sellers/[id]`: the current balance; **Add bundle** (choose a bundle,
+  writes a `topup` ledger entry); **Adjust** (a positive or negative number and a **required note**,
+  writes an `adjustment` entry); and the full ledger, newest first, with kind, amount, note, staff
+  member and date. Rows are never edited or deleted.
 
-- **Approve** — any request, any time. Staff are the **sole** approver for a login-less
-  seller's order. On approval: `Order → cancelled` (`lastReachedStatus` kept),
-  `CancellationRequest → approved` (`resolvedBy = staff`), `Listing → published`.
-- **Raise a cancellation** on a seller's behalf — `requestedBy = staff`, choose the reason.
+Rules: [`seller-credits.md`](../seller-credits.md).
 
-**No reject, no decline** — [ADR-0005](../adr/0005-always-approves-cancellation.md). The daily
-**Vercel Cron** sweep auto-approves anything past `autoApproveAt` (`resolvedBy = auto`);
-overdue requests also resolve lazily on read of this list or the order page.
+---
+
+## 8. `/admin/reviews` — Reviews
+
+A list of every `Review`, newest first, filterable by seller and by hidden or visible. Each row
+shows the seller, the reviewer, rating, text, the context label (purchased part or "No purchase"),
+the seller's reply, and its hidden state. **Hide** requires a reason and **Unhide** is available.
+Staff cannot write, edit or reply. Rules: [`reviews.md`](../reviews.md) §5.
 
 ---
 
@@ -214,3 +232,4 @@ No message deletion or redaction — the log is append-only.
 | Staff accounts | seed script only — **no creation UI here** |
 | Impersonation | not built |
 | Staff have **no** seller-center access | they see every seller's data here instead |
+| Staff order actions | **none** — read-only ([ADR-0009](../adr/0009-seller-operated-orders-cash-on-delivery.md)) |

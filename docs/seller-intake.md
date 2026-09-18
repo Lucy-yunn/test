@@ -56,6 +56,7 @@ working tabs plus hidden reference tabs.
 | Body style | — | Optional — e.g. `saloon`, `estate/avant`, `hatchback`. |
 | Drivetrain | — | Optional — e.g. `fwd`, `rwd`, `awd/quattro`. |
 | Registration country | — | Optional. |
+| Why the car was scrapped | — | Optional free text, the seller's own words (for example an accident, flood or end of life). Maps to `DonorVehicle.scrapReason` and is shown to buyers on the donor-vehicle page. |
 | Notes | — | Optional free text for Staff. |
 
 The engine / fuel / transmission / body / drivetrain columns are the structured

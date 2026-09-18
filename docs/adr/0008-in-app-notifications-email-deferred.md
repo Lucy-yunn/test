@@ -1,6 +1,6 @@
 # ADR-0008 — v1 notifications are in-app only; transactional email is deferred as one layer
 
-- **Status:** accepted
+- **Status:** accepted. The decision stands. The event list changed on 2026-09-19 (no shipping events; review and credit events added; no staff-relayed login-less sellers): see [`docs/notifications.md`](../notifications.md).
 - **Date:** 2026-09-06
 - **Source:** [#17 Notifications](https://github.com/Lucy-yunn/test/issues/17) · full matrix in [`docs/notifications.md`](../notifications.md); builds on [#12 §6](../auth-and-permissions.md)
 

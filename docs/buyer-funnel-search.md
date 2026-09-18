@@ -207,14 +207,28 @@ No dead ends.
   listed as placeholders for later EU markets (upholds the standing "language switch present
   from day one" preference). Selecting a non-English option shows a "not translated yet"
   notice and reverts.
-- **Delivery-to** location indicator (`Bulgaria, Aytos` in the demo).
-- Header utilities: messages, **favourites** (buyer favourites are in scope), cart, log in.
+- **Delivery-to** control, e.g. `Delivery to Bulgaria, Aytos`. It only **pre-fills the city at
+  the reserve step** ([`order-model.md`](./order-model.md) §2); it never affects search or
+  sorting.
+  - On a visitor's first request the city is **suggested from their IP address** using the
+    location headers Vercel adds to each request. These are city-level and often wrong, so the
+    suggestion is shown as editable and is **not stored**.
+  - The visitor can click it and type a city (a plain text input, no city list). A chosen city is
+    kept in the browser; once signed in it is saved as `Buyer.deliveryCity`. A chosen city always
+    wins over a detected one.
+  - Only a city the buyer chose is ever written to the database. Verify the header names against
+    the Vercel and Next.js docs at build time; they are absent in local development, so use a
+    fixed fake value there.
+- Header utilities: messages, **saved** (Saved Parts and Saved Sellers,
+  [`seller-profile.md`](./seller-profile.md) §8), **my orders** (a link to `/account/orders`,
+  replacing the cart), log in. **There is no cart** in v1.
 - **Footer** — a full commerce footer on both pages: **Buying** / **Help** / **Legal**
   columns; an operator + VAT line; a **payment-methods** row; and a policy block that states,
   in buyer-facing language:
-  - **Condition & returns** — parts sold as described with photos + defect list; cancel any
-    time before dispatch; once shipped, no cancellation and **no returns/refunds process in
-    v1**; EU statutory consumer rights unaffected. (Mirrors #10 / #8.)
+  - **Condition & returns** — parts sold as described with photos + defect list; **pay the
+    seller in cash after inspecting the part at the courier, and you may decline it there**; cancel
+    any time before handover; no returns/refunds process in v1; EU statutory consumer rights
+    unaffected. (Mirrors the [order model](./order-model.md) / #8.)
   - **How matching works** — results show parts by the vehicle they were **removed from**.
     IVO does **not** verify that a part fits any other vehicle. A part from the same
     generation is **not guaranteed** to fit your car — always check the **part number** and

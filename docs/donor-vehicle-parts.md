@@ -3,6 +3,14 @@
 Resolves [Buyer-facing "more parts from this donor vehicle" view — v1 or not (#23)](https://github.com/Lucy-yunn/test/issues/23)
 on the [Wayfinder map (#1)](https://github.com/Lucy-yunn/test/issues/1).
 
+> **Amended 2026-09-19.** The "no dedicated donor-vehicle page" cut in §1 and §8 below is
+> **reversed**: every donor vehicle now has a public page with the car's details, why it was
+> scrapped, and all of its parts, sold parts greyed last
+> ([`seller-profile.md`](./seller-profile.md) §6, [ADR-0011](./adr/0011-public-seller-profile-and-donor-vehicle-page.md)).
+> **This inline section stays unchanged**, and the listing page's Donor vehicle heading gains a
+> link to the new page. Everything below about the inline section still holds, including that it
+> shows only `published` and `reserved` siblings.
+
 The `DonorVehicle` and `Listing` entities (fields, relationships, the `Listing → DonorVehicle`
 provenance link) live in [`docs/domain-model.md`](./domain-model.md). This document owns one
 buyer-facing surface: a section on the listing detail page that lists the seller's **other
