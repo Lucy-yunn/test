@@ -46,6 +46,25 @@ Every demo account's password is `demo-password-123` (printed by the seed run).
    enumerated list it gives is 73 + the catch-all. The enumerated list was taken
    as authoritative. Flag if any leaf should be dropped or merged for v1.
 
+## Fixtures to add after the 2026-09-19 scope change
+
+The demo dataset below predates the change. When the matching build steps land, extend
+`prisma/seed/seed.ts` so it also contains:
+
+- **Every seller has a login** (the four demo sellers all get one), and an avatar for at least one.
+- Orders in **`placed`, `confirmed`, `completed`, `cancelled` and `refused`** (replacing
+  `shipped` and `delivered`), one **pending** cancellation on a `confirmed` order, and one order
+  that has been `placed` for many days so the staff list shows a stuck order.
+- **Credit bundles** (placeholder: 25, 100 and 250 credits at falling per-credit prices) and a
+  ledger per seller with `topup`, `publish` and `adjustment` rows. One seller near 5 credits and
+  one at 0.
+- **Reviews** for at least two sellers: some purchase-linked, some "No purchase", one with a
+  seller reply, one hidden, and one seller with fewer than 3 (to show "New seller").
+- **Saved sellers** for at least one buyer.
+- A donor vehicle with a `scrapReason`, one with none, and a car with a `sold` Listing so the
+  greyed-last rule is visible.
+- Notification rows matching the new event list ([`notifications.md`](../notifications.md) §3).
+
 ## Demo coverage (seller-center §11 checklist)
 
 The login-enabled seller **Sofia Auto Dismantlers** (`yard.sofia@example.com`) has:

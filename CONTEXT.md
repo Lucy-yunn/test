@@ -19,18 +19,20 @@ What a User is: `buyer`, `seller`, or `staff`. Exactly one per User in v1.
 _Avoid_: permission, type, group
 
 **Buyer**:
-A party who browses and purchases parts. The profile is created automatically when a person
-self-registers on the site.
+A person who self-registers to browse, save, message, reserve parts and review sellers. The
+profile is created automatically at registration.
 _Avoid_: customer, client, shopper, user
 
 **Seller**:
-A party whose parts are sold on the platform. The record is created by staff during
-onboarding; a login is attached later, or never.
+A business, such as a dismantler or repair shop, whose parts are sold on the platform. Staff
+create the record at onboarding and provision a login; a seller cannot publish or sell without
+one. The seller operates their own Orders.
 _Avoid_: vendor, supplier, dismantler, merchant, yard, partner
 
 **Staff**:
-The operator role — the founders — who run the admin tool. Staff has no profile of its own,
-only the role.
+The two founders, who run the admin tool. They enter sellers, donor vehicles and Listings on a
+seller's behalf, add credits, and hide reviews. Staff are never a party to an Order and cannot
+confirm, complete, cancel or refuse one. Staff has no profile of its own, only the role.
 _Avoid_: admin (for the person), operator, moderator, superuser
 
 **Location**:
@@ -38,9 +40,8 @@ A Seller's single physical place of business. One Seller has one Location in v1.
 _Avoid_: address, branch, warehouse, site
 
 **Seller center**:
-The area where a Seller with a login views their own Orders and product performance.
-Read-only except for two actions: replying to a buyer's Messages, and approving a
-Cancellation request on one of their Orders. Listing is never done here.
+The area where a Seller runs their Orders, replies to Messages and Reviews, and sees their
+Listings, credits and figures. Listing is never done here.
 _Avoid_: seller dashboard, seller portal, vendor console
 
 **Admin tool**:
@@ -108,7 +109,7 @@ _Avoid_: search, filter, finder, wizard
 The physical car a Seller dismantled, from which one or more Listings' parts were removed.
 Entered once by staff and always identified to a Generation; its parts are then added as
 Listings against it. Carries the structured engine, engine code, fuel, gearbox, body style
-and drivetrain of that specific car.
+and drivetrain of that specific car, and the seller's free-text reason it was scrapped.
 _Avoid_: donor car (as the entity name), source vehicle, scrap car, parts car, vehicle
 
 **Provenance**:
@@ -140,19 +141,50 @@ buyer sees a bulleted list. Distinct from the free-text condition notes.
 _Avoid_: fault, issue, flaw, damage note
 
 **Order**:
-A Buyer's purchase of exactly one Listing, moving through a fixed lifecycle
-(placed → confirmed → shipped → delivered, or cancelled). No payment in v1.
+A Buyer's reservation of exactly one Listing, moving through placed → confirmed → completed, or
+ending cancelled or refused. Only the Seller advances it. Payment is cash on delivery, outside
+the platform.
 _Avoid_: transaction, purchase, sale, checkout, cart
 
+**Refused**:
+The end state of an Order when the Buyer inspected the part at the courier and declined it. Set
+by the Seller; the Listing goes back on sale.
+_Avoid_: returned, rejected, failed delivery
+
 **Cancellation request**:
-A Buyer's request to cancel an Order before it ships. Carries a reason. Always ends in
-approval — by the Seller, by Staff, or automatically after seven days; it is never rejected
-and the Buyer cannot withdraw it.
+A Buyer's record of cancelling an Order before handover, with a reason. Instant while the Order
+is placed; once confirmed it waits for the Seller or approves itself after seven days. It is
+never rejected, the Buyer cannot withdraw it, and Staff cannot act on it.
 _Avoid_: cancellation (as the action), refund request, return, dispute
 
 **Favorite**:
-A Buyer's saved reference to a Listing. Feeds the seller-center favourites count.
+A Buyer's saved Listing, shown as "Saved Parts". Feeds the seller-center favourites count.
 _Avoid_: wishlist, bookmark, like, save, watch
+
+**Saved seller**:
+A Buyer's saved reference to a Seller, shown as "Saved Sellers".
+_Avoid_: follow, subscription, favourite seller
+
+**Review**:
+A Buyer's rating of a Seller from 1 to 5 stars with optional text. Any signed-in Buyer may write
+one; it is labelled with the purchased part, or "No purchase". The Seller may reply once; Staff
+may hide it.
+_Avoid_: rating (for the whole), feedback, testimonial
+
+**Credit**:
+One unit a Seller spends to publish a Listing. Bought in advance as a Credit bundle, recorded in
+an append-only ledger, and never refunded.
+_Avoid_: token, coin, point, balance (for one unit)
+
+**Credit bundle**:
+A number of Credits sold to Sellers at a fixed EUR price. Bigger bundles cost less per Credit.
+Staff record a purchase by hand.
+_Avoid_: package, plan, subscription, top-up (for the product)
+
+**Donor-vehicle page**:
+The public page for one DonorVehicle: the car's details, why it was scrapped, and every part
+taken from it, sold parts greyed last.
+_Avoid_: car page, vehicle profile, ID card (informal only)
 
 **Thread**:
 A single buyer↔seller conversation, scoped to one Listing and one Buyer. Started by the buyer
@@ -169,8 +201,8 @@ A buyer's or seller's flag on a Thread, raising it for Staff to review. Not itse
 _Avoid_: flag, complaint, abuse report, ticket
 
 **Notification**:
-A durable in-app record that one event (an Order status change, a Cancellation request event)
-happened, addressed to one recipient with a login — a Buyer or a Seller. Shown in a per-user
+A durable in-app record that one event (an Order status change, a Cancellation request, a
+Review, a low Credit balance) happened, addressed to one recipient — a Buyer or a Seller. Shown in a per-user
 feed with an unread count. New-message alerting is not a Notification; it stays on the Thread's
 own unread state. There is no notification email in v1.
 _Avoid_: alert, message (for this), push, toast, inbox item

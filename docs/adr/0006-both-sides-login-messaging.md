@@ -1,6 +1,6 @@
 # ADR-0006 — Messaging requires a login on both sides; no staff relay
 
-- **Status:** accepted
+- **Status:** accepted. Since 2026-09-19 every seller must have a login ([ADR-0009](./0009-seller-operated-orders-cash-on-delivery.md)), so the login-less case this ADR handles no longer arises for published listings. The rule stands unchanged.
 - **Date:** 2026-09-06
 - **Source:** [#11 In-app messaging model](https://github.com/Lucy-yunn/test/issues/11) §2 · full spec in [`docs/messaging-model.md`](../messaging-model.md)
 

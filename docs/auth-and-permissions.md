@@ -21,7 +21,7 @@ Three **roles**, exactly one per `User` in v1 (locked in #2): `buyer`, `seller`,
 | Role | Profile entity | Created by | Login |
 |---|---|---|---|
 | `buyer` | `Buyer` (1:1, required) | self-registration | always |
-| `seller` | `Seller` (1:1, **optional**) | staff, at onboarding | provisioned by staff later, or never |
+| `seller` | `Seller` (1:1; the link is unset only between profile creation and login provisioning) | staff, at onboarding | provisioned by staff. **Required before the seller can publish or sell** (§4.4). |
 | `staff` | none | seed script (by hand) | always |
 
 Out of this ticket:
@@ -96,8 +96,9 @@ authorization mechanism (the DAL) avoids two sources of truth.
      `Buyer` insert together, or create the `Buyer` in a `before` hook / same-transaction
      callback — an implementation choice, but the atomicity is not optional).
 2. The buyer is **auto-signed-in**.
-3. Redirect: to the **gated action** the buyer came from (the listing they clicked **Buy** /
-   **Favorite** / **Message seller** on), else the homepage. There is nothing to "merge" — an
+3. Redirect: to the **gated action** the buyer came from (the listing they clicked **Reserve** /
+   **Save** / **Message seller** on, the review they were writing, or the seller-contact button),
+   else the homepage. There is nothing to "merge" — an
    anonymous visitor has no favourites, orders, or threads to carry over; funnel state is just
    URL parameters.
 
@@ -109,7 +110,7 @@ authorization mechanism (the DAL) avoids two sources of truth.
 |---|---|
 | `name` | ✅ |
 | `password` | ✅ — requires the current password |
-| saved delivery address (the 7 fields, #10 §4) | ✅ |
+| saved delivery address (the 7 fields, #10 §4) and delivery city | ✅ |
 | `email` | ✗ — no verification path in v1; screen shows "Contact us to change your email" |
 | delete account | ✗ — no self-serve deletion in v1 (see §9) |
 
@@ -117,7 +118,9 @@ authorization mechanism (the DAL) avoids two sources of truth.
 
 ## 4. Seller account provisioning (staff-driven)
 
-A Seller is onboarded white-glove. Provisioning is **two phases**, and phase 2 is optional.
+A Seller is onboarded white-glove. Provisioning is **two phases**, and **both are required**
+before the seller's parts can be sold ([ADR-0009](./adr/0009-seller-operated-orders-cash-on-delivery.md):
+sellers operate their own orders, so a seller without a login cannot sell).
 
 ### 4.1 Phase 1 — create the `Seller` profile (always)
 
@@ -127,13 +130,11 @@ Staff open **New seller** in the admin tool and enter:
 - contact name / contact email / contact phone (staff-facing)
 - the embedded **Location** — name, address line, city, postcode, country (one per Seller, #2)
 
-**No `User` is created.** Staff can immediately enter `DonorVehicle`s and `Listing`s against
-this Seller. Their published listings appear on the buyer site (displayName + Location city /
-country). Because `Seller.userId` is unset, the listing page shows *"Messaging isn't available
-for this seller"* instead of a **Message seller** button, and no `Thread` can be created
-(#11 §2). This is a **login-less seller**.
+**No `User` is created yet.** Staff can immediately enter `DonorVehicle`s and draft `Listing`s
+against this Seller, but **cannot publish** until phase 2 is done (§4.4). Staff may also upload
+the seller's avatar here.
 
-### 4.2 Phase 2 — provision a login (optional, any time)
+### 4.2 Phase 2 — provision a login (required to publish)
 
 On the Seller page, staff click **Provision login** and enter a **login email**
 (pre-filled from the contact email, editable). Then:
@@ -147,8 +148,7 @@ On the Seller page, staff click **Provision login** and enter a **login email**
 3. The password is **not** force-rotated on first login. The seller center has a
    **Change password** page.
 
-Once linked, the seller can sign in to the (mostly read-only) seller center and use its two
-write actions (§7).
+Once linked, the seller can sign in to the seller center and use its write actions (§7.2).
 
 ### 4.3 Managing an existing seller login
 
@@ -157,11 +157,26 @@ Staff actions on a Seller that has a login:
 | Action | Effect |
 |---|---|
 | **Disable login** | Better Auth ban — the seller cannot sign in. `Seller` profile, listings, orders, and message history are untouched. Reversible via **Enable login**. |
-| **Unlink login** | Clears `Seller.userId` **and** disables that `User` (never a hard delete). For the "provisioned the wrong / a mistaken account" case. The Seller reverts to login-less behaviour on the buyer site. |
+| **Unlink login** | Clears `Seller.userId` **and** disables that `User` (never a hard delete). For the "provisioned the wrong / a mistaken account" case. The Seller becomes unavailable (§4.4) until a login is provisioned again. |
 | **Reset password** | Generates a new random password shown once to staff to relay. Works on any `User` (§6). |
 
-A disabled or unlinked seller login simply makes the Seller behave as login-less again
-(no messaging).
+A disabled or unlinked seller login makes the Seller **unavailable** (§4.4).
+
+### 4.4 A seller is available only with an active login
+
+A seller is **available** when `Seller.userId` is set and that `User` is not banned. The DAL
+enforces it:
+
+- **Publishing** a Listing (`draft` or `cancelled` to `published`) is refused for an unavailable
+  seller: *"This seller has no active login."*
+- **Reserving** a Listing is refused for an unavailable seller, and the listing page shows the
+  **Reserve** button disabled with *"This seller is temporarily unavailable."* This covers
+  Listings already published when a login is later disabled or unlinked.
+- The seller's public profile and donor-vehicle pages are hidden ([`seller-profile.md`](./seller-profile.md) §1).
+- **Open orders are not touched.** Disabling or unlinking a login with open orders is allowed but
+  the admin tool warns staff first, because nobody can then confirm or complete them.
+
+There is no login-less seller case any more, and no staff relay.
 
 ---
 
@@ -204,37 +219,39 @@ seller` **with `Seller.userId` set**) · **Staff** (`role = staff`).
 
 | Capability | Anonymous | Buyer | Seller | Staff |
 |---|---|---|---|---|
-| Funnel, search, browse, listing detail, policy / footer pages | ✅ | ✅ | ✅ | ✅ |
-| Place an Order (**Buy**) | → login | ✅ | ✗ disabled | ✗ disabled |
-| Favorite / unfavorite a listing | → login | ✅ | ✗ | ✗ |
-| Start / reply in a `Thread` (**Message seller**) | → login | ✅ *(if the seller has a login)* | ✗ *(no button)* | ✗ |
+| Funnel, search, browse, listing detail, seller profile, donor-vehicle page, policy / footer pages | ✅ | ✅ | ✅ | ✅ |
+| See a seller's **phone number** | ✗ *(sign-in button)* | ✅ | ✅ | ✅ |
+| Reserve a part (`Order`) | → login | ✅ | ✗ disabled | ✗ disabled |
+| Save / unsave a listing | → login | ✅ | ✗ | ✗ |
+| Save / unsave a seller | → login | ✅ | ✗ | ✗ |
+| Start / reply in a `Thread` (**Message seller**) | → login | ✅ | ✗ *(no button)* | ✗ |
 | View **my orders** / order detail | — | ✅ own only | — | — |
-| Cancel own order (raise a `CancellationRequest`, pre-ship) | — | ✅ own | — | — |
-| Confirm receipt (`shipped → delivered`) | — | ✅ own | — | — |
+| Cancel own order (instant while `placed`; a `CancellationRequest` once `confirmed`) | — | ✅ own | — | — |
+| Write a review of a seller | → login | ✅ | ✗ | ✗ |
 | Report a `Thread` | — | ✅ own threads | ✅ own threads | — |
 | Settings — edit `name` / `password` / delivery address | — | ✅ | — | — |
 | Change `email` / delete account | — | ✗ *(contact staff)* | — | — |
 
 "→ login" = the action is visible but sends an anonymous user through `/login` (or
-`/register`) and back. `seller` / `staff` accounts see **Buy** and **Message seller** rendered
-disabled with a short note ("Buying is for buyer accounts").
+`/register`) and back. `seller` / `staff` accounts see **Reserve** and **Message seller** rendered
+disabled with a short note ("Reserving is for buyer accounts").
 
-### 7.2 Seller center (`/seller/*`) — `role = seller` with a login only
+### 7.2 Seller center (`/seller/*`) — `role = seller`
 
 | Capability | Access | Source |
 |---|---|---|
-| View own listings + product-performance metrics | read | metrics owned by #13 |
+| View own listings + metrics | read | [`seller-center.md`](./seller-center.md) |
 | View own orders — full delivery-address snapshot, buyer phone, cancellation reason | read | [order-model.md §11](./order-model.md) |
-| See `DonorVehicle` data | read — **only where it surfaces through the seller's own Listings / listing detail, or another surface #13 defines**; no standalone `DonorVehicle` view is mandated here | this ticket + #13 |
-| **Messages** — reply in `Thread`s | **write** | [messaging-model.md §5](./messaging-model.md) |
+| **Confirm** an order, **mark it completed**, **mark it refused** | **write** | [order-model.md §3](./order-model.md) |
 | **Approve** a pending `CancellationRequest` on own order | **write** | [order-model.md §6.3](./order-model.md) |
+| **Messages** — reply in `Thread`s, report a thread | **write** | [messaging-model.md §5](./messaging-model.md) |
+| **Reply** once to a review of oneself | **write** | [reviews.md §6](./reviews.md) |
+| View own credit balance and ledger | read | [seller-credits.md §5](./seller-credits.md) |
 | Change own password | write | §4.2 |
-| Create / edit / price listings; **initiate** a cancellation; see any other seller's data | ✗ | staff-entry only in v1; `CancellationRequest.requestedBy` is `buyer \| staff` |
+| Create / edit / price listings; buy credits; cancel or raise a cancellation; write a review; see any other seller's data | ✗ | staff-entry and manual top-up only in v1 |
 
-The seller center is **read-only except for two write actions**: replying to messages, and
-approving a pending cancellation on one's own order. (This corrects
-[messaging-model.md](./messaging-model.md) §5, which describes messaging as "the one write
-action" — there are two once merged #10 §6.3 is accounted for.)
+The seller center writes only the actions in this table. (This supersedes the old "read-only
+except two write actions" rule.)
 
 ### 7.3 Admin tool (`/admin/*`) — `role = staff` only
 
@@ -245,9 +262,10 @@ English-only (no translated copy; still under `[locale]` for routing uniformity)
 | **Sellers** — create profile, edit, **provision / unlink login**, **reset password**, **disable / enable login** | ✅ |
 | **Buyers** — view, **reset password** | ✅ |
 | **Parts / PartNumbers** — full CRUD, `partStatus` transitions, merges | ✅ |
-| **Listings / DonorVehicles** — full CRUD, publish checklist, `status` transitions | ✅ |
-| **Orders** — confirm, mark shipped (enter `trackingNumber` + `expectedTimeRange`), mark delivered, enter `shippingCostEur` / `shippingNotes` | ✅ |
-| **Cancellations** — approve any, raise one on a seller's behalf, "Pending cancellations" list | ✅ |
+| **Listings / DonorVehicles** — full CRUD, publish checklist (charges one credit), `status` transitions | ✅ |
+| **Orders** — **read-only** list and detail. No confirm, complete, refuse, cancel or approve. | ✅ read only |
+| **Credits** — add a bundle, adjust with a note, manage bundles, view any ledger | ✅ |
+| **Reviews** — list, hide and unhide with a reason. Cannot write or reply. | ✅ |
 | **Threads** — read any, post as **IVO Support**, lock / unlock, resolve the report queue | ✅ |
 | **Block** a `User` from messaging (`messagingBlockedAt`) | ✅ |
 | **Vehicle catalogue** — add `VehicleMake` / `VehicleModelGroup` / `VehicleGeneration` during intake | ✅ |
@@ -279,8 +297,8 @@ see every seller's data in the admin tool).
 
 No self-serve account deletion in v1. A real erasure flow (GDPR-style right-to-be-forgotten,
 which matters for an EU business) is **post-v1 / map fog** — it interacts with retained
-`Order` history, `Message` immutability (#11 §4), and the login-less `Seller` model, none of
-which v1 needs to solve for a fictional-user demo.
+`Order` history, `Message` immutability (#11 §4), and public `Review` content, none of which
+v1 needs to solve for a fictional-user demo.
 
 ---
 
@@ -295,7 +313,9 @@ layouts.**
 | **DAL — `verifySession()`** | Runs on every authenticated read path; memoised per request (`cache()`); returns a typed session or `null`. `null` on a protected path → redirect to `/login`. |
 | **DAL — role guards** | `requireBuyer()` / `requireSeller()` / `requireStaff()` at the top of every data function **and** re-checked inside **every** Server Action. A wrong-role **authenticated** request (e.g. a signed-in buyer opening `/admin`) → a plain **403 page** (not a redirect, not a 404). |
 | **DAL — ownership checks** | `Order.buyerId` / `Order.sellerId` match the session; `Thread` party check; `Seller.userId === session.userId` for all seller-center data; a buyer reads only their own `Buyer`. |
-| **DAL — `role = buyer` gate** | specifically on: create `Order`, create `Favorite`, create `Thread` / `Message` as a buyer, create `CancellationRequest` as a buyer. |
+| **DAL — `role = buyer` gate** | specifically on: create `Order`, create `Favorite`, create `SavedSeller`, create `Review`, create `Thread` / `Message` as a buyer, create `CancellationRequest`. |
+| **DAL — seller availability** | publish and reserve refuse an unavailable seller (§4.4). |
+| **DAL — phone gating** | `contactPhone` is returned only when a session exists. |
 | **DAL — messaging block** | `User.messagingBlockedAt` checked on every `Thread` / `Message` write (#11 §7). |
 | **Schema** | `User.role` single required enum (the one-role rule, §8); FKs and 1:1 constraints on `Buyer.userId` / `Seller.userId`. |
 

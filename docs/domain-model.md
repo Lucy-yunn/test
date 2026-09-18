@@ -10,6 +10,13 @@ column types, or lifecycle detail. Those belong to the downstream tickets listed
 Vocabulary is governed by [`CONTEXT.md`](../CONTEXT.md). Field lists here are conceptual;
 where a ticket owns the full detail it is named inline.
 
+> **Revised 2026-09-19.** The founders' v1 scope change amended this model: the order lifecycle
+> (`placed → confirmed → completed`, plus `cancelled` and `refused`; no shipping) is now operated
+> by the seller ([ADR-0009](./adr/0009-seller-operated-orders-cash-on-delivery.md)); new entities
+> `Review`, `SavedSeller`, `CreditBundle` and `CreditLedgerEntry`; new fields on `Buyer`, `Seller`
+> and `DonorVehicle`. Sections below are updated; the ticket-history tables at the end are
+> historical.
+
 ---
 
 ## The four questions this ticket had to settle
@@ -54,8 +61,10 @@ Cross-vehicle compatibility is deferred (see the map's *Out of scope*); amended 
 - **`Buyer`** — a profile entity, 1:1 with a `User`, **auto-created on self-registration**.
   Holds delivery address and contact details.
 - **`Seller`** — a profile entity, **created by staff during onboarding**; its `User` link is
-  1:1 and **optional**, attached when a seller-center login is provisioned. Holds business /
-  display name, contact, and the single embedded Location.
+  1:1 and is attached when a seller login is provisioned. The link may be unset only briefly,
+  between profile creation and provisioning: **a seller cannot publish or sell without an active
+  login** ([`auth-and-permissions.md`](./auth-and-permissions.md) §4.4). Holds business / display
+  name, contact, avatar, and the single embedded Location.
 - **Staff** — no profile entity; just `User.role = staff` (only the two founders, created by
   hand).
 
@@ -98,18 +107,27 @@ A party who browses and purchases. Created automatically when a person self-regi
 - **saved delivery address** — `recipientName`, `phone`, `addressLine1`, `addressLine2?`,
   `city`, `postcode`, `country`; editable in buyer settings, snapshotted onto each `Order` at
   checkout (see [`docs/order-model.md`](./order-model.md))
-- Relationships: → many `Order`, → many `Favorite`, → many `Thread`
+- `deliveryCity` — nullable; the city the buyer confirmed in the header's **Delivery to**
+  control, pre-filling checkout ([`buyer-funnel-search.md`](./buyer-funnel-search.md) §6)
+- Relationships: → many `Order`, → many `Favorite`, → many `SavedSeller`, → many `Thread`,
+  → many `Review`
 
 #### Seller
 A party whose parts are sold on the platform. Created by staff during onboarding.
 
-- `userId` — 1:1, **optional** (attached when a login is provisioned)
-- `displayName`, contact name / email / phone
+- `userId` — 1:1, attached when a login is provisioned (required before publishing)
+- `displayName` (the business name shown to buyers), contact name / email / phone. **`contactPhone`
+  is shown publicly to signed-in users only**; email and contact name are staff-facing.
+- `avatarUrl` — nullable, uploaded by staff
+- `lastActiveAt` — nullable; set on the seller's sign-in or action, at most once per day
 - **Location** (embedded): name, address line, city, postcode, country — one per Seller in v1
+- Derived, not stored: rating average and count ([`reviews.md`](./reviews.md)), credit balance
+  ([`seller-credits.md`](./seller-credits.md)), "on IVO since" (earliest `publishedAt`)
 - Relationships: → many `DonorVehicle`, → many `Listing`, → many `Order` (as seller),
-  → many `Thread` (as seller)
+  → many `Thread` (as seller), → many `Review`, → many `SavedSeller`, → many `CreditLedgerEntry`
 
-Seller-center scope and metrics: [Seller center (#13)](https://github.com/Lucy-yunn/test/issues/13).
+Seller-center scope: [`seller-center.md`](./seller-center.md). Public profile:
+[`seller-profile.md`](./seller-profile.md).
 
 ### Catalogue
 
@@ -215,6 +233,9 @@ model resolved by [Listing model (#8)](https://github.com/Lucy-yunn/test/issues/
 - `label` — required, staff reference ("Silver Golf VII, Plovdiv yard")
 - `donorYear`, `vin`, `vinDerivedNotes`, `mileageKm`, `registrationCountry`, `notes` — all
   nullable
+- `scrapReason` — nullable **free text**: why the car was scrapped, in the seller's own words.
+  The staff form suggests examples (accident, flood, end of life) but does not restrict the
+  value. Shown on the donor-vehicle page and as the first line on the seller's car cards.
 - **structured vehicle detail** — `engine`, `engineCode`, `fuel`, `transmission`
   (`manual`/`automatic`/`other`), `bodyStyle`, `drivetrain` — all nullable; these live per
   physical car (not on the catalogue Generation) and are shown on the Listing so buyers can
@@ -224,10 +245,10 @@ model resolved by [Listing model (#8)](https://github.com/Lucy-yunn/test/issues/
 - **No lifecycle status in v1** — it is a data record
 - `vin` is shown to buyers **masked**; `vinDerivedNotes` is staff-only
 - Relationships: → many `Listing`, → many `DonorVehiclePhoto` (0..n, optional)
-- Buyer surface: the listing detail page carries a **"More parts from the same car"** section
-  listing the other `published` / `reserved` `Listing`s that share a `donorVehicleId`. Spec:
-  [`docs/donor-vehicle-parts.md`](./donor-vehicle-parts.md) (resolves
-  [#23](https://github.com/Lucy-yunn/test/issues/23)). No new model element.
+- Buyer surfaces: the listing detail page carries a **"More parts from the same car"** section
+  ([`docs/donor-vehicle-parts.md`](./donor-vehicle-parts.md)), and each car has its own public
+  **donor-vehicle page** with the car's ID card and every part taken from it, sold parts greyed
+  last ([`seller-profile.md`](./seller-profile.md) §6).
 
 #### Listing
 One physical used item one Seller has for sale. A single unique unit. Full model resolved by
@@ -249,11 +270,13 @@ One physical used item one Seller has for sale. A single unique unit. Full model
 - Relationships: → many `ListingPhoto`, → many `ListingDefect`, → many `Favorite`,
   → many `Thread`, → 0..1 `Order` (active)
 
-**Lifecycle:** `draft → published` (staff, passes the publish checklist);
-`published → reserved` (order `placed`); `reserved → sold` (order `delivered`);
-`reserved → published` (order cancelled before `shipped`); `published ↔ cancelled` (staff);
-`published`/`cancelled → archived` (staff). Staff never set `sold` by hand. Only `published`
-and `reserved` are buyer-visible.
+**Lifecycle:** `draft → published` (staff, passes the publish checklist, **costs one seller
+credit**); `published → reserved` (order `placed`); `reserved → sold` (order `completed`);
+`reserved → published` (order `cancelled` or `refused`; no new credit); `published ↔ cancelled`
+(staff; `cancelled → published` costs one credit); `published`/`cancelled → archived` (staff;
+terminal). Staff never set `sold` by hand. Only `published` and `reserved` are visible in Browse
+and the seller's Parts tab. **`sold` Listings additionally appear, greyed and last, on their
+donor-vehicle page** ([`seller-profile.md`](./seller-profile.md) §6).
 
 #### ListingPhoto
 - `listingId` — required
@@ -270,56 +293,94 @@ A single known defect, entered separately (transparency — buyer sees a bullete
 - `displayOrder`
 
 #### Order
-A Buyer's purchase of exactly one Listing. **No cart, no line items, no `OrderItem`** in v1.
-Full model, lifecycle, checkout + cancellation flows: [`docs/order-model.md`](./order-model.md)
-(resolves [#10](https://github.com/Lucy-yunn/test/issues/10)).
+A Buyer's reservation of exactly one Listing. **No cart, no line items, no `OrderItem`** in v1.
+**Payment is cash on delivery outside the platform**, and the seller operates the order. Full
+rules: [`docs/order-model.md`](./order-model.md) ([ADR-0009](./adr/0009-seller-operated-orders-cash-on-delivery.md)).
 
 - `internalCode` — readable, e.g. `ORD-000123`, unique
 - `buyerId`, `sellerId` (denormalised from the Listing), `listingId` — required
 - `itemPriceEur` — snapshot of `Listing.priceEur` at placement
-- `shippingCostEur`, `shippingNotes` — nullable; staff-entered in the admin tool, display-only
-  (checkout is stubbed, nothing is charged)
-- `status` — `placed` | `confirmed` | `shipped` | `delivered` | `cancelled`
-- `lastReachedStatus` — set only on cancellation; preserved above `cancelled` in the UI (Q17)
-- `expectedTimeRange` (free text, nullable — set at `shipped`), `trackingNumber` (free text,
-  nullable — set at `shipped`)
+- `status` — `placed` | `confirmed` | `completed` | `cancelled` | `refused`
+- `lastReachedStatus` — set only on cancellation; preserved above `cancelled` in the UI
+- `refusalNote` — nullable free text, set when the seller marks `refused`
 - delivery-address snapshot — `recipientName`, `phone`, `addressLine1`, `addressLine2?`,
   `city`, `postcode`, `country` (a flat group / embedded value, never an FK to a mutable row)
-- `placedAt`, and per-transition timestamps (`confirmedAt` / `shippedAt` / `deliveredAt` /
-  `cancelledAt`)
-- Stubbed checkout — "Buy" creates the Order in `placed`, no payment, no staff approval gate;
-  the Listing transitions `published → reserved`
-- Relationships: → 1 `Buyer`, → 1 `Seller`, → 1 `Listing`, → 0..1 `CancellationRequest`
+- `placedAt`, and per-transition timestamps (`confirmedAt` / `completedAt` / `cancelledAt` /
+  `refusedAt`)
+- Relationships: → 1 `Buyer`, → 1 `Seller`, → 1 `Listing`, → 0..1 `CancellationRequest`,
+  → 0..1 `Review`
 
-**Lifecycle:** `placed → confirmed → shipped → delivered`, plus `cancelled` from `placed` or
-`confirmed` only (pre-ship). All transitions manual (no carrier integration). `delivered` and
-`cancelled` are terminal. Listing coupling (locked in #8): `placed` → Listing `reserved`;
-`delivered` → Listing `sold`; cancellation approved → Listing back to `published`.
+**Lifecycle:** `placed → confirmed → completed`, plus `cancelled` from `placed` (buyer, instant) or
+from `confirmed` (an approved request), and `refused` from `confirmed`. **Only the seller**
+confirms, completes and refuses; **staff have no order actions**. `completed`, `refused` and
+`cancelled` are terminal. Listing coupling: `placed` → Listing `reserved`; `completed` → `sold`;
+`cancelled` or `refused` → back to `published`.
+
+**Removed:** `shippingCostEur`, `shippingNotes`, `expectedTimeRange`, `trackingNumber`,
+`shippedAt`, `deliveredAt`, and the `shipped` / `delivered` statuses.
 
 #### CancellationRequest
-A Buyer's request to cancel an Order before it ships. One-way: it always ends in `approved` —
-the only variable is when (seller approves, staff approve, or auto-approve **7 days** after
-`createdAt`). No reject; the buyer cannot withdraw. Full rules: [`docs/order-model.md`](./order-model.md).
+A Buyer's request to cancel an Order before handover. It records the reason for **every**
+cancellation. Created `approved` while the Order is `placed`; created `pending` when `confirmed`,
+where it always ends in `approved` (seller approves, or auto-approve **7 days** after
+`createdAt`). No reject; the buyer cannot withdraw; staff cannot approve or raise one. Full rules:
+[`docs/order-model.md`](./order-model.md) §6.
 
 - `orderId` — required; **0..1 per Order**
-- `requestedBy` — `buyer` | `staff`
 - `reason` — enum (`found_elsewhere` | `no_longer_needed` | `seller_too_slow` |
   `condition_or_fitment_concern` | `ordered_by_mistake` | `other`)
 - `reasonDetail` — nullable free text; required when `reason = other`
 - `state` — `pending` | `approved`
 - `createdAt`, `autoApproveAt` (`createdAt + 7 days`), `resolvedAt` (nullable),
-  `resolvedBy` (nullable — `seller` | `staff` | `auto`)
-- While a request is `pending` the Order may still go `placed → confirmed` but **cannot** go
-  to `shipped`.
+  `resolvedBy` (nullable — `buyer` | `seller` | `auto`)
+- While a request is `pending` the Order **cannot** be marked `completed` or `refused`.
+
+**Removed:** `requestedBy`.
 
 #### Favorite
+A Buyer's saved Listing ("Saved Parts" in the UI).
+
 - `buyerId`, `listingId` — unique together
 - `createdAt`
 
+#### SavedSeller
+A Buyer's saved Seller ("Saved Sellers" in the UI). See [`docs/seller-profile.md`](./seller-profile.md) §8.
+
+- `buyerId`, `sellerId` — unique together
+- `createdAt`
+
+#### Review
+A Buyer's rating of a Seller, optionally linked to one of their completed Orders, with an optional
+one-time Seller reply and a staff hide. Any signed-in buyer may write one; the label says whether it
+followed a purchase. Full rules: [`docs/reviews.md`](./reviews.md)
+([ADR-0012](./adr/0012-reviews-open-to-any-buyer.md)).
+
+- `sellerId`, `buyerId` — required
+- `orderId` — nullable, unique when set; a `completed` order of that buyer with that seller
+- `rating` (1–5), `body` (nullable)
+- `sellerReply`, `sellerRepliedAt` — nullable
+- `hiddenAt`, `hiddenBy`, `hiddenReason` — nullable; set by staff
+- `createdAt`
+
+#### CreditBundle
+A credit product staff sell to Sellers. See [`docs/seller-credits.md`](./seller-credits.md) §1.
+
+- `name`, `credits`, `priceEur`, `isActive`, `displayOrder`
+
+#### CreditLedgerEntry
+One append-only change to a Seller's credit balance; the balance is the sum of `delta`. See
+[`docs/seller-credits.md`](./seller-credits.md) §2 ([ADR-0010](./adr/0010-prepaid-seller-credits.md)).
+
+- `sellerId` — required
+- `delta` — signed integer
+- `kind` — `topup` | `publish` | `adjustment`
+- `bundleId` (for `topup`), `listingId` (for `publish`), `note` (required for `adjustment`)
+- `createdBy` (User), `createdAt`
+
 #### Thread
 A single buyer↔seller conversation, scoped to one Listing and one Buyer. Exists **only when
-both parties have a login** — buyer signed in, `Seller.userId` set; no staff relay for a
-login-less seller (their listings carry no **Message seller** button).
+both parties have a login** — buyer signed in, `Seller.userId` set; no staff relay. Every
+seller has a login since 2026-09-19, so this only bites a seller whose login is disabled.
 
 - `listingId`, `buyerId`, `sellerId` — required; unique `(listingId, buyerId)`
 - `createdAt`, `lastMessageAt`
@@ -351,14 +412,16 @@ notification mechanism — **there is no notification email in v1**
 a Notification (it stays on `Message.readAt`).
 
 - `userId` — required; the recipient, whose `role` is `buyer` or `seller` (never `staff`)
-- `type` — enum (`order_placed` | `order_confirmed` | `order_shipped` | `order_delivered` |
-  `cancellation_requested` | `cancellation_warning` | `cancellation_approved`)
-- `subjectType` — `order` | `cancellation_request`; `subjectId` — FK to that row
+- `type` — enum (buyer: `order_confirmed` | `order_completed` | `order_refused` |
+  `cancellation_approved` | `review_replied`; seller: `order_placed` | `cancellation_requested` |
+  `order_cancelled` | `review_received` | `credits_low` | `credits_empty`)
+- `subjectType` — `order` | `cancellation_request` | `review` | `credit_ledger_entry`;
+  `subjectId` — FK to that row
 - `createdAt`, `readAt` (nullable — set on opening the subject or clearing the feed)
 - Relationships: → 1 `User`
 
-Written by the DAL transition functions in the same transaction as the state change, and by
-the #10 §6.5 cron for `cancellation_warning`. Full event → audience matrix and the feed rules:
+Written by the DAL functions in the same transaction as the change they describe. Full event →
+audience matrix and the feed rules:
 [`docs/notifications.md`](./notifications.md) (resolves [#17](https://github.com/Lucy-yunn/test/issues/17)).
 
 ---
@@ -393,11 +456,18 @@ erDiagram
 
     Buyer ||--o{ Order : places
     Buyer ||--o{ Favorite : saves
+    Buyer ||--o{ SavedSeller : follows
     Buyer ||--o{ Thread : starts
+    Buyer ||--o{ Review : writes
     Seller ||--o{ Order : fulfils
     Seller ||--o{ Thread : answers
+    Seller ||--o{ SavedSeller : "saved as"
+    Seller ||--o{ Review : "reviewed in"
+    Seller ||--o{ CreditLedgerEntry : "credits in ledger"
+    CreditBundle ||--o{ CreditLedgerEntry : "topped up by"
 
     Order ||--o| CancellationRequest : "cancelled via"
+    Order ||--o| Review : "may carry"
 
     Thread ||--o{ Message : contains
 
@@ -416,12 +486,15 @@ erDiagram
 | **`Group` is a table, not a label on `Category`** | Funnel menu needs stable ordering + slugs; makes leaf-only structural | `group` enum/string on Category |
 | **No `Fitment` entity; vehicle catalogue is `VehicleGeneration`-grain; buyer discovery is provenance-only** ([#21](https://github.com/Lucy-yunn/test/issues/21), reverses [#7](https://github.com/Lucy-yunn/test/issues/7)) | A two-person team cannot research/assert/maintain a compatibility database; generation-grain keeps the hand-built catalogue to ~150 rows, not ~1000; the donor Generation + part number + shown donor details are enough for a provenance-first marketplace | Engine-grain `Modification` catalogue + staff-verified `Fitment` rows + a Fitment ∪ Provenance search union with confirmed-fit badges (the [#4](https://github.com/Lucy-yunn/test/issues/4)/[#7](https://github.com/Lucy-yunn/test/issues/7) design; too much ongoing curation for v1) |
 | **`VehicleModelGroup` groups model designations (`A4, S4`); no per-nameplate level** ([#21](https://github.com/Lucy-yunn/test/issues/21)) | Matches how RRR/Ovoko group these and the founder's mocks; keeps the catalogue at three levels | A distinct `VehicleModel` per nameplate under a family level (an extra buyer-facing click that teaches nothing) |
-| **No cart / `OrderItem` in v1** | Every part is a unique single unit; multi-seller carts split into N orders anyway; checkout is stubbed so one-payment-many-items has no value yet | Cart + `Order → OrderItem` split now |
+| **No cart / `OrderItem` in v1** | Every part is a unique single unit; multi-seller carts split into N orders anyway; payment is cash on delivery per part, so one-payment-many-items has no value | Cart + `Order → OrderItem` split now |
 | **`Listing.sellerId` kept explicit** (redundant with `donorVehicle.sellerId`) | Nearly every query is "listings/orders by seller"; invariant enforced in the DAL | Derive seller through the DonorVehicle on every query |
 | **`DonorVehicle.generationId` required** (reverses the "unknown donor allowed" note from #2) | Provenance stays meaningful; it is the only buyer-discovery path; the hand-built catalogue already only holds real pilot-donor Generations, so staff extend it during intake | Nullable generation — but then a part is barely discoverable |
 | **A Part with no `PartNumber` can still be published** (checklist takes "no visible number" tick) | #5's researched position — used-yard parts routinely lack legible numbers; identification then rests on provenance + the shown donor-vehicle details; a *wrong* forced number generates disputes | Hard-require a number — blocks legitimate parts, slows intake, risks bad data |
-| **`Listing.status` merges pipeline + stock state; `sold` only at order `delivered`** | One enum, no ambiguity; `reserved` holds the item for the whole order, released on pre-`shipped` cancel | Separate `stockStatus` field; `sold` at `confirmed` |
-| **`sold`/`cancelled`/`archived` listings are fully hidden from buyers** | Keeps the marketplace showing only actionable stock; a completed sale is back-office data | Show sold listings greyed (clutters browse) |
+| **`Listing.status` merges pipeline + stock state; `sold` only at order `completed`** | One enum, no ambiguity; `reserved` holds the item for the whole order, released on cancel or refuse | Separate `stockStatus` field; `sold` at `confirmed` |
+| **`sold`/`cancelled`/`archived` listings are hidden from buyers, except `sold` on the donor-vehicle page** (amended by [ADR-0011](./adr/0011-public-seller-profile-and-donor-vehicle-page.md)) | Browse shows only actionable stock; a car's page shows what it sold as proof of history | Show sold listings greyed everywhere (clutters browse) |
+| **The seller, not staff, operates orders** ([ADR-0009](./adr/0009-seller-operated-orders-cash-on-delivery.md)) | Staff cannot observe whether a part exists or was handed over | Staff-advanced orders (the original design) |
+| **Credits are an append-only ledger; publishing costs one** ([ADR-0010](./adr/0010-prepaid-seller-credits.md)) | Revenue that does not depend on seeing off-platform sales; full audit trail | Commission; subscription |
+| **Reviews are open to any signed-in buyer and labelled** ([ADR-0012](./adr/0012-reviews-open-to-any-buyer.md)) | Few completed orders in the pilot; a purchase-only rule would leave ratings empty | Purchase-only reviews |
 
 These two calls are recorded as ADRs (written by the Final spec assembly ticket, [#26](https://github.com/Lucy-yunn/test/issues/26)):
 
