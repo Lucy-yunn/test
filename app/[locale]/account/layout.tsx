@@ -13,7 +13,7 @@ export default async function AccountLayout({ children }: LayoutProps<"/[locale]
       <header className="flex items-center justify-between border-b border-zinc-200 pb-3 dark:border-zinc-800">
         <nav className="flex gap-4 text-sm">
           <Link href="/account/orders">{t("orders")}</Link>
-          <Link href="/account/favourites">{t("favourites")}</Link>
+          <Link href="/account/saved">{t("saved")}</Link>
           <Link href="/account/messages">{t("messages")}</Link>
           <Link href="/account/settings">{t("settings")}</Link>
         </nav>

@@ -29,7 +29,7 @@ export async function SiteHeader() {
           {actor?.role === "buyer" ? (
             <>
               <Link href="/account/messages">{t("messages")}</Link>
-              <Link href="/account/favourites">{t("favorites")}</Link>
+              <Link href="/account/saved/parts">{t("saved")}</Link>
               <Link href="/account">{t("account")}</Link>
             </>
           ) : actor ? (
