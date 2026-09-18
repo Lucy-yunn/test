@@ -13,7 +13,7 @@
     "register": "Register",
     "account": "My account",
     "messages": "Messages",
-    "favorites": "Favourites",
+    "saved": "Saved",
     "deliveryTo": "Delivery to {place}"
   },
   "LocaleSwitcher": {
@@ -70,7 +70,7 @@
   },
   "Account": {
     "orders": "Orders",
-    "favourites": "Favourites",
+    "saved": "Saved",
     "messages": "Messages",
     "settings": "Settings",
     "profile": "Profile",

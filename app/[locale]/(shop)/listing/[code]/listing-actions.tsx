@@ -1,11 +1,14 @@
 import { getActor } from "@/lib/dal/session";
+import { db } from "@/lib/db";
+import { isListingSaved } from "@/lib/services/favourites";
+import { setSavedAction } from "@/app/[locale]/account/saved/actions";
 import { Link } from "@/i18n/navigation";
 
 /**
- * Buy / Favourite / Message seller (docs/auth-and-permissions.md §7.1).
+ * Buy / Save / Message seller (docs/auth-and-permissions.md §7.1).
  * Anonymous → routed through /login. seller / staff → disabled. Message needs
- * the seller to have a login. The actions themselves are wired in build steps
- * 6 (favourites) / 7 (checkout) / 9 (messaging).
+ * the seller to have a login. Save is live (build step 6); Buy and Message are
+ * wired in later steps.
  */
 export async function ListingActions({
   code,
@@ -21,6 +24,7 @@ export async function ListingActions({
   const actor = await getActor();
   const backTo = `/listing/${code}`;
   const isBuyer = actor?.role === "buyer";
+  const saved = await isListingSaved(db, actor, code);
 
   return (
     <div className="rounded border border-zinc-200 p-4 dark:border-zinc-800">
@@ -42,9 +46,15 @@ export async function ListingActions({
             <button disabled title="Checkout arrives in build step 7" className="rounded bg-purple-700 px-4 py-2 text-white opacity-60">
               Buy
             </button>
-            <button disabled title="Favourites arrive in build step 6" className="rounded border px-4 py-2 text-sm opacity-60">
-              Save to favourites
-            </button>
+            <form action={setSavedAction.bind(null, code, !saved)}>
+              <button
+                type="submit"
+                aria-pressed={saved}
+                className={`w-full rounded border px-4 py-2 text-sm ${saved ? "border-purple-700 bg-purple-50 text-purple-800 dark:bg-purple-950 dark:text-purple-200" : ""}`}
+              >
+                {saved ? "Saved ♥ (remove)" : "Save ♡"}
+              </button>
+            </form>
           </>
         ) : (
           <p className="text-sm text-zinc-500">Buying is for buyer accounts.</p>

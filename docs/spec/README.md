@@ -214,7 +214,7 @@ code, not decisions.
 5. **Buyer funnel & Browse** — homepage funnel bar, `/browse` provenance match + facets +
    pagination, `/listing/[id]` + "More parts from the same car". → [`buyer-funnel-search.md`](../buyer-funnel-search.md), [`donor-vehicle-parts.md`](../donor-vehicle-parts.md).
 
-*Steps 0 to 5 are built. Steps 6 onward were re-planned on 2026-09-19 after the scope change.*
+*Steps 0 to 6 are built. Steps 7 onward were re-planned on 2026-09-19 after the scope change.*
 
 6. **Favourites (Saved Parts)** — save and unsave a Listing, the buyer's Saved Parts tab with
    greyed and badged unavailable items and "Find similar". Unaffected by the scope change. →
