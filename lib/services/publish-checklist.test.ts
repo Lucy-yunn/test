@@ -10,6 +10,7 @@ const pass = {
   hasDonorVehicle: true,
   partNumberCount: 1,
   noVisiblePartNumber: false,
+  sellerAvailable: true,
 };
 
 describe("evaluatePublishChecklist", () => {
@@ -30,6 +31,12 @@ describe("evaluatePublishChecklist", () => {
     expect(
       evaluatePublishChecklist({ ...pass, partNumberCount: 0, noVisiblePartNumber: false }).ok,
     ).toBe(false);
+  });
+
+  it("fails when the seller has no active login", () => {
+    const r = evaluatePublishChecklist({ ...pass, sellerAvailable: false });
+    expect(r.ok).toBe(false);
+    expect(r.failures).toContain("The seller has an active login");
   });
 
   it("lists every failing item, not just the first", () => {

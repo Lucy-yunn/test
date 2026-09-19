@@ -225,6 +225,9 @@ model Buyer {
   postcode      String?
   country       String? @default("BG")
 
+  // City the buyer chose in the header's "Delivery to" control; pre-fills checkout.
+  deliveryCity  String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -242,6 +245,11 @@ model Seller {
   contactName  String
   contactEmail String
   contactPhone String?
+
+  // Public profile (docs/seller-profile.md): avatar uploaded by staff, last activity
+  // of the seller's own login (set at most once a day).
+  avatarUrl    String?
+  lastActiveAt DateTime?
 
   // Embedded Location — one per Seller in v1.
   locationName    String?
@@ -388,6 +396,8 @@ model DonorVehicle {
   mileageKm           Int?
   registrationCountry String?
   notes               String?
+  // Why the car was scrapped, in the seller's own words (free text, docs/seller-profile.md §6).
+  scrapReason         String?
 
   // Structured detail — per physical car, shown on the Listing (#21).
   engine       String?

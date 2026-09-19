@@ -1,4 +1,5 @@
 import type { PrismaClient, Condition, Transmission } from "@prisma/client";
+import type { Actor } from "../dal/actor";
 
 /**
  * Buyer listing-detail page + the "More parts from the same car" section
@@ -56,12 +57,24 @@ export interface ListingDetail {
     modelGroupName: string;
     generationLabel: string;
   };
-  seller: { name: string; city: string; country: string; hasLogin: boolean };
+  seller: {
+    name: string;
+    city: string;
+    country: string;
+    hasLogin: boolean;
+    /** Only ever set for a signed-in viewer; anonymous visitors get null (ADR-0011). */
+    phone: string | null;
+  };
 }
 
+/**
+ * `viewer` is the signed-in Actor, or null/omitted for an anonymous visitor. It only
+ * decides whether the seller's phone number is returned (docs/seller-profile.md §3).
+ */
 export async function getListingDetail(
   db: PrismaClient,
   internalCode: string,
+  viewer: Actor | null = null,
 ): Promise<ListingDetail | null> {
   const l = await db.listing.findUnique({
     where: { internalCode },
@@ -113,7 +126,7 @@ export async function getListingDetail(
           },
         },
       },
-      seller: { select: { displayName: true, locationCity: true, locationCountry: true, userId: true } },
+      seller: { select: { displayName: true, locationCity: true, locationCountry: true, userId: true, contactPhone: true } },
     },
   });
 
@@ -167,6 +180,7 @@ export async function getListingDetail(
       city: l.seller.locationCity,
       country: l.seller.locationCountry,
       hasLogin: l.seller.userId != null,
+      phone: viewer ? l.seller.contactPhone : null,
     },
   };
 }

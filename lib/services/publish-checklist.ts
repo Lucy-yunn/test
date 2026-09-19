@@ -12,6 +12,8 @@ export interface PublishChecklistInput {
   hasDonorVehicle: boolean;
   partNumberCount: number;
   noVisiblePartNumber: boolean;
+  /** The seller has a linked, non-banned login (docs/auth-and-permissions.md §4.4). */
+  sellerAvailable: boolean;
 }
 
 export interface PublishChecklistResult {
@@ -34,6 +36,7 @@ export function evaluatePublishChecklist(
   if (input.partNumberCount < 1 && !input.noVisiblePartNumber) {
     failures.push('At least one part number, or "no visible number" ticked');
   }
+  if (!input.sellerAvailable) failures.push("The seller has an active login");
 
   return { ok: failures.length === 0, failures };
 }

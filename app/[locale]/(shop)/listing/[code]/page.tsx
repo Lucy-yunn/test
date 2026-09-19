@@ -4,6 +4,7 @@ import { setRequestLocale } from "next-intl/server";
 import { db } from "@/lib/db";
 import { getListingDetail, getSiblingListings } from "@/lib/services/listing-detail";
 import { Link } from "@/i18n/navigation";
+import { getActor } from "@/lib/dal/session";
 import { PhotoGallery } from "./photo-gallery";
 import { ListingActions } from "./listing-actions";
 import { SiblingCard } from "./sibling-card";
@@ -28,7 +29,8 @@ export default async function ListingPage({ params }: PageProps<"/[locale]/listi
   const { locale, code } = await params;
   setRequestLocale(locale);
 
-  const d = await getListingDetail(db, decodeURIComponent(code));
+  const actor = await getActor();
+  const d = await getListingDetail(db, decodeURIComponent(code), actor);
   if (!d) notFound();
 
   const siblings = await getSiblingListings(db, {
@@ -83,6 +85,23 @@ export default async function ListingPage({ params }: PageProps<"/[locale]/listi
             <p className="text-zinc-600 dark:text-zinc-400">
               {d.seller.name} — {d.seller.city}, {d.seller.country}
             </p>
+            {actor ? (
+              d.seller.phone ? (
+                <p className="mt-1">
+                  Phone:{" "}
+                  <a href={`tel:${d.seller.phone.replace(/\s+/g, "")}`} className="text-purple-700 underline">
+                    {d.seller.phone}
+                  </a>
+                </p>
+              ) : null
+            ) : (
+              <Link
+                href={`/login?redirect=/listing/${d.internalCode}`}
+                className="mt-2 inline-block rounded border px-3 py-1 text-purple-800 hover:bg-zinc-50 dark:text-purple-300 dark:hover:bg-zinc-900"
+              >
+                Sign in to get seller contact
+              </Link>
+            )}
           </div>
         </div>
       </div>

@@ -214,7 +214,7 @@ code, not decisions.
 5. **Buyer funnel & Browse** — homepage funnel bar, `/browse` provenance match + facets +
    pagination, `/listing/[id]` + "More parts from the same car". → [`buyer-funnel-search.md`](../buyer-funnel-search.md), [`donor-vehicle-parts.md`](../donor-vehicle-parts.md).
 
-*Steps 0 to 6 are built. Steps 7 onward were re-planned on 2026-09-19 after the scope change.*
+*Steps 0 to 7 are built. Steps 8 onward were re-planned on 2026-09-19 after the scope change.*
 
 6. **Favourites (Saved Parts)** — save and unsave a Listing, the buyer's Saved Parts tab with
    greyed and badged unavailable items and "Find similar". Unaffected by the scope change. →
@@ -223,8 +223,8 @@ code, not decisions.
 7. **Retrofit shipped steps** — `scrapReason` on the admin donor-vehicle editor; seller avatar
    upload and `lastActiveAt`; a login-required guard on publish (a seller must be available);
    the phone number hidden behind a sign-in button; the **Delivery to** control (IP suggestion,
-   editable, `Buyer.deliveryCity`); the header cart icon removed; the Buy button renamed
-   **Reserve this part**. → [`auth-and-permissions.md`](../auth-and-permissions.md) §4.4,
+   editable, `Buyer.deliveryCity`); the Buy button renamed **Reserve this part**. (The header
+   never had a cart icon, and the **My orders** header link waits for the orders page in step 10.) → [`auth-and-permissions.md`](../auth-and-permissions.md) §4.4,
    [`buyer-funnel-search.md`](../buyer-funnel-search.md) §6.
 
 8. **Seller profile & donor-vehicle page** — `/sellers/[id]` with All Cars, Parts, Reviews tabs

@@ -142,3 +142,40 @@ export async function moveListingPhoto(
     db.listingPhoto.update({ where: { id: neighbour.id }, data: { displayOrder: photo.displayOrder } }),
   ]);
 }
+
+/**
+ * Seller avatar (docs/seller-profile.md §2): uploaded by staff, optional, one per
+ * seller. Replacing it deletes the previous file. Only the URL is stored.
+ */
+export async function setSellerAvatar(
+  db: PrismaClient,
+  store: PhotoStore,
+  args: { sellerId: string; image: Buffer },
+): Promise<{ url: string }> {
+  const seller = await db.seller.findUnique({
+    where: { id: args.sellerId },
+    select: { avatarUrl: true },
+  });
+  if (!seller) throw new NotFoundError("Seller not found");
+
+  const url = await ingest(store, `sellers/${args.sellerId}`, args.image);
+  await db.seller.update({ where: { id: args.sellerId }, data: { avatarUrl: url } });
+  if (seller.avatarUrl) await store.delete(seller.avatarUrl).catch(() => {});
+  return { url };
+}
+
+/** Idempotent: removing when there is no avatar does nothing. */
+export async function removeSellerAvatar(
+  db: PrismaClient,
+  store: PhotoStore,
+  sellerId: string,
+): Promise<void> {
+  const seller = await db.seller.findUnique({
+    where: { id: sellerId },
+    select: { avatarUrl: true },
+  });
+  if (!seller) throw new NotFoundError("Seller not found");
+  if (!seller.avatarUrl) return;
+  await db.seller.update({ where: { id: sellerId }, data: { avatarUrl: null } });
+  await store.delete(seller.avatarUrl).catch(() => {});
+}

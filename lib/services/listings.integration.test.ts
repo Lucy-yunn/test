@@ -22,6 +22,8 @@ let donorA: string;
 let partId: string;
 const listingIds: string[] = [];
 const partIds: string[] = [];
+const extraSellerIds: string[] = [];
+const extraUserIds: string[] = [];
 
 beforeAll(async () => {
   const make = await db.vehicleMake.create({ data: { name: `Mk ${TAG}`, slug: `mk-${TAG}` } });
@@ -39,7 +41,10 @@ beforeAll(async () => {
     await db.category.create({ data: { name: `Cat ${TAG}`, slug: `cat-${TAG}`, groupId: group.id, displayOrder: 1 } })
   ).id;
 
-  sellerA = (await db.seller.create({ data: { displayName: `A ${TAG}`, contactName: "A", contactEmail: `a-${TAG}@x.test`, locationCity: "Sofia" } })).id;
+  // Seller A can publish: since 2026-09-19 a seller needs an active login (auth §4.4).
+  const loginA = await db.user.create({ data: { name: `Seller A ${TAG}`, email: `login-a-${TAG}@example.test`, role: "seller" } });
+  extraUserIds.push(loginA.id);
+  sellerA = (await db.seller.create({ data: { displayName: `A ${TAG}`, contactName: "A", contactEmail: `a-${TAG}@x.test`, locationCity: "Sofia", userId: loginA.id } })).id;
   sellerB = (await db.seller.create({ data: { displayName: `B ${TAG}`, contactName: "B", contactEmail: `b-${TAG}@x.test`, locationCity: "Varna" } })).id;
 
   donorA = (await createDonorVehicle(db, { sellerId: sellerA, generationId, label: `Donor ${TAG}` })).id;
@@ -53,7 +58,8 @@ afterAll(async () => {
   await db.donorVehicle.deleteMany({ where: { label: { contains: TAG } } });
   await db.partNumber.deleteMany({ where: { partId: { in: partIds } } });
   await db.part.deleteMany({ where: { id: { in: partIds } } });
-  await db.seller.deleteMany({ where: { id: { in: [sellerA, sellerB] } } });
+  await db.seller.deleteMany({ where: { id: { in: [sellerA, sellerB, ...extraSellerIds] } } });
+  await db.user.deleteMany({ where: { id: { in: extraUserIds } } });
   await db.category.deleteMany({ where: { slug: `cat-${TAG}` } });
   await db.group.deleteMany({ where: { slug: `gr-${TAG}` } });
   await db.vehicleGeneration.deleteMany({ where: { slug: `gen-${TAG}` } });
@@ -229,5 +235,60 @@ describe("defects", () => {
     await removeListingDefect(db, d1.id);
     expect(await db.listingDefect.count({ where: { listingId: l.id } })).toBe(1);
     void d2;
+  });
+});
+
+describe("publishing needs an available seller (docs/auth-and-permissions.md §4.4)", () => {
+  /** A draft that passes every checklist item, on a fresh seller. `login` controls the seller's account. */
+  async function readyDraft(login: "none" | "active" | "banned") {
+    let userId: string | null = null;
+    if (login !== "none") {
+      const user = await db.user.create({
+        data: {
+          name: `Seller ${login} ${TAG}`,
+          email: `av-${login}-${Math.random().toString(36).slice(2, 8)}-${TAG}@example.test`,
+          role: "seller",
+          banned: login === "banned",
+        },
+      });
+      extraUserIds.push(user.id);
+      userId = user.id;
+    }
+    const seller = await db.seller.create({
+      data: { displayName: `Av ${login} ${TAG}`, contactName: "S", contactEmail: `av-${TAG}@x.test`, locationCity: "Sofia", userId },
+    });
+    extraSellerIds.push(seller.id);
+    const donor = await createDonorVehicle(db, { sellerId: seller.id, generationId, label: `Donor av ${login} ${TAG}` });
+    const listing = await createListing(db, {
+      donorVehicleId: donor.id,
+      partId: await mkPart(`Avail ${login}`),
+      priceEur: "50.00",
+      condition: "used_good",
+      noVisiblePartNumber: true,
+    });
+    listingIds.push(listing.id);
+    await db.listingPhoto.create({ data: { listingId: listing.id, url: "https://x/p.jpg", displayOrder: 0 } });
+    return listing;
+  }
+
+  const statusOf = async (id: string) => (await db.listing.findUniqueOrThrow({ where: { id } })).status;
+
+  it("refuses a seller who has no login", async () => {
+    const l = await readyDraft("none");
+    expect((await getPublishChecklist(db, l.id)).failures).toEqual(["The seller has an active login"]);
+    await expect(publishListing(db, l.id)).rejects.toThrow(/no active login/i);
+    expect(await statusOf(l.id)).toBe("draft");
+  });
+
+  it("refuses a seller whose login is disabled", async () => {
+    const l = await readyDraft("banned");
+    await expect(publishListing(db, l.id)).rejects.toBeInstanceOf(InvariantError);
+    expect(await statusOf(l.id)).toBe("draft");
+  });
+
+  it("publishes for a seller with an active login", async () => {
+    const l = await readyDraft("active");
+    await publishListing(db, l.id);
+    expect(await statusOf(l.id)).toBe("published");
   });
 });

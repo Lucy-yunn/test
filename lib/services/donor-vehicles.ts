@@ -17,6 +17,8 @@ export interface DonorVehicleInput {
   mileageKm?: number | null;
   registrationCountry?: string | null;
   notes?: string | null;
+  /** Why the car was scrapped, in the seller's own words (free text). */
+  scrapReason?: string | null;
   engine?: string | null;
   engineCode?: string | null;
   fuel?: string | null;
@@ -49,6 +51,7 @@ export async function createDonorVehicle(
       mileageKm: input.mileageKm ?? null,
       registrationCountry: clean(input.registrationCountry),
       notes: clean(input.notes),
+      scrapReason: clean(input.scrapReason),
       engine: clean(input.engine),
       engineCode: clean(input.engineCode),
       fuel: clean(input.fuel),
@@ -85,6 +88,7 @@ export async function updateDonorVehicle(
   if (patch.mileageKm !== undefined) data.mileageKm = patch.mileageKm ?? null;
   if (patch.registrationCountry !== undefined) data.registrationCountry = clean(patch.registrationCountry);
   if (patch.notes !== undefined) data.notes = clean(patch.notes);
+  if (patch.scrapReason !== undefined) data.scrapReason = clean(patch.scrapReason);
   if (patch.engine !== undefined) data.engine = clean(patch.engine);
   if (patch.engineCode !== undefined) data.engineCode = clean(patch.engineCode);
   if (patch.fuel !== undefined) data.fuel = clean(patch.fuel);

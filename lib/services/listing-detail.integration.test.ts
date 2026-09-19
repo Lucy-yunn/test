@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "../db";
+import type { Actor } from "../dal/actor";
 import { getListingDetail, getSiblingListings } from "./listing-detail";
 
+const PHONE = "+359 88 123 4567";
 const TAG = `ld-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 const S = (n: string) => `${TAG}-${n}`;
 
@@ -60,7 +62,7 @@ beforeAll(async () => {
   const gen = await db.vehicleGeneration.create({ data: { label: S("Gen"), slug: S("gen"), modelGroupId: mg.id } });
   const group = await db.group.create({ data: { name: S("Grp"), slug: S("grp"), displayOrder: 980 } });
   categoryId = (await db.category.create({ data: { name: S("Cat"), slug: S("cat"), groupId: group.id, displayOrder: 1 } })).id;
-  sellerId = (await db.seller.create({ data: { displayName: S("Seller"), contactName: "S", contactEmail: `${TAG}@x.test`, locationCity: "Sofia" } })).id;
+  sellerId = (await db.seller.create({ data: { displayName: S("Seller"), contactName: "S", contactEmail: `${TAG}@x.test`, contactPhone: PHONE, locationCity: "Sofia" } })).id;
 
   donorId = (await db.donorVehicle.create({
     data: {
@@ -139,5 +141,41 @@ describe("getSiblingListings — more parts from the same car", () => {
     expect(
       await getSiblingListings(db, { donorVehicleId: lone.id, excludeListingId: anchor.id }),
     ).toHaveLength(0);
+  });
+});
+
+describe("getListingDetail — the seller's phone number is for signed-in users only", () => {
+  const signedIn: Actor = { userId: "u-1", role: "buyer", buyerId: "b-1", sellerId: null, messagingBlocked: false };
+
+  it("is hidden from an anonymous visitor, and appears nowhere in what is returned", async () => {
+    const l = await listing(donorId, "70.00", "published", 1);
+
+    const detail = await getListingDetail(db, l.internalCode, null);
+
+    expect(detail?.seller.phone).toBeNull();
+    expect(JSON.stringify(detail)).not.toContain(PHONE);
+  });
+
+  it("is hidden when no viewer is given at all", async () => {
+    const l = await listing(donorId, "70.00", "published", 1);
+    expect((await getListingDetail(db, l.internalCode))?.seller.phone).toBeNull();
+  });
+
+  it("is shown to any signed-in user", async () => {
+    const l = await listing(donorId, "70.00", "published", 1);
+
+    const detail = await getListingDetail(db, l.internalCode, signedIn);
+
+    expect(detail?.seller.phone).toBe(PHONE);
+  });
+
+  it("is null for a signed-in user when the seller has no phone on file", async () => {
+    await db.seller.update({ where: { id: sellerId }, data: { contactPhone: null } });
+    try {
+      const l = await listing(donorId, "70.00", "published", 1);
+      expect((await getListingDetail(db, l.internalCode, signedIn))?.seller.phone).toBeNull();
+    } finally {
+      await db.seller.update({ where: { id: sellerId }, data: { contactPhone: PHONE } });
+    }
   });
 });

@@ -20,6 +20,7 @@ export interface DonorDefaults {
   mileageKm: string;
   registrationCountry: string;
   notes: string;
+  scrapReason: string;
   engine: string;
   engineCode: string;
   fuel: string;
@@ -75,6 +76,19 @@ export function DonorVehicleForm({
         </div>
         <Field label="Body style" name="bodyStyle" defaultValue={defaults.bodyStyle} />
         <Field label="Drivetrain" name="drivetrain" defaultValue={defaults.drivetrain} />
+      </div>
+      <div className="flex flex-col gap-1">
+        <label htmlFor="scrapReason" className="text-sm font-medium">
+          Why the car was scrapped (shown to buyers)
+        </label>
+        <textarea
+          id="scrapReason"
+          name="scrapReason"
+          rows={3}
+          defaultValue={defaults.scrapReason}
+          placeholder="In the seller's own words, e.g. accident, flood, end of life"
+          className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+        />
       </div>
       <Field label="Notes" name="notes" defaultValue={defaults.notes} />
 
