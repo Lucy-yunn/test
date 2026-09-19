@@ -39,6 +39,9 @@ Every demo account's password is `demo-password-123` (printed by the seed run).
    `.env.test.local` (`TEST_DATABASE_URL`, never falls back to `DATABASE_URL`),
    creates the first migration, and seeds the development branch. Production is
    configured later, in Vercel — never locally.
+   **Superseded for day-to-day work:** development and tests now use a local
+   PostgreSQL (`ivo_dev` and `ivo_test`), and migrations, seeds and tests refuse any
+   remote database. See [`docs/local-database.md`](../local-database.md).
 3. **A Vercel Blob store** (for real listing photos later — build step 4). The
    seed uses `placehold.co` placeholder URLs; add the real hostname to
    `next.config.ts` `images.remotePatterns` and drop `placehold.co`.

@@ -14,4 +14,4 @@ Every testable behaviour is built test-first: **red → green → refactor**. Wr
 
 In scope: DAL functions, Server Actions, status-machine transitions (order / listing / cancellation), the buyer provenance-match query and facet narrowing, de-dup / merge rules, the publish checklist, notification writes, the cancellation auto-approve sweep. Out of scope: the Prisma schema shape, config, one-line pass-throughs.
 
-DAL and Server Action tests run against a real Postgres (a Neon test branch or Testcontainers), never a mock.
+DAL and Server Action tests run against a real Postgres, never a mock: the local `ivo_test` database on this machine. Automated tests, migrations and seeds refuse any remote database; see `docs/local-database.md`.
