@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { requireBuyer } from "@/lib/dal/session";
 import { NotFoundError } from "@/lib/dal";
 import { saveListing, unsaveListing } from "@/lib/services/favourites";
+import { saveSeller, unsaveSeller } from "@/lib/services/saved-sellers";
 
 /**
  * Save / unsave one Listing for the signed-in buyer. Re-checks the role inside
@@ -23,4 +24,18 @@ export async function setSavedAction(code: string, save: boolean): Promise<void>
   }
   revalidatePath("/[locale]/listing/[code]", "page");
   revalidatePath("/[locale]/account/saved/parts", "page");
+}
+
+/** Save / unsave one Seller for the signed-in buyer (the heart on the seller profile). */
+export async function setSellerSavedAction(sellerId: string, save: boolean): Promise<void> {
+  const actor = await requireBuyer();
+  try {
+    if (save) await saveSeller(db, actor, sellerId);
+    else await unsaveSeller(db, actor, sellerId);
+  } catch (err) {
+    // The seller lost their public profile between render and click; the refresh shows the truth.
+    if (!(err instanceof NotFoundError)) throw err;
+  }
+  revalidatePath("/[locale]/sellers/[id]", "page");
+  revalidatePath("/[locale]/account/saved/sellers", "page");
 }

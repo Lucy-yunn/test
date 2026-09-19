@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { setRequestLocale } from "next-intl/server";
@@ -5,6 +6,7 @@ import { db } from "@/lib/db";
 import { getListingDetail, getSiblingListings } from "@/lib/services/listing-detail";
 import { Link } from "@/i18n/navigation";
 import { getActor } from "@/lib/dal/session";
+import { formatDay } from "@/lib/format-date";
 import { PhotoGallery } from "./photo-gallery";
 import { ListingActions } from "./listing-actions";
 import { SiblingCard } from "./sibling-card";
@@ -80,14 +82,43 @@ export default async function ListingPage({ params }: PageProps<"/[locale]/listi
             sellerHasLogin={d.seller.hasLogin}
           />
 
-          <div className="text-sm">
+          <div className="rounded border border-purple-200 bg-purple-50 p-4 text-sm dark:border-purple-900 dark:bg-purple-950">
             <p className="font-semibold">Seller</p>
-            <p className="text-zinc-600 dark:text-zinc-400">
-              {d.seller.name} — {d.seller.city}, {d.seller.country}
-            </p>
+            <div className="mt-2 flex items-center gap-3">
+              {d.seller.avatarUrl ? (
+                <Image
+                  src={d.seller.avatarUrl}
+                  alt=""
+                  width={48}
+                  height={48}
+                  unoptimized
+                  className="h-12 w-12 rounded-full object-cover"
+                />
+              ) : (
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-200 text-lg font-semibold text-purple-900">
+                  {d.seller.name.trim().charAt(0).toUpperCase() || "?"}
+                </span>
+              )}
+              <div className="min-w-0">
+                {d.seller.hasLogin ? (
+                  <Link href={`/sellers/${d.seller.id}`} className="font-medium hover:underline">
+                    {d.seller.name}
+                  </Link>
+                ) : (
+                  <p className="font-medium">{d.seller.name}</p>
+                )}
+                <p className="text-zinc-600 dark:text-zinc-400">
+                  {d.seller.city}, {d.seller.country === "BG" ? "Bulgaria" : d.seller.country}
+                </p>
+                <p className="text-xs text-zinc-500">
+                  New seller · Last active {formatDay(d.seller.lastActiveAt)}
+                </p>
+              </div>
+            </div>
+
             {actor ? (
               d.seller.phone ? (
-                <p className="mt-1">
+                <p className="mt-2">
                   Phone:{" "}
                   <a href={`tel:${d.seller.phone.replace(/\s+/g, "")}`} className="text-purple-700 underline">
                     {d.seller.phone}
@@ -97,11 +128,19 @@ export default async function ListingPage({ params }: PageProps<"/[locale]/listi
             ) : (
               <Link
                 href={`/login?redirect=/listing/${d.internalCode}`}
-                className="mt-2 inline-block rounded border px-3 py-1 text-purple-800 hover:bg-zinc-50 dark:text-purple-300 dark:hover:bg-zinc-900"
+                className="mt-2 inline-block rounded border bg-white px-3 py-1 text-purple-800 hover:bg-zinc-50 dark:bg-transparent dark:text-purple-300 dark:hover:bg-zinc-900"
               >
                 Sign in to get seller contact
               </Link>
             )}
+
+            {d.seller.hasLogin ? (
+              <p className="mt-3">
+                <Link href={`/sellers/${d.seller.id}?tab=parts`} className="font-medium text-purple-700 underline">
+                  View all parts
+                </Link>
+              </p>
+            ) : null}
           </div>
         </div>
       </div>
@@ -147,7 +186,12 @@ export default async function ListingPage({ params }: PageProps<"/[locale]/listi
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold">Donor vehicle</h2>
+          <h2 className="text-lg font-semibold">
+            Donor vehicle{" "}
+            <Link href={`/car/${d.donor.id}`} className="text-sm font-medium text-purple-700 underline">
+              View other parts of this car
+            </Link>
+          </h2>
           <p className="text-xs text-zinc-500">
             The car this part was removed from. Same-generation parts are not
             guaranteed to fit — check the part number and these details against

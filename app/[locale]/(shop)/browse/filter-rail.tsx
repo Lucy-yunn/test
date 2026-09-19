@@ -11,23 +11,26 @@ export function FilterRail({
   sp,
   facets,
   showGeneration,
+  base = "/browse",
 }: {
   sp: SP;
   facets: BrowseResult["facets"];
   showGeneration: boolean;
+  /** The page the facet links point at. The seller Parts tab reuses this rail. */
+  base?: string;
 }) {
   return (
     <aside className="flex flex-col gap-5 text-sm">
       {facets.categories.length > 1 ? (
-        <FacetGroup title="Categories" param="category" options={facets.categories} sp={sp} />
+        <FacetGroup title="Categories" param="category" options={facets.categories} sp={sp} base={base} />
       ) : null}
       {showGeneration && facets.generations.length > 1 ? (
-        <FacetGroup title="Generation" param="generation" options={facets.generations} sp={sp} />
+        <FacetGroup title="Generation" param="generation" options={facets.generations} sp={sp} base={base} />
       ) : null}
-      <FacetGroup title="Engine" param="engine" options={facets.engines} sp={sp} />
-      <FacetGroup title="Fuel type" param="fuel" options={facets.fuels} sp={sp} />
-      <FacetGroup title="Gearbox type" param="transmission" options={facets.transmissions} sp={sp} />
-      <FacetGroup title="Quality" param="condition" options={facets.conditions} sp={sp} />
+      <FacetGroup title="Engine" param="engine" options={facets.engines} sp={sp} base={base} />
+      <FacetGroup title="Fuel type" param="fuel" options={facets.fuels} sp={sp} base={base} />
+      <FacetGroup title="Gearbox type" param="transmission" options={facets.transmissions} sp={sp} base={base} />
+      <FacetGroup title="Quality" param="condition" options={facets.conditions} sp={sp} base={base} />
 
       {facets.priceRange ? (
         <div>
@@ -36,7 +39,7 @@ export function FilterRail({
             €{facets.priceRange.min} – €{facets.priceRange.max} in stock
           </p>
           {(sp.min || sp.max) && (
-            <Link href={browseHref(sp, { min: null, max: null })} className="text-xs text-purple-700 underline">
+            <Link href={browseHref(sp, { min: null, max: null }, base)} className="text-xs text-purple-700 underline">
               clear price
             </Link>
           )}
@@ -51,11 +54,13 @@ function FacetGroup({
   param,
   options,
   sp,
+  base,
 }: {
   title: string;
   param: string;
   options: { value: string; label: string; count: number }[];
   sp: SP;
+  base: string;
 }) {
   if (options.length === 0) return null;
   const active = typeof sp[param] === "string" ? (sp[param] as string) : undefined;
@@ -66,7 +71,7 @@ function FacetGroup({
         {options.map((o) => (
           <li key={o.value}>
             <Link
-              href={toggleHref(sp, param, o.value)}
+              href={toggleHref(sp, param, o.value, base)}
               className={`flex items-center justify-between rounded px-1 py-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 ${
                 active === o.value ? "font-semibold text-purple-700" : ""
               }`}
