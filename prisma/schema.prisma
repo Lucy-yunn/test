@@ -234,6 +234,7 @@ model Buyer {
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   orders    Order[]
   favorites Favorite[]
+  savedSellers SavedSeller[]
   threads   Thread[]
 }
 
@@ -266,6 +267,7 @@ model Seller {
   listings      Listing[]
   orders        Order[]
   threads       Thread[]
+  savedBy       SavedSeller[]
 }
 
 // ---------------------------------------------------------------------------
@@ -572,6 +574,20 @@ model Favorite {
 
   @@unique([buyerId, listingId])
   @@index([listingId])
+}
+
+// A buyer's saved seller ("Saved Sellers", docs/seller-profile.md §8).
+model SavedSeller {
+  id        String   @id @default(cuid())
+  buyerId   String
+  sellerId  String
+  createdAt DateTime @default(now())
+
+  buyer  Buyer  @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  seller Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@unique([buyerId, sellerId])
+  @@index([sellerId])
 }
 
 model Thread {

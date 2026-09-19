@@ -19,6 +19,8 @@ export const PAGE_SIZE = 12;
 export type BrowseSort = "newest" | "price_asc" | "price_desc" | "condition";
 
 export interface BrowseParams {
+  /** Scope to one seller (their profile's Parts tab). Facet counts then cover only that seller. */
+  sellerId?: string;
   categoryId?: string;
   /** Partial funnel — any generation of this model group. Also scopes the Generation facet. */
   modelGroupId?: string;
@@ -153,6 +155,7 @@ export async function browseListings(
   const candidates = await db.listing.findMany({
     where: {
       status: { in: ["published", "reserved"] },
+      ...(params.sellerId ? { sellerId: params.sellerId } : {}),
       ...(params.categoryId ? { part: { categoryId: params.categoryId } } : {}),
       ...carScope,
     },

@@ -190,3 +190,64 @@ describe("browseListings — provenance match", () => {
     expect(r.rows.length).toBe(0);
   });
 });
+
+describe("browseListings — scoped to one seller (the seller's Parts tab)", () => {
+  it("returns only that seller's buyer-visible listings, with facet counts covering only them", async () => {
+    const other = await db.seller.create({
+      data: { displayName: S("Other"), contactName: "O", contactEmail: `o-${TAG}@x.test`, locationCity: "Varna" },
+    });
+    const otherDonor = await db.donorVehicle.create({
+      data: { sellerId: other.id, generationId: genA, label: S("other-donor"), fuel: "LPG" },
+    });
+    const otherPart = await part(catHl);
+    const visible = await db.listing.create({
+      data: {
+        internalCode: S("LST-other-1"),
+        partId: otherPart,
+        donorVehicleId: otherDonor.id,
+        sellerId: other.id,
+        priceEur: "60.00",
+        condition: "used_good",
+        status: "published",
+        publishedAt: new Date(),
+      },
+    });
+    const reserved = await db.listing.create({
+      data: {
+        internalCode: S("LST-other-2"),
+        partId: await part(catHl),
+        donorVehicleId: otherDonor.id,
+        sellerId: other.id,
+        priceEur: "70.00",
+        condition: "used_good",
+        status: "reserved",
+        publishedAt: new Date(),
+      },
+    });
+    const draft = await db.listing.create({
+      data: {
+        internalCode: S("LST-other-3"),
+        partId: await part(catHl),
+        donorVehicleId: otherDonor.id,
+        sellerId: other.id,
+        priceEur: "80.00",
+        condition: "used_good",
+        status: "draft",
+      },
+    });
+
+    try {
+      const scoped = await browseListings(db, { sellerId: other.id });
+
+      expect(scoped.rows.map((r) => r.internalCode).sort()).toEqual([visible.internalCode, reserved.internalCode].sort());
+      expect(scoped.total).toBe(2);
+      expect(scoped.facets.fuels).toEqual([{ value: "LPG", label: "LPG", count: 2 }]);
+      // Without the scope the same call also sees the other seller's listings.
+      expect((await browseListings(db, {})).total).toBeGreaterThan(2);
+    } finally {
+      await db.listing.deleteMany({ where: { id: { in: [visible.id, reserved.id, draft.id] } } });
+      await db.donorVehicle.deleteMany({ where: { id: otherDonor.id } });
+      await db.seller.deleteMany({ where: { id: other.id } });
+    }
+  });
+});

@@ -179,3 +179,19 @@ describe("getListingDetail — the seller's phone number is for signed-in users 
     }
   });
 });
+
+describe("getListingDetail: what the seller card needs", () => {
+  it("returns the seller's id, avatar and last-active time so the card can link to the profile", async () => {
+    const lastActive = new Date("2026-09-10T08:00:00Z");
+    await db.seller.update({ where: { id: sellerId }, data: { avatarUrl: "https://x/a.jpg", lastActiveAt: lastActive } });
+    try {
+      const l = await listing(donorId, "70.00", "published", 1);
+
+      const detail = await getListingDetail(db, l.internalCode);
+
+      expect(detail?.seller).toMatchObject({ id: sellerId, avatarUrl: "https://x/a.jpg", lastActiveAt: lastActive });
+    } finally {
+      await db.seller.update({ where: { id: sellerId }, data: { avatarUrl: null, lastActiveAt: null } });
+    }
+  });
+});

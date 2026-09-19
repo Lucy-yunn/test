@@ -58,7 +58,10 @@ export interface ListingDetail {
     generationLabel: string;
   };
   seller: {
+    id: string;
     name: string;
+    avatarUrl: string | null;
+    lastActiveAt: Date | null;
     city: string;
     country: string;
     hasLogin: boolean;
@@ -126,7 +129,18 @@ export async function getListingDetail(
           },
         },
       },
-      seller: { select: { displayName: true, locationCity: true, locationCountry: true, userId: true, contactPhone: true } },
+      seller: {
+        select: {
+          id: true,
+          displayName: true,
+          avatarUrl: true,
+          lastActiveAt: true,
+          locationCity: true,
+          locationCountry: true,
+          userId: true,
+          contactPhone: true,
+        },
+      },
     },
   });
 
@@ -176,7 +190,10 @@ export async function getListingDetail(
       generationLabel: g.label,
     },
     seller: {
+      id: l.seller.id,
       name: l.seller.displayName,
+      avatarUrl: l.seller.avatarUrl,
+      lastActiveAt: l.seller.lastActiveAt,
       city: l.seller.locationCity,
       country: l.seller.locationCountry,
       hasLogin: l.seller.userId != null,
