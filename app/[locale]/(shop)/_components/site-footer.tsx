@@ -30,8 +30,9 @@ export async function SiteFooter() {
           </p>
           <p>
             <strong>Condition &amp; returns.</strong> Parts are sold as described,
-            with photos and a defect list. You can cancel any time before dispatch;
-            once shipped there is no cancellation and no returns/refunds process in
+            with photos and a defect list. You pay the seller in cash after you
+            inspect the part at the courier, and you may decline it there. You can
+            cancel any time before handover. There is no returns/refunds process in
             v1. Your EU statutory consumer rights are unaffected.
           </p>
           <p className="text-amber-700 dark:text-amber-500">{t("legalNote")}</p>

@@ -1,7 +1,7 @@
 import type { PrismaClient, Prisma, Condition, ListingStatus } from "@prisma/client";
 import { InvariantError, NotFoundError } from "../dal/errors";
 import { assertTransition, LISTING_TRANSITIONS } from "../dal/transitions";
-import { assertSellerOwnsDonorVehicle } from "../dal/invariants";
+import { assertSellerOwnsDonorVehicle, assertSellerAvailable, isSellerAvailable } from "../dal/invariants";
 import { nextInternalCode } from "./internal-code";
 import {
   evaluatePublishChecklist,
@@ -173,6 +173,7 @@ export async function getPublishChecklist(
       condition: true,
       priceEur: true,
       donorVehicleId: true,
+      sellerId: true,
       noVisiblePartNumber: true,
       _count: { select: { photos: true } },
       part: {
@@ -195,6 +196,7 @@ export async function getPublishChecklist(
     hasDonorVehicle: listing.donorVehicleId != null,
     partNumberCount: listing.part?._count.partNumbers ?? 0,
     noVisiblePartNumber: listing.noVisiblePartNumber,
+    sellerAvailable: await isSellerAvailable(db, listing.sellerId),
   });
 }
 
@@ -206,10 +208,11 @@ export async function publishListing(
 ): Promise<void> {
   const listing = await db.listing.findUnique({
     where: { id: listingId },
-    select: { status: true },
+    select: { status: true, sellerId: true },
   });
   if (!listing) throw new NotFoundError("Listing not found");
   assertTransition(LISTING_TRANSITIONS, listing.status, "published", "Listing");
+  await assertSellerAvailable(db, listing.sellerId);
 
   const checklist = await getPublishChecklist(db, listingId);
   if (!checklist.ok) {

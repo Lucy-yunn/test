@@ -190,3 +190,24 @@ function isUniqueViolation(err: unknown): boolean {
     (err as { code?: string }).code === "P2002"
   );
 }
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Record that a seller's own login was just active (docs/seller-profile.md §2).
+ * Written at most once every 24 hours, in a single conditional update, so a busy
+ * seller does not cause a write per request. A user with no linked seller is ignored.
+ */
+export async function recordSellerActivity(
+  db: PrismaClient,
+  userId: string,
+  now: Date = new Date(),
+): Promise<void> {
+  await db.seller.updateMany({
+    where: {
+      userId,
+      OR: [{ lastActiveAt: null }, { lastActiveAt: { lt: new Date(now.getTime() - DAY_MS) } }],
+    },
+    data: { lastActiveAt: now },
+  });
+}

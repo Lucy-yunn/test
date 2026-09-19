@@ -34,6 +34,7 @@ const EMPTY = {
   mileageKm: "",
   registrationCountry: "",
   notes: "",
+  scrapReason: "",
   engine: "",
   engineCode: "",
   fuel: "",

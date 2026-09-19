@@ -5,10 +5,10 @@ import { setSavedAction } from "@/app/[locale]/account/saved/actions";
 import { Link } from "@/i18n/navigation";
 
 /**
- * Buy / Save / Message seller (docs/auth-and-permissions.md §7.1).
+ * Reserve / Save / Message seller (docs/auth-and-permissions.md §7.1).
  * Anonymous → routed through /login. seller / staff → disabled. Message needs
- * the seller to have a login. Save is live (build step 6); Buy and Message are
- * wired in later steps.
+ * the seller to have a login. Save is live (build step 6); Reserve and Message are
+ * wired in later steps (10 and 11).
  */
 export async function ListingActions({
   code,
@@ -35,7 +35,7 @@ export async function ListingActions({
         {!actor ? (
           <>
             <Link href={`/login?redirect=${backTo}`} className="rounded bg-purple-700 px-4 py-2 text-center text-white">
-              Sign in to buy
+              Sign in to reserve
             </Link>
             <Link href={`/login?redirect=${backTo}`} className="rounded border px-4 py-2 text-center text-sm">
               Sign in to save
@@ -43,8 +43,8 @@ export async function ListingActions({
           </>
         ) : isBuyer ? (
           <>
-            <button disabled title="Checkout arrives in build step 7" className="rounded bg-purple-700 px-4 py-2 text-white opacity-60">
-              Buy
+            <button disabled title="Reserving arrives in build step 10" className="rounded bg-purple-700 px-4 py-2 text-white opacity-60">
+              Reserve this part
             </button>
             <form action={setSavedAction.bind(null, code, !saved)}>
               <button
@@ -57,14 +57,14 @@ export async function ListingActions({
             </form>
           </>
         ) : (
-          <p className="text-sm text-zinc-500">Buying is for buyer accounts.</p>
+          <p className="text-sm text-zinc-500">Reserving is for buyer accounts.</p>
         )}
 
         {sellerHasLogin ? (
           actor && !isBuyer ? null : (
             <button
               disabled
-              title="Messaging arrives in build step 9"
+              title="Messaging arrives in build step 11"
               className="rounded border px-4 py-2 text-sm opacity-60"
             >
               Message seller

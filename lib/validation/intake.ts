@@ -21,6 +21,7 @@ export const donorVehicleSchema = z.object({
   mileageKm: optNum,
   registrationCountry: opt,
   notes: opt,
+  scrapReason: opt,
   engine: opt,
   engineCode: opt,
   fuel: opt,

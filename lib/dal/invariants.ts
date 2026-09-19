@@ -35,6 +35,26 @@ export async function assertSellerOwnsDonorVehicle(
   }
 }
 
+/**
+ * A seller is *available* when it has a linked login that is not banned
+ * (docs/auth-and-permissions.md §4.4). Publishing and reserving both require it,
+ * because sellers operate their own orders (ADR-0009).
+ */
+export async function isSellerAvailable(db: Db, sellerId: string): Promise<boolean> {
+  const seller = await db.seller.findUnique({
+    where: { id: sellerId },
+    select: { userId: true, user: { select: { banned: true } } },
+  });
+  if (!seller) throw new NotFoundError(`Seller ${sellerId} not found`);
+  return seller.userId != null && !seller.user?.banned;
+}
+
+export async function assertSellerAvailable(db: Db, sellerId: string): Promise<void> {
+  if (!(await isSellerAvailable(db, sellerId))) {
+    throw new InvariantError("This seller has no active login");
+  }
+}
+
 /** "Cannot delete a Category that still has Parts." */
 export async function assertCategoryHasNoParts(
   db: Db,

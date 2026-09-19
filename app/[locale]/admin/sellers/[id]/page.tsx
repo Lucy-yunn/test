@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { requireStaff } from "@/lib/dal/session";
 import { SellerForm } from "../seller-form";
 import { LoginControls } from "../login-controls";
+import { AvatarPanel } from "../avatar-panel";
 
 export default async function SellerDetailPage({
   params,
@@ -20,6 +21,7 @@ export default async function SellerDetailPage({
       contactName: true,
       contactEmail: true,
       contactPhone: true,
+      avatarUrl: true,
       locationName: true,
       locationLine1: true,
       locationCity: true,
@@ -58,6 +60,11 @@ export default async function SellerDetailPage({
             locationCountry: seller.locationCountry,
           }}
         />
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-lg font-semibold">Avatar</h2>
+        <AvatarPanel sellerId={seller.id} displayName={seller.displayName} avatarUrl={seller.avatarUrl} />
       </section>
 
       <section>
