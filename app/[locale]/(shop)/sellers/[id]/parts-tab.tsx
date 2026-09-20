@@ -1,6 +1,7 @@
 import { Link } from "@/i18n/navigation";
 import { db } from "@/lib/db";
 import { browseListings, type BrowseSort } from "@/lib/services/browse";
+import { getSellerRating } from "@/lib/services/reviews";
 import { FilterRail } from "../../browse/filter-rail";
 import { ResultRow } from "../../browse/result-row";
 import { browseHref, pageHref, type SP } from "../../browse/browse-nav";
@@ -24,6 +25,7 @@ const num = (v: string | string[] | undefined) => {
  */
 export async function PartsTab({ sellerId, sp }: { sellerId: string; sp: SP }) {
   const base = `/sellers/${sellerId}`;
+  const rating = await getSellerRating(db, sellerId);
   const categorySlug = str(sp.category);
   const generationSlug = str(sp.generation);
   const [category, generation] = await Promise.all([
@@ -80,7 +82,7 @@ export async function PartsTab({ sellerId, sp }: { sellerId: string; sp: SP }) {
           <>
             <div>
               {result.rows.map((r) => (
-                <ResultRow key={r.id} row={r} />
+                <ResultRow key={r.id} row={r} rating={rating} />
               ))}
             </div>
             {result.pageCount > 1 ? (

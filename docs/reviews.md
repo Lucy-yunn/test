@@ -100,3 +100,16 @@ Known weakness, accepted ([ADR-0012](./adr/0012-reviews-open-to-any-buyer.md)): 
 **seller** sets `completed`, a seller can delay it to avoid a purchase-linked review, and the
 open rule makes ratings easy to game. The first remedy, if needed, is to count only purchase-linked
 reviews in the average.
+
+---
+
+## 8. Build notes (step 12)
+
+- `Review.rating` is checked between 1 and 5 in the database as well as in the service.
+- The header of the Reviews tab shows the raw total and average, and adds "New seller" below 3
+  reviews. Everywhere else (seller header, listing card, result rows, saved sellers) the rating
+  reads `4.8/5 (10)`, or "New seller".
+- The seller replies from `/seller/reviews`, a minimal screen until the full seller center
+  (build step 13). Staff work from `/admin/reviews`.
+- A completed order's page offers **Leave a review** until that order has one.
+- Notifications for new reviews and replies are step 14.

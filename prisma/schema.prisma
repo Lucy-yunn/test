@@ -156,6 +156,7 @@ model User {
   reportsMade    Report[]       @relation("ReportBy")
   reportsClosed  Report[]       @relation("ReportResolvedBy")
   creditEntries  CreditLedgerEntry[]
+  reviewsHidden  Review[]       @relation("ReviewHiddenBy")
 
   @@index([role])
   @@map("user")
@@ -240,6 +241,7 @@ model Buyer {
   favorites Favorite[]
   savedSellers SavedSeller[]
   threads   Thread[]
+  reviews   Review[]
 }
 
 model Seller {
@@ -277,6 +279,7 @@ model Seller {
   threads       Thread[]
   savedBy       SavedSeller[]
   creditEntries CreditLedgerEntry[]
+  reviews       Review[]
 }
 
 // ---------------------------------------------------------------------------
@@ -546,6 +549,7 @@ model Order {
   seller              Seller               @relation(fields: [sellerId], references: [id])
   listing             Listing              @relation(fields: [listingId], references: [id])
   cancellationRequest CancellationRequest?
+  review              Review?
 
   @@index([buyerId])
   @@index([sellerId])
@@ -708,4 +712,32 @@ model CreditLedgerEntry {
   creator User?         @relation(fields: [createdBy], references: [id])
 
   @@index([sellerId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Seller reviews (docs/reviews.md, ADR-0012)
+// ---------------------------------------------------------------------------
+
+/** A buyer's review of a seller. Open to any signed-in buyer; `orderId` links it to one completed order. */
+model Review {
+  id              String    @id @default(cuid())
+  sellerId        String
+  buyerId         String
+  orderId         String?   @unique // at most one review per order
+  rating          Int // 1 to 5, checked in the database too
+  body            String?
+  sellerReply     String? // once, never edited
+  sellerRepliedAt DateTime?
+  hiddenAt        DateTime? // staff hide: the review, its reply and its rating all drop out
+  hiddenById      String?
+  hiddenReason    String?
+  createdAt       DateTime  @default(now())
+
+  seller   Seller @relation(fields: [sellerId], references: [id])
+  buyer    Buyer  @relation(fields: [buyerId], references: [id])
+  order    Order? @relation(fields: [orderId], references: [id])
+  hiddenBy User?  @relation("ReviewHiddenBy", fields: [hiddenById], references: [id])
+
+  @@index([sellerId, createdAt])
+  @@index([buyerId])
 }

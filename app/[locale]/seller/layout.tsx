@@ -18,6 +18,7 @@ export default async function SellerLayout({ children }: LayoutProps<"/[locale]/
         <nav className="flex gap-4 text-sm">
           <Link href="/seller" className="font-semibold">Seller</Link>
           <Link href="/seller/orders">Orders</Link>
+          <Link href="/seller/reviews">Reviews</Link>
           <Link href="/seller/messages">
             Messages
             {unread > 0 ? (

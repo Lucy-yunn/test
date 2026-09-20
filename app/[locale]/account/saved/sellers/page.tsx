@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { requireBuyer } from "@/lib/dal/session";
 import { formatDay } from "@/lib/format-date";
 import { listSavedSellers, type SavedSellerCard } from "@/lib/services/saved-sellers";
+import { getSellerRatings } from "@/lib/services/reviews";
+import { formatRating, type RatingSummary } from "@/lib/rating";
 import { Link } from "@/i18n/navigation";
 import { setSellerSavedAction } from "../actions";
 
@@ -13,6 +15,7 @@ export default async function SavedSellersPage({ params }: PageProps<"/[locale]/
 
   const actor = await requireBuyer();
   const cards = await listSavedSellers(db, actor);
+  const ratings = await getSellerRatings(db, cards.map((c) => c.sellerId));
 
   if (cards.length === 0) {
     return (
@@ -26,14 +29,14 @@ export default async function SavedSellersPage({ params }: PageProps<"/[locale]/
     <div>
       <p className="mb-2 text-sm text-zinc-500">{cards.length} saved</p>
       {cards.map((c) => (
-        <SellerCardRow key={c.sellerId} card={c} />
+        <SellerCardRow key={c.sellerId} card={c} rating={ratings.get(c.sellerId)} />
       ))}
     </div>
   );
 }
 
 /** A saved seller who has lost their public profile stays in the list, greyed. */
-function SellerCardRow({ card }: { card: SavedSellerCard }) {
+function SellerCardRow({ card, rating }: { card: SavedSellerCard; rating?: RatingSummary }) {
   const avatar = card.avatarUrl ? (
     <Image src={card.avatarUrl} alt="" width={56} height={56} unoptimized className="h-14 w-14 rounded-full object-cover" />
   ) : (
@@ -60,7 +63,7 @@ function SellerCardRow({ card }: { card: SavedSellerCard }) {
         </p>
         {card.available ? (
           <p className="text-sm">
-            New seller · <span className="font-medium">{card.onShelf}</span> on the shelf
+            {rating ? formatRating(rating) : "New seller"} · <span className="font-medium">{card.onShelf}</span> on the shelf
           </p>
         ) : (
           <span className="mt-1 inline-block rounded bg-zinc-200 px-2 py-0.5 text-xs font-medium text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200">

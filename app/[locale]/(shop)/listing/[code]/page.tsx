@@ -7,6 +7,8 @@ import { getListingDetail, getSiblingListings } from "@/lib/services/listing-det
 import { Link } from "@/i18n/navigation";
 import { getActor } from "@/lib/dal/session";
 import { formatDay } from "@/lib/format-date";
+import { formatRating } from "@/lib/rating";
+import { getSellerRating } from "@/lib/services/reviews";
 import { SellerContactView } from "../../_components/seller-contact";
 import { PhotoGallery } from "./photo-gallery";
 import { ListingActions } from "./listing-actions";
@@ -36,10 +38,10 @@ export default async function ListingPage({ params }: PageProps<"/[locale]/listi
   const d = await getListingDetail(db, decodeURIComponent(code), actor);
   if (!d) notFound();
 
-  const siblings = await getSiblingListings(db, {
-    donorVehicleId: d.donor.id,
-    excludeListingId: d.id,
-  });
+  const [siblings, sellerRating] = await Promise.all([
+    getSiblingListings(db, { donorVehicleId: d.donor.id, excludeListingId: d.id }),
+    getSellerRating(db, d.seller.id),
+  ]);
   const firstEight = siblings.slice(0, 8);
   const rest = siblings.slice(8);
 
@@ -113,7 +115,7 @@ export default async function ListingPage({ params }: PageProps<"/[locale]/listi
                   {d.seller.city}, {d.seller.country === "BG" ? "Bulgaria" : d.seller.country}
                 </p>
                 <p className="text-xs text-zinc-500">
-                  New seller · Last active {formatDay(d.seller.lastActiveAt)}
+                  {formatRating(sellerRating)} · Last active {formatDay(d.seller.lastActiveAt)}
                 </p>
               </div>
             </div>

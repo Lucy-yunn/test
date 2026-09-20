@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import type { BrowseRow } from "@/lib/services/browse";
+import { formatRating, type RatingSummary } from "@/lib/rating";
 
 const CONDITION_LABEL: Record<string, string> = {
   new: "New",
@@ -8,7 +9,7 @@ const CONDITION_LABEL: Record<string, string> = {
   needs_repair: "Needs repair",
 };
 
-export function ResultRow({ row }: { row: BrowseRow }) {
+export function ResultRow({ row, rating }: { row: BrowseRow; rating?: RatingSummary }) {
   const d = row.donor;
   const donorDetail = [
     d.engine,
@@ -53,6 +54,7 @@ export function ResultRow({ row }: { row: BrowseRow }) {
           </span>
           {row.partNumber ? <> · {row.partNumber}</> : null} · Seller:{" "}
           {row.seller.name}, {row.seller.city}
+          {rating ? <> · {formatRating(rating)}</> : null}
         </p>
         {row.defects.length ? (
           <ul className="mt-1 list-disc pl-4 text-xs text-zinc-500">
