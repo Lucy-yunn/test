@@ -109,6 +109,11 @@ export default async function OrderPage({ params }: PageProps<"/[locale]/account
       </section>
 
       <section className="flex flex-col gap-3">
+        {order.status === "completed" && !order.reviewed && order.seller.available ? (
+          <Link href={`/sellers/${order.seller.id}/review?order=${order.id}`} className="w-fit rounded bg-purple-700 px-4 py-2 text-sm text-white">
+            Leave a review
+          </Link>
+        ) : null}
         {canCancel ? <CancelForm orderId={order.id} orderCode={order.code} instant={order.status === "placed"} /> : null}
         {order.seller.available ? (
           <Link href={`/listing/${order.listing.code}/message`} className="w-fit rounded border px-4 py-2 text-sm">

@@ -7,10 +7,12 @@ import { getActor } from "@/lib/dal/session";
 import { getSellerProfile } from "@/lib/services/seller-profile";
 import { isSellerSaved } from "@/lib/services/saved-sellers";
 import { listMessageableListings } from "@/lib/services/messaging";
+import { getSellerRating } from "@/lib/services/reviews";
 import type { SP } from "../../browse/browse-nav";
 import { SellerHeader } from "./seller-header";
 import { CarsTab } from "./cars-tab";
 import { PartsTab } from "./parts-tab";
+import { ReviewsTab, parseReviewSort } from "./reviews-tab";
 
 const TABS = [
   { key: "cars", label: "All Cars" },
@@ -41,9 +43,10 @@ export default async function SellerProfilePage({
   // Independent of each other, so ask together. A saved flag for a seller with no profile is simply unused.
   // The parts a buyer can ask about are only needed for buyers and visitors, who see the Message picker.
   const canMessage = !actor || actor.role === "buyer";
-  const [profile, saved, messageable] = await Promise.all([
+  const [profile, saved, rating, messageable] = await Promise.all([
     getSellerProfile(db, id, actor),
     isSellerSaved(db, actor, id),
+    getSellerRating(db, id),
     canMessage ? listMessageableListings(db, id) : Promise.resolve([]),
   ]);
   if (!profile) notFound();
@@ -52,7 +55,7 @@ export default async function SellerProfilePage({
 
   return (
     <div>
-      <SellerHeader profile={profile} actor={actor} saved={saved} messageable={messageable} />
+      <SellerHeader profile={profile} actor={actor} saved={saved} messageable={messageable} rating={rating} />
 
       <nav className="flex border-b border-zinc-200 text-sm font-medium dark:border-zinc-800">
         {TABS.map((t) => (
@@ -72,8 +75,7 @@ export default async function SellerProfilePage({
         {tab === "cars" ? <CarsTab sellerId={id} sp={sp} /> : null}
         {tab === "parts" ? <PartsTab sellerId={id} sp={sp} /> : null}
         {tab === "reviews" ? (
-          // Reviews arrive in build step 12.
-          <p className="text-sm text-zinc-500">No reviews yet.</p>
+          <ReviewsTab sellerId={id} sort={parseReviewSort(typeof sp.sort === "string" ? sp.sort : undefined)} actor={actor} />
         ) : null}
       </div>
     </div>

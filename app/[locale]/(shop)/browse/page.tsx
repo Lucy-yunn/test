@@ -2,6 +2,7 @@ import { setRequestLocale } from "next-intl/server";
 import { db } from "@/lib/db";
 import { resolveBrowseContext, getFunnelTree } from "@/lib/services/catalogue";
 import { browseListings, type BrowseSort } from "@/lib/services/browse";
+import { getSellerRatings } from "@/lib/services/reviews";
 import { Link } from "@/i18n/navigation";
 import { FunnelBar } from "../_components/funnel-bar";
 import { FilterRail } from "./filter-rail";
@@ -62,6 +63,7 @@ export default async function BrowsePage({
     page: num(sp.page) ?? 1,
   });
 
+  const ratings = await getSellerRatings(db, result.rows.map((r) => r.seller.id));
   const activeSort = (str(sp.sort) as BrowseSort) ?? "newest";
   const chips: { label: string; href: string }[] = [];
   for (const key of ["category", "generation", "engine", "fuel", "transmission", "condition"] as const) {
@@ -129,7 +131,7 @@ export default async function BrowsePage({
             <>
               <div>
                 {result.rows.map((r) => (
-                  <ResultRow key={r.id} row={r} />
+                  <ResultRow key={r.id} row={r} rating={ratings.get(r.seller.id)} />
                 ))}
               </div>
               {result.pageCount > 1 ? (

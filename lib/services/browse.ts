@@ -58,7 +58,7 @@ export interface BrowseRow {
     transmission: Transmission | null;
     mileageKm: number | null;
   };
-  seller: { name: string; city: string; country: string };
+  seller: { id: string; name: string; city: string; country: string };
 }
 
 export interface FacetCount<V = string> { value: V; label: string; count: number }
@@ -123,7 +123,7 @@ function candidateSelect() {
       },
     },
     seller: {
-      select: { displayName: true, locationCity: true, locationCountry: true },
+      select: { id: true, displayName: true, locationCity: true, locationCountry: true },
     },
     photos: { orderBy: { displayOrder: "asc" as const }, take: 1, select: { url: true } },
     defects: { orderBy: { displayOrder: "asc" as const }, select: { description: true } },
@@ -250,6 +250,7 @@ function toRow(c: Candidate): BrowseRow {
       mileageKm: c.donorVehicle.mileageKm,
     },
     seller: {
+      id: c.seller.id,
       name: c.seller.displayName,
       city: c.seller.locationCity,
       country: c.seller.locationCountry,

@@ -15,6 +15,7 @@ export default function AdminLayout({ children }: LayoutProps<"/[locale]/admin">
           <Link href="/admin/credits">Credits</Link>
           <Link href="/admin/orders">Orders</Link>
           <Link href="/admin/threads">Threads</Link>
+          <Link href="/admin/reviews">Reviews</Link>
           <Link href="/admin/buyers">Buyers</Link>
           <Link href="/admin/catalogue">Vehicle catalogue</Link>
           <Link href="/admin/parts">Parts</Link>

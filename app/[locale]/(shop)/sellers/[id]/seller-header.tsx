@@ -3,6 +3,7 @@ import { Link } from "@/i18n/navigation";
 import type { Actor } from "@/lib/dal/actor";
 import { formatDay, formatMonthYear } from "@/lib/format-date";
 import type { SellerProfile } from "@/lib/services/seller-profile";
+import { formatRating, type RatingSummary } from "@/lib/rating";
 import { setSellerSavedAction } from "@/app/[locale]/account/saved/actions";
 import { SellerContactView } from "../../_components/seller-contact";
 import { ShareButton } from "./share-button";
@@ -16,12 +17,14 @@ export function SellerHeader({
   actor,
   saved,
   messageable,
+  rating,
 }: {
   profile: SellerProfile;
   actor: Actor | null;
   saved: boolean;
   /** The seller's parts on sale, for the "Which part is your message about?" picker. */
   messageable: { code: string; title: string; priceEur: string }[];
+  rating: RatingSummary;
 }) {
   const backTo = `/sellers/${profile.id}`;
   const isBuyer = actor?.role === "buyer";
@@ -45,8 +48,7 @@ export function SellerHeader({
 
       <div className="min-w-0 flex-1">
         <h1 className="text-2xl font-semibold">{profile.name}</h1>
-        {/* Reviews arrive in build step 12; until then every seller reads as new. */}
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">New seller</p>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">{formatRating(rating)}</p>
       </div>
 
       <dl className="grid gap-1 text-sm">
