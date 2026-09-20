@@ -5,7 +5,9 @@ import {
   sellerIsAvailable,
   type SellerLoginState,
 } from "../dal/seller-availability";
+import { blankToNull, firstLine } from "../text";
 import { maskVin } from "./listing-detail";
+import { sellerContactFor, type SellerContact } from "./seller-contact";
 
 /**
  * The public seller profile (docs/seller-profile.md). Node-safe.
@@ -18,8 +20,8 @@ export interface SellerProfile {
   city: string;
   country: string;
   lastActiveAt: Date | null;
-  /** Only ever set for a signed-in viewer; anonymous visitors get null (ADR-0011). */
-  phone: string | null;
+  /** What the viewer may see of the seller's contact (ADR-0011). */
+  contact: SellerContact;
   /** Earliest publish date across the seller's listings. */
   onIvoSince: Date;
 }
@@ -37,8 +39,8 @@ export function sellerHasPublicProfile(
 
 /**
  * `viewer` is the signed-in Actor or null; it only decides whether the phone number is
- * returned. One read: the seller, its login state and its earliest publish date are
- * selected together instead of in three separate calls.
+ * returned (via sellerContactFor). One read: the seller, its login state and its earliest
+ * publish date are selected together instead of in three separate calls.
  */
 export async function getSellerProfile(
   db: PrismaClient,
@@ -72,7 +74,7 @@ export async function getSellerProfile(
     city: seller.locationCity,
     country: seller.locationCountry,
     lastActiveAt: seller.lastActiveAt,
-    phone: viewer ? seller.contactPhone : null,
+    contact: sellerContactFor(viewer, seller.contactPhone),
     onIvoSince: seller.listings[0].publishedAt as Date,
   };
 }
@@ -145,8 +147,6 @@ export interface SellerCarsResult {
     fuels: string[];
   };
 }
-
-export const firstLine = (text: string | null): string | null => text?.split(/\r?\n/, 1)[0]?.trim() || null;
 
 /**
  * A seller's donor vehicles that have at least one part on the shelf or sold. A car
@@ -360,7 +360,7 @@ export async function getDonorVehiclePage(
     transmission: d.transmission,
     bodyStyle: d.bodyStyle,
     drivetrain: d.drivetrain,
-    scrapReason: d.scrapReason?.trim() || null,
+    scrapReason: blankToNull(d.scrapReason),
     photos: d.photos,
     seller: {
       id: d.seller.id,

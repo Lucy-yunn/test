@@ -160,7 +160,7 @@ describe("getSellerProfile — the phone number is for signed-in users only", ()
 
     const profile = await getSellerProfile(db, id, null);
 
-    expect(profile?.phone).toBeNull();
+    expect(profile?.contact).toEqual({ kind: "sign_in" });
     expect(JSON.stringify(profile)).not.toContain(PHONE);
   });
 
@@ -168,7 +168,7 @@ describe("getSellerProfile — the phone number is for signed-in users only", ()
     const id = await mkSeller("phone-in");
     await mkListing(await mkDonor(id), id, "published");
 
-    expect((await getSellerProfile(db, id, signedIn))?.phone).toBe(PHONE);
+    expect((await getSellerProfile(db, id, signedIn))?.contact).toEqual({ kind: "phone", phone: PHONE });
   });
 });
 

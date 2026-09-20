@@ -4,11 +4,12 @@ import type { Actor } from "@/lib/dal/actor";
 import { formatDay, formatMonthYear } from "@/lib/format-date";
 import type { SellerProfile } from "@/lib/services/seller-profile";
 import { setSellerSavedAction } from "@/app/[locale]/account/saved/actions";
+import { SellerContactView } from "../../_components/seller-contact";
 import { ShareButton } from "./share-button";
 
 /**
- * The seller header shown on every tab (docs/seller-profile.md section 2). The phone is
- * only rendered when the service returned it, that is, for a signed-in viewer.
+ * The seller header shown on every tab (docs/seller-profile.md section 2). The contact
+ * line shows what the service allowed for this viewer.
  */
 export function SellerHeader({
   profile,
@@ -55,20 +56,12 @@ export function SellerHeader({
         <div>
           <dt className="sr-only">Phone</dt>
           <dd>
-            {profile.phone ? (
-              <a href={`tel:${profile.phone.replace(/\s+/g, "")}`} className="text-purple-700 underline">
-                {profile.phone}
-              </a>
-            ) : actor ? (
-              <span className="text-zinc-500">No phone on file</span>
-            ) : (
-              <Link
-                href={`/login?redirect=${backTo}`}
-                className="inline-block rounded border px-3 py-1 text-purple-800 hover:bg-white dark:text-purple-300"
-              >
-                Sign in to get seller contact
-              </Link>
-            )}
+            <SellerContactView
+              contact={profile.contact}
+              signInHref={`/login?redirect=${backTo}`}
+              signInClassName="inline-block rounded border px-3 py-1 text-purple-800 hover:bg-white dark:text-purple-300"
+              emptyNote="No phone on file"
+            />
           </dd>
         </div>
         <div className="text-zinc-600 dark:text-zinc-400">Last active: {formatDay(profile.lastActiveAt)}</div>

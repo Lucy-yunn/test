@@ -1,6 +1,7 @@
 import type { PrismaClient, Condition, Transmission } from "@prisma/client";
 import type { Actor } from "../dal/actor";
 import { SELLER_AVAILABILITY_SELECT, sellerIsAvailable } from "../dal/seller-availability";
+import { sellerContactFor, type SellerContact } from "./seller-contact";
 
 /**
  * Buyer listing-detail page + the "More parts from the same car" section
@@ -71,14 +72,14 @@ export interface ListingDetail {
      * with no link to a profile that would not exist, and no messaging.
      */
     available: boolean;
-    /** Only ever set for a signed-in viewer; anonymous visitors get null (ADR-0011). */
-    phone: string | null;
+    /** What the viewer may see of the seller's contact (ADR-0011); the number itself only for a signed-in viewer. */
+    contact: SellerContact;
   };
 }
 
 /**
  * `viewer` is the signed-in Actor, or null/omitted for an anonymous visitor. It only
- * decides whether the seller's phone number is returned (docs/seller-profile.md §3).
+ * decides whether the seller's phone number is returned (docs/seller-profile.md §3, via sellerContactFor).
  */
 export async function getListingDetail(
   db: PrismaClient,
@@ -203,7 +204,7 @@ export async function getListingDetail(
       city: l.seller.locationCity,
       country: l.seller.locationCountry,
       available: sellerIsAvailable(l.seller),
-      phone: viewer ? l.seller.contactPhone : null,
+      contact: sellerContactFor(viewer, l.seller.contactPhone),
     },
   };
 }

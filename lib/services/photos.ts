@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { blankToNull } from "../text";
 import type { PrismaClient } from "@prisma/client";
 import { InvariantError, NotFoundError } from "../dal/errors";
 import { downscaleForWeb } from "../images";
@@ -53,7 +54,7 @@ export async function addListingPhoto(
       listingId: args.listingId,
       url,
       displayOrder: listing._count.photos,
-      caption: args.caption?.trim() || null,
+      caption: blankToNull(args.caption),
     },
     select: { id: true, url: true },
   });
@@ -79,7 +80,7 @@ export async function addDonorVehiclePhoto(
       donorVehicleId: args.donorVehicleId,
       url,
       displayOrder: dv._count.photos,
-      caption: args.caption?.trim() || null,
+      caption: blankToNull(args.caption),
     },
     select: { id: true, url: true },
   });

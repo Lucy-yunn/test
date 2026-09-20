@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
+import { blankToNull } from "../text";
 import { hashPassword } from "better-auth/crypto";
 import { ConflictError, InvariantError, NotFoundError } from "../dal/errors";
 import { generateInitialPassword } from "./credentials";
@@ -37,12 +38,12 @@ export async function createSeller(
       displayName: input.displayName.trim(),
       contactName: input.contactName.trim(),
       contactEmail: normEmail(input.contactEmail),
-      contactPhone: input.contactPhone?.trim() || null,
-      locationName: input.locationName?.trim() || null,
-      locationLine1: input.locationLine1?.trim() || null,
+      contactPhone: blankToNull(input.contactPhone),
+      locationName: blankToNull(input.locationName),
+      locationLine1: blankToNull(input.locationLine1),
       locationCity: input.locationCity.trim(),
-      locationPostcode: input.locationPostcode?.trim() || null,
-      locationCountry: input.locationCountry?.trim() || "BG",
+      locationPostcode: blankToNull(input.locationPostcode),
+      locationCountry: blankToNull(input.locationCountry) ?? "BG",
     },
     select: { id: true },
   });
@@ -58,12 +59,12 @@ export async function updateSeller(
   if (patch.displayName !== undefined) data.displayName = patch.displayName.trim();
   if (patch.contactName !== undefined) data.contactName = patch.contactName.trim();
   if (patch.contactEmail !== undefined) data.contactEmail = normEmail(patch.contactEmail);
-  if (patch.contactPhone !== undefined) data.contactPhone = patch.contactPhone?.trim() || null;
-  if (patch.locationName !== undefined) data.locationName = patch.locationName?.trim() || null;
-  if (patch.locationLine1 !== undefined) data.locationLine1 = patch.locationLine1?.trim() || null;
+  if (patch.contactPhone !== undefined) data.contactPhone = blankToNull(patch.contactPhone);
+  if (patch.locationName !== undefined) data.locationName = blankToNull(patch.locationName);
+  if (patch.locationLine1 !== undefined) data.locationLine1 = blankToNull(patch.locationLine1);
   if (patch.locationCity !== undefined) data.locationCity = patch.locationCity.trim();
-  if (patch.locationPostcode !== undefined) data.locationPostcode = patch.locationPostcode?.trim() || null;
-  if (patch.locationCountry !== undefined) data.locationCountry = patch.locationCountry?.trim() || "BG";
+  if (patch.locationPostcode !== undefined) data.locationPostcode = blankToNull(patch.locationPostcode);
+  if (patch.locationCountry !== undefined) data.locationCountry = blankToNull(patch.locationCountry) ?? "BG";
 
   await db.seller.update({ where: { id: sellerId }, data });
 }

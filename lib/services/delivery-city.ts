@@ -1,59 +1,85 @@
 /**
- * The header's "Delivery to" city (docs/buyer-funnel-search.md §6). It only pre-fills
- * the city at the reserve step; it never affects search or sorting. Node-safe.
+ * The header's "Delivery to" city (docs/buyer-funnel-search.md section 6). It only
+ * pre-fills the city at the reserve step; it never affects search or sorting. Node-safe.
  *
- * A city the buyer chose always wins over a guess. The IP-derived guess is never
- * stored: only a city the buyer chose is ever written to the database.
+ * Two entry points hide everything else:
+ *  - `resolveDeliveryLocation` says which city to show, and whether it is a choice or a guess.
+ *  - `chooseDeliveryCity` records what the visitor typed and says what the browser cookie should hold.
+ *
+ * A city the visitor chose always wins over a guess. The guess from the IP address is
+ * never stored: only a city the visitor chose is ever written down.
  */
 import type { PrismaClient } from "@prisma/client";
 import { isBuyer, type Actor } from "../dal/actor";
-import { ForbiddenError, InvariantError } from "../dal/errors";
+import { blankToNull } from "../text";
 
 export const MAX_CITY_LENGTH = 80;
 
 export type CitySource = "chosen" | "detected";
 
-const clean = (s: string | null | undefined): string | null => s?.trim() || null;
-
-/**
- * Vercel adds the visitor's city to each request as a URL-encoded header. It is
- * city-level and often wrong, so it is only a suggestion.
- */
-export function parseDetectedCity(raw: string | null | undefined): string | null {
-  const trimmed = clean(raw);
-  if (!trimmed) return null;
-  try {
-    return clean(decodeURIComponent(trimmed));
-  } catch {
-    return null;
-  }
+export interface DeliveryLocation {
+  city: string | null;
+  /** "chosen" for a city the visitor picked, "detected" for a guess, null when there is none. */
+  source: CitySource | null;
 }
 
-export function resolveDeliveryCity(input: {
-  savedCity: string | null;
-  cookieCity: string | null;
-  detectedCity: string | null;
-}): { city: string | null; source: CitySource | null } {
-  const chosen = clean(input.savedCity) ?? clean(input.cookieCity);
+/**
+ * Which city to show in the header.
+ *
+ * Order: the signed-in buyer's saved city, then the city chosen in this browser
+ * (`cookieCity`), then a guess. The guess is the city in Vercel's IP header, or
+ * `fallbackCity` when the header is missing or unreadable (development has no header).
+ */
+export async function resolveDeliveryLocation(
+  db: PrismaClient,
+  input: {
+    actor: Actor | null;
+    cookieCity: string | null | undefined;
+    /** Vercel's `x-vercel-ip-city`: URL-encoded, city-level and often wrong. */
+    ipCityHeader: string | null | undefined;
+    fallbackCity: string | null | undefined;
+  },
+): Promise<DeliveryLocation> {
+  const chosen = blankToNull(await savedCity(db, input.actor)) ?? blankToNull(input.cookieCity);
   if (chosen) return { city: chosen, source: "chosen" };
-  const detected = clean(input.detectedCity);
+
+  const detected = decodeCity(input.ipCityHeader) ?? blankToNull(input.fallbackCity);
   if (detected) return { city: detected, source: "detected" };
+
   return { city: null, source: null };
 }
 
-/** Save the city a buyer chose; blank clears it. Buyer accounts only. */
-export async function setDeliveryCity(db: PrismaClient, actor: Actor, city: string): Promise<void> {
-  if (!isBuyer(actor)) throw new ForbiddenError("Delivery city is for buyer accounts");
-  const value = clean(city);
-  if (value && value.length > MAX_CITY_LENGTH) {
-    throw new InvariantError(`City must be at most ${MAX_CITY_LENGTH} characters`);
+/**
+ * Record the city a visitor typed in the header control and return what the browser
+ * cookie should now hold, null meaning "remove the cookie". Blank clears the choice.
+ * Over-long input is cut to the limit. A signed-in buyer's city is also saved on their
+ * account; anyone else only gets the cookie.
+ */
+export async function chooseDeliveryCity(
+  db: PrismaClient,
+  actor: Actor | null,
+  rawCity: string,
+): Promise<string | null> {
+  const city = blankToNull(rawCity.trim().slice(0, MAX_CITY_LENGTH));
+  if (actor && isBuyer(actor)) {
+    await db.buyer.update({ where: { id: actor.buyerId! }, data: { deliveryCity: city } });
   }
-  await db.buyer.update({ where: { id: actor.buyerId! }, data: { deliveryCity: value } });
+  return city;
 }
 
-/** The buyer's saved city, or null for anonymous visitors and non-buyer roles. */
-export async function getSavedDeliveryCity(db: PrismaClient, actor: Actor | null): Promise<string | null> {
+/** The buyer's saved city; null for anonymous visitors and non-buyer roles. */
+async function savedCity(db: PrismaClient, actor: Actor | null): Promise<string | null> {
   if (!actor || !isBuyer(actor)) return null;
   const buyer = await db.buyer.findUnique({ where: { id: actor.buyerId! }, select: { deliveryCity: true } });
   return buyer?.deliveryCity ?? null;
+}
+
+function decodeCity(raw: string | null | undefined): string | null {
+  const trimmed = blankToNull(raw);
+  if (!trimmed) return null;
+  try {
+    return blankToNull(decodeURIComponent(trimmed));
+  } catch {
+    return null;
+  }
 }
