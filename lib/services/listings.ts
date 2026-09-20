@@ -1,7 +1,12 @@
 import type { PrismaClient, Prisma, Condition, ListingStatus } from "@prisma/client";
 import { InvariantError, NotFoundError } from "../dal/errors";
 import { assertTransition, LISTING_TRANSITIONS } from "../dal/transitions";
-import { assertSellerOwnsDonorVehicle, assertSellerAvailable, isSellerAvailable } from "../dal/invariants";
+import { assertSellerOwnsDonorVehicle } from "../dal/invariants";
+import {
+  SELLER_AVAILABILITY_SELECT,
+  assertSellerStateAvailable,
+  sellerIsAvailable,
+} from "../dal/seller-availability";
 import { nextInternalCode } from "./internal-code";
 import {
   evaluatePublishChecklist,
@@ -162,19 +167,17 @@ export async function removeListingDefect(db: PrismaClient, id: string): Promise
   await db.listingDefect.delete({ where: { id } });
 }
 
-/** Load a listing and evaluate the publish checklist. */
-export async function getPublishChecklist(
-  db: PrismaClient,
-  listingId: string,
-): Promise<PublishChecklistResult> {
+/** Everything the publish checklist and the publish transition need, in one read. */
+async function loadForPublish(db: PrismaClient, listingId: string) {
   const listing = await db.listing.findUnique({
     where: { id: listingId },
     select: {
+      status: true,
       condition: true,
       priceEur: true,
       donorVehicleId: true,
-      sellerId: true,
       noVisiblePartNumber: true,
+      seller: { select: SELLER_AVAILABILITY_SELECT },
       _count: { select: { photos: true } },
       part: {
         select: {
@@ -186,7 +189,12 @@ export async function getPublishChecklist(
     },
   });
   if (!listing) throw new NotFoundError("Listing not found");
+  return listing;
+}
 
+type LoadedForPublish = Awaited<ReturnType<typeof loadForPublish>>;
+
+function evaluateLoaded(listing: LoadedForPublish): PublishChecklistResult {
   return evaluatePublishChecklist({
     photoCount: listing._count.photos,
     hasCondition: listing.condition != null,
@@ -196,25 +204,32 @@ export async function getPublishChecklist(
     hasDonorVehicle: listing.donorVehicleId != null,
     partNumberCount: listing.part?._count.partNumbers ?? 0,
     noVisiblePartNumber: listing.noVisiblePartNumber,
-    sellerAvailable: await isSellerAvailable(db, listing.sellerId),
+    sellerAvailable: sellerIsAvailable(listing.seller),
   });
 }
 
-/** `draft → published` — checklist is the gate. */
+/** Load a listing and evaluate the publish checklist. */
+export async function getPublishChecklist(
+  db: PrismaClient,
+  listingId: string,
+): Promise<PublishChecklistResult> {
+  return evaluateLoaded(await loadForPublish(db, listingId));
+}
+
+/**
+ * `draft → published`, with the checklist as the gate. The listing is loaded once and the
+ * checklist evaluated once; the seller availability comes with that same read.
+ */
 export async function publishListing(
   db: PrismaClient,
   listingId: string,
   reviewedBy?: string | null,
 ): Promise<void> {
-  const listing = await db.listing.findUnique({
-    where: { id: listingId },
-    select: { status: true, sellerId: true },
-  });
-  if (!listing) throw new NotFoundError("Listing not found");
+  const listing = await loadForPublish(db, listingId);
   assertTransition(LISTING_TRANSITIONS, listing.status, "published", "Listing");
-  await assertSellerAvailable(db, listing.sellerId);
+  assertSellerStateAvailable(listing.seller);
 
-  const checklist = await getPublishChecklist(db, listingId);
+  const checklist = evaluateLoaded(listing);
   if (!checklist.ok) {
     throw new InvariantError(
       `Publish checklist not met: ${checklist.failures.join("; ")}`,

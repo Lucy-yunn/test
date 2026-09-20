@@ -168,6 +168,10 @@ the phone (or the sign-in button, §3), the chat icon (§7), and **View all part
 linking to `/car/[id]`. The inline "More parts from the same car" section stays as it is
 ([`donor-vehicle-parts.md`](./donor-vehicle-parts.md)).
 
+When the seller is **not available** (no login, or the login is disabled) the card shows the name
+as plain text and omits **View all parts**, because the profile does not exist for them
+([`auth-and-permissions.md`](./auth-and-permissions.md) §4.4).
+
 ---
 
 ## 10. Data changes

@@ -36,24 +36,17 @@ export async function assertSellerOwnsDonorVehicle(
 }
 
 /**
- * A seller is *available* when it has a linked login that is not banned
- * (docs/auth-and-permissions.md §4.4). Publishing and reserving both require it,
- * because sellers operate their own orders (ADR-0009).
+ * "A seller is available" (a linked, non-disabled login) lives in one place,
+ * `./seller-availability`. Re-exported here so it still reads as one of the invariants.
  */
-export async function isSellerAvailable(db: Db, sellerId: string): Promise<boolean> {
-  const seller = await db.seller.findUnique({
-    where: { id: sellerId },
-    select: { userId: true, user: { select: { banned: true } } },
-  });
-  if (!seller) throw new NotFoundError(`Seller ${sellerId} not found`);
-  return seller.userId != null && !seller.user?.banned;
-}
-
-export async function assertSellerAvailable(db: Db, sellerId: string): Promise<void> {
-  if (!(await isSellerAvailable(db, sellerId))) {
-    throw new InvariantError("This seller has no active login");
-  }
-}
+export {
+  isSellerAvailable,
+  assertSellerAvailable,
+  assertSellerStateAvailable,
+  sellerIsAvailable,
+  SELLER_AVAILABILITY_SELECT,
+  NO_ACTIVE_LOGIN_MESSAGE,
+} from "./seller-availability";
 
 /** "Cannot delete a Category that still has Parts." */
 export async function assertCategoryHasNoParts(

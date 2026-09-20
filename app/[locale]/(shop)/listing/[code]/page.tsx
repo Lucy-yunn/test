@@ -79,7 +79,7 @@ export default async function ListingPage({ params }: PageProps<"/[locale]/listi
             code={d.internalCode}
             price={d.priceEur}
             negotiable={d.negotiable}
-            sellerHasLogin={d.seller.hasLogin}
+            sellerAvailable={d.seller.available}
           />
 
           <div className="rounded border border-purple-200 bg-purple-50 p-4 text-sm dark:border-purple-900 dark:bg-purple-950">
@@ -100,7 +100,7 @@ export default async function ListingPage({ params }: PageProps<"/[locale]/listi
                 </span>
               )}
               <div className="min-w-0">
-                {d.seller.hasLogin ? (
+                {d.seller.available ? (
                   <Link href={`/sellers/${d.seller.id}`} className="font-medium hover:underline">
                     {d.seller.name}
                   </Link>
@@ -134,7 +134,7 @@ export default async function ListingPage({ params }: PageProps<"/[locale]/listi
               </Link>
             )}
 
-            {d.seller.hasLogin ? (
+            {d.seller.available ? (
               <p className="mt-3">
                 <Link href={`/sellers/${d.seller.id}?tab=parts`} className="font-medium text-purple-700 underline">
                   View all parts

@@ -164,8 +164,11 @@ A disabled or unlinked seller login makes the Seller **unavailable** (§4.4).
 
 ### 4.4 A seller is available only with an active login
 
-A seller is **available** when `Seller.userId` is set and that `User` is not banned. The DAL
-enforces it:
+A seller is **available** when `Seller.userId` is set and that `User` is not banned. This is one
+rule in one place, `lib/dal/seller-availability.ts`; publishing, the seller profile, the
+donor-vehicle page, saved sellers and the listing page all decide through it, and
+`lib/services/seller-rules.integration.test.ts` checks that they agree for every login state. The
+DAL enforces it:
 
 - **Publishing** a Listing (`draft` or `cancelled` to `published`) is refused for an unavailable
   seller: *"This seller has no active login."*
@@ -173,6 +176,8 @@ enforces it:
   **Reserve** button disabled with *"This seller is temporarily unavailable."* This covers
   Listings already published when a login is later disabled or unlinked.
 - The seller's public profile and donor-vehicle pages are hidden ([`seller-profile.md`](./seller-profile.md) §1).
+- On a listing page the seller's **name is shown as plain text**, with no link to a profile that
+  would not exist, no **View all parts**, and *"Messaging isn't available for this seller."*
 - **Open orders are not touched.** Disabling or unlinking a login with open orders is allowed but
   the admin tool warns staff first, because nobody can then confirm or complete them.
 

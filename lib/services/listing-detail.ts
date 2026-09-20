@@ -1,5 +1,6 @@
 import type { PrismaClient, Condition, Transmission } from "@prisma/client";
 import type { Actor } from "../dal/actor";
+import { SELLER_AVAILABILITY_SELECT, sellerIsAvailable } from "../dal/seller-availability";
 
 /**
  * Buyer listing-detail page + the "More parts from the same car" section
@@ -64,7 +65,12 @@ export interface ListingDetail {
     lastActiveAt: Date | null;
     city: string;
     country: string;
-    hasLogin: boolean;
+    /**
+     * Whether the seller is available (an active, non-disabled login): the same rule as
+     * the seller profile and publishing. When false the page shows the name as plain text,
+     * with no link to a profile that would not exist, and no messaging.
+     */
+    available: boolean;
     /** Only ever set for a signed-in viewer; anonymous visitors get null (ADR-0011). */
     phone: string | null;
   };
@@ -137,7 +143,7 @@ export async function getListingDetail(
           lastActiveAt: true,
           locationCity: true,
           locationCountry: true,
-          userId: true,
+          ...SELLER_AVAILABILITY_SELECT,
           contactPhone: true,
         },
       },
@@ -196,7 +202,7 @@ export async function getListingDetail(
       lastActiveAt: l.seller.lastActiveAt,
       city: l.seller.locationCity,
       country: l.seller.locationCountry,
-      hasLogin: l.seller.userId != null,
+      available: sellerIsAvailable(l.seller),
       phone: viewer ? l.seller.contactPhone : null,
     },
   };
