@@ -376,7 +376,8 @@ export interface StaffOrderView extends OrderView {
   ageDays: number | null;
 }
 
-const orderSelect = {
+/** What every order view reads. Shared with the seller center's order detail. */
+export const orderSelect = {
   id: true,
   internalCode: true,
   status: true,
@@ -408,9 +409,9 @@ const orderSelect = {
   },
 } satisfies Prisma.OrderSelect;
 
-type OrderRow = Prisma.OrderGetPayload<{ select: typeof orderSelect }>;
+export type OrderRow = Prisma.OrderGetPayload<{ select: typeof orderSelect }>;
 
-function toView(o: OrderRow): OrderView {
+export function toView(o: OrderRow): OrderView {
   return {
     id: o.id,
     code: o.internalCode,
