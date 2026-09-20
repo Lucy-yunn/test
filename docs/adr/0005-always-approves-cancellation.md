@@ -2,7 +2,7 @@
 
 - **Status:** accepted, **amended by [ADR-0009](./0009-seller-operated-orders-cash-on-delivery.md) (2026-09-19)**: the request is instant while the order is `placed`, only the seller (not staff) can approve one on a `confirmed` order, staff cannot raise one, and "pre-ship" now means "before handover". The 7-day auto-approve, no reject and no withdrawal are unchanged.
 - **Date:** 2026-09-06
-- **Source:** [#10 Order model & stubbed checkout](https://github.com/Lucy-yunn/test/issues/10) §6 · full flow in [`docs/order-model.md`](../order-model.md)
+- **Source:** [#10 Order model & stubbed checkout](https://github.com/Lucy-yunn/carparts/issues/10) §6 · full flow in [`docs/order-model.md`](../order-model.md)
 
 ## Context
 

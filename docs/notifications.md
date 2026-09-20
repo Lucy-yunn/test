@@ -1,7 +1,7 @@
 # v1 Notifications — order, cancellation, review & credit events
 
-Originally resolved [Notifications (#17)](https://github.com/Lucy-yunn/test/issues/17) on the
-[Wayfinder map (#1)](https://github.com/Lucy-yunn/test/issues/1). **Revised 2026-09-19**: the
+Originally resolved [Notifications (#17)](https://github.com/Lucy-yunn/carparts/issues/17) on the
+[Wayfinder map (#1)](https://github.com/Lucy-yunn/carparts/issues/1). **Revised 2026-09-19**: the
 event list follows the new order lifecycle ([`order-model.md`](./order-model.md)), and reviews and
 credits add events.
 

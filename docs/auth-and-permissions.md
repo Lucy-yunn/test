@@ -1,9 +1,9 @@
 # v1 Auth, Roles & Permissions
 
-Resolves [Auth, roles & permissions (#12)](https://github.com/Lucy-yunn/test/issues/12)
-on the [Wayfinder map (#1)](https://github.com/Lucy-yunn/test/issues/1).
+Resolves [Auth, roles & permissions (#12)](https://github.com/Lucy-yunn/carparts/issues/12)
+on the [Wayfinder map (#1)](https://github.com/Lucy-yunn/carparts/issues/1).
 
-Builds on [Core domain model (#2)](https://github.com/Lucy-yunn/test/issues/2) (the party
+Builds on [Core domain model (#2)](https://github.com/Lucy-yunn/carparts/issues/2) (the party
 model — `User` / `Buyer` / `Seller` / `staff`) and the architecture baseline
 ([ADR-0001](./adr/0001-architecture-baseline.md); auth checks in the Data Access Layer).
 Vocabulary is governed by [`CONTEXT.md`](../CONTEXT.md); the entity/field skeleton lives in
@@ -26,9 +26,9 @@ Three **roles**, exactly one per `User` in v1 (locked in #2): `buyer`, `seller`,
 
 Out of this ticket:
 - **Notifications** (email / push, and whether a login event should notify) — map fog, the
-  dedicated [notifications ticket (#17)](https://github.com/Lucy-yunn/test/issues/17).
+  dedicated [notifications ticket (#17)](https://github.com/Lucy-yunn/carparts/issues/17).
 - **The admin-tool and seller-center screen layouts** — owned by
-  [Seller center (#13)](https://github.com/Lucy-yunn/test/issues/13) and the final spec
+  [Seller center (#13)](https://github.com/Lucy-yunn/carparts/issues/13) and the final spec
   assembly. This document fixes the permissions those screens operate within.
 - **Self-serve seller listing** — out of scope for v1 (map). Sellers never create or edit
   listings; that is staff-entry only.
@@ -332,16 +332,16 @@ buyer-only.
 
 ## 11. Downstream / fog touched by this ticket
 
-- **[Seller center (#13)](https://github.com/Lucy-yunn/test/issues/13)** — consumes this
+- **[Seller center (#13)](https://github.com/Lucy-yunn/carparts/issues/13)** — consumes this
   matrix; owns the seller-center screens and the exact performance metrics, and decides
   whether a standalone `DonorVehicle` view exists (§7.2).
-- **[Notifications (#17)](https://github.com/Lucy-yunn/test/issues/17)** — any "your password
+- **[Notifications (#17)](https://github.com/Lucy-yunn/carparts/issues/17)** — any "your password
   was reset" / "your seller login is ready" messaging depends on the notification channel
   decision and on whether transactional email lands.
-- **[Messaging model (#11)](https://github.com/Lucy-yunn/test/issues/11)** — its §5 "one write
+- **[Messaging model (#11)](https://github.com/Lucy-yunn/carparts/issues/11)** — its §5 "one write
   action" wording needs to become "two" (messaging **and** cancellation approval). Noted on
   PR #16 rather than edited on that unmerged branch.
 - **[ADR-0001](./adr/0001-architecture-baseline.md)** — finalised with **Better Auth** (the
   draft's Auth.js line is corrected).
-- **[Final spec assembly (#26)](https://github.com/Lucy-yunn/test/issues/26)** — [ADR-0004](./adr/0004-one-role-per-user.md)
+- **[Final spec assembly (#26)](https://github.com/Lucy-yunn/carparts/issues/26)** — [ADR-0004](./adr/0004-one-role-per-user.md)
   (§8); the [admin-tool spec](./spec/admin-tool.md) and [screen inventory](./spec/screens.md).

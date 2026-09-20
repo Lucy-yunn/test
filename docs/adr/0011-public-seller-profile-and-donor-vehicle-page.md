@@ -3,7 +3,7 @@
 - **Status:** accepted
 - **Date:** 2026-09-19
 - **Source:** founders' v1 scope revision · full rules in [`docs/seller-profile.md`](../seller-profile.md)
-- **Reverses:** the "no dedicated donor-vehicle page" cut in [`donor-vehicle-parts.md`](../donor-vehicle-parts.md) §1 and §8 ([#23](https://github.com/Lucy-yunn/test/issues/23)); the "buyer sees only display name and city" rule in [`auth-and-permissions.md`](../auth-and-permissions.md) §7 and [`order-model.md`](../order-model.md) §11
+- **Reverses:** the "no dedicated donor-vehicle page" cut in [`donor-vehicle-parts.md`](../donor-vehicle-parts.md) §1 and §8 ([#23](https://github.com/Lucy-yunn/carparts/issues/23)); the "buyer sees only display name and city" rule in [`auth-and-permissions.md`](../auth-and-permissions.md) §7 and [`order-model.md`](../order-model.md) §11
 
 ## Context
 

@@ -2,18 +2,18 @@
 
 - **Status:** accepted
 - **Date:** 2026-09-07
-- **Source:** [#21 Vehicle-catalogue grain & the buyer-facing label](https://github.com/Lucy-yunn/test/issues/21) · reverses [#7](https://github.com/Lucy-yunn/test/issues/7); amends [#2](https://github.com/Lucy-yunn/test/issues/2) / [#4](https://github.com/Lucy-yunn/test/issues/4) / [#8](https://github.com/Lucy-yunn/test/issues/8) / [#9](https://github.com/Lucy-yunn/test/issues/9)
+- **Source:** [#21 Vehicle-catalogue grain & the buyer-facing label](https://github.com/Lucy-yunn/carparts/issues/21) · reverses [#7](https://github.com/Lucy-yunn/carparts/issues/7); amends [#2](https://github.com/Lucy-yunn/carparts/issues/2) / [#4](https://github.com/Lucy-yunn/carparts/issues/4) / [#8](https://github.com/Lucy-yunn/carparts/issues/8) / [#9](https://github.com/Lucy-yunn/carparts/issues/9)
 - **Buyer search:** [`docs/buyer-funnel-search.md`](../buyer-funnel-search.md) §3
 
 ## Context
 
-The map originally (Q6, then [#2](https://github.com/Lucy-yunn/test/issues/2) / [#4](https://github.com/Lucy-yunn/test/issues/4) / [#7](https://github.com/Lucy-yunn/test/issues/7)) specified:
+The map originally (Q6, then [#2](https://github.com/Lucy-yunn/carparts/issues/2) / [#4](https://github.com/Lucy-yunn/carparts/issues/4) / [#7](https://github.com/Lucy-yunn/carparts/issues/7)) specified:
 
 - an **engine-grain** vehicle catalogue leaf (`Modification` = a specific engine + engine code + body + power),
 - a **`Fitment`** entity: staff-verified `Part ↔ Modification` compatibility assertions,
 - buyer search as a **union** of the Fitment path and the Provenance path, with `✓ Confirmed fit` / `From a matching car` result badges.
 
-While assembling this, two problems surfaced. (1) The founder's own UI mocks and the [#4](https://github.com/Lucy-yunn/test/issues/4) research both used **generation-grain** vehicle identity (`A4 S4 B5 8D (1994–1999)`), not engine-grain. (2) Maintaining a `Fitment` database means a two-person team researching, asserting and maintaining which other vehicles every part fits — ~1000 hand-verified catalogue rows and a compatibility assertion on every intake.
+While assembling this, two problems surfaced. (1) The founder's own UI mocks and the [#4](https://github.com/Lucy-yunn/carparts/issues/4) research both used **generation-grain** vehicle identity (`A4 S4 B5 8D (1994–1999)`), not engine-grain. (2) Maintaining a `Fitment` database means a two-person team researching, asserting and maintaining which other vehicles every part fits — ~1000 hand-verified catalogue rows and a compatibility assertion on every intake.
 
 ## Decision
 
@@ -26,7 +26,7 @@ While assembling this, two problems surfaced. (1) The founder's own UI mocks and
 5. **Engine detail is per-car, on `DonorVehicle`** (`engine` / `engineCode` / `fuel` / `transmission` / `bodyStyle` / `drivetrain`), shown on every Listing and offered as optional **Engine / Fuel / Gearbox facets** on Browse. These narrow by the *donor* car's attributes; they are **never** compatibility assertions, and a null donor value never matches a selected filter.
 6. **The buyer is told, explicitly**, that same-generation provenance is not a fit guarantee — a standing note on Browse and a footer "How matching works" block — and to check the **part number** and the shown **engine / gearbox details** before buying.
 
-The catalogue now grows from **`DonorVehicle` intake only** (the [#7](https://github.com/Lucy-yunn/test/issues/7) fitment-entry growth path is gone).
+The catalogue now grows from **`DonorVehicle` intake only** (the [#7](https://github.com/Lucy-yunn/carparts/issues/7) fitment-entry growth path is gone).
 
 ## Consequences
 
@@ -39,9 +39,9 @@ The catalogue now grows from **`DonorVehicle` intake only** (the [#7](https://gi
 **Negative / trade-offs**
 - A part that genuinely fits many platforms is only discoverable via the one platform it was pulled from — a buyer with a different (compatible) car will not see it. Accepted for v1; a compatibility layer is a possible future effort (map *Out of scope*).
 - Engine-specific parts (alternators, ECUs) rely on the buyer matching the shown engine code — more buyer effort than a `✓ Confirmed fit` badge would have given.
-- Reverses a closed ticket ([#7](https://github.com/Lucy-yunn/test/issues/7)) and amends four others; `docs/fitment-and-compatibility-search.md` was deleted.
+- Reverses a closed ticket ([#7](https://github.com/Lucy-yunn/carparts/issues/7)) and amends four others; `docs/fitment-and-compatibility-search.md` was deleted.
 
 ## Alternatives considered
 
-- **The [#4](https://github.com/Lucy-yunn/test/issues/4)/[#7](https://github.com/Lucy-yunn/test/issues/7) design** (engine-grain catalogue + staff-verified `Fitment` + search union + badges) — rejected: too much ongoing curation for a two-person team; the founder's mocks never asked for it.
+- **The [#4](https://github.com/Lucy-yunn/carparts/issues/4)/[#7](https://github.com/Lucy-yunn/carparts/issues/7) design** (engine-grain catalogue + staff-verified `Fitment` + search union + badges) — rejected: too much ongoing curation for a two-person team; the founder's mocks never asked for it.
 - **Generation-grain catalogue + structured `Fitment` constraints + a "conditional fit" badge** (explored mid-#21) — rejected by the founder: still a compatibility database to maintain.

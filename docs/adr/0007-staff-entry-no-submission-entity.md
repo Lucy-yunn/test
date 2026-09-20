@@ -2,7 +2,7 @@
 
 - **Status:** accepted
 - **Date:** 2026-09-06
-- **Source:** [#14 Seller inventory data-intake mechanism](https://github.com/Lucy-yunn/test/issues/14) · full spec in [`docs/seller-intake.md`](../seller-intake.md)
+- **Source:** [#14 Seller inventory data-intake mechanism](https://github.com/Lucy-yunn/carparts/issues/14) · full spec in [`docs/seller-intake.md`](../seller-intake.md)
 
 ## Context
 

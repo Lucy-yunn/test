@@ -3,7 +3,7 @@
 - **Status:** accepted
 - **Date:** 2026-09-19
 - **Source:** founders' v1 scope revision (2026-09-10, grilled 2026-09-19) · full rules in [`docs/order-model.md`](../order-model.md)
-- **Amends:** the order lifecycle and staff role decided in [#10](https://github.com/Lucy-yunn/test/issues/10); [ADR-0005](./0005-always-approves-cancellation.md) (cancellation)
+- **Amends:** the order lifecycle and staff role decided in [#10](https://github.com/Lucy-yunn/carparts/issues/10); [ADR-0005](./0005-always-approves-cancellation.md) (cancellation)
 
 ## Context
 
