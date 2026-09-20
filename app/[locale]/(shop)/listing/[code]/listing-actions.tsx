@@ -7,17 +7,19 @@ import { Link } from "@/i18n/navigation";
 /**
  * Reserve / Save / Message seller (docs/auth-and-permissions.md §7.1).
  * Anonymous → routed through /login. seller / staff → disabled. Message needs
- * the seller to have a login. Save is live (build step 6); Reserve and Message are
- * wired in later steps (10 and 11).
+ * the seller to have a login. Save is live (build step 6) and Reserve is live (step 10);
+ * Message is wired in step 11.
  */
 export async function ListingActions({
   code,
   price,
+  status,
   negotiable,
   sellerAvailable,
 }: {
   code: string;
   price: string;
+  status: string;
   negotiable: boolean;
   sellerAvailable: boolean;
 }) {
@@ -43,9 +45,20 @@ export async function ListingActions({
           </>
         ) : isBuyer ? (
           <>
-            <button disabled title="Reserving arrives in build step 10" className="rounded bg-purple-700 px-4 py-2 text-white opacity-60">
-              Reserve this part
-            </button>
+            {status === "published" && sellerAvailable ? (
+              <Link href={`/listing/${code}/reserve`} className="rounded bg-purple-700 px-4 py-2 text-center text-white">
+                Reserve this part
+              </Link>
+            ) : (
+              <>
+                <button disabled className="rounded bg-purple-700 px-4 py-2 text-white opacity-60">
+                  Reserve this part
+                </button>
+                <p className="text-xs text-zinc-500">
+                  {!sellerAvailable ? "This seller is temporarily unavailable." : "This item is no longer available."}
+                </p>
+              </>
+            )}
             <form action={setSavedAction.bind(null, code, !saved)}>
               <button
                 type="submit"

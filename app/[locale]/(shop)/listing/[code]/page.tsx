@@ -79,6 +79,7 @@ export default async function ListingPage({ params }: PageProps<"/[locale]/listi
           <ListingActions
             code={d.internalCode}
             price={d.priceEur}
+            status={d.status}
             negotiable={d.negotiable}
             sellerAvailable={d.seller.available}
           />

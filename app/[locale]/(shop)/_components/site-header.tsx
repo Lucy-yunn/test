@@ -35,6 +35,7 @@ export async function SiteHeader() {
         <div className="flex items-center gap-4 text-sm">
           {actor?.role === "buyer" ? (
             <>
+              <Link href="/account/orders">{t("myOrders")}</Link>
               <Link href="/account/messages">{t("messages")}</Link>
               <Link href="/account/saved/parts">{t("saved")}</Link>
               <Link href="/account">{t("account")}</Link>
