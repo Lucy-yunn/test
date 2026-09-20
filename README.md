@@ -20,16 +20,18 @@ scaffolded) · Vercel Blob (behind `lib/storage.ts`) · Zod · Vitest · Vercel.
 
 ```bash
 npm install
-bash scripts/setup-neon.sh          # guided: wires the Neon development + test
-                                    # branches into .env.local / .env.test.local,
-                                    # runs the first migration, seeds dev data
+                                    # then set up the local PostgreSQL databases
+                                    # (ivo_dev, ivo_test): docs/local-database.md
 npm run dev                         # http://localhost:3000
 ```
 
-`.env.local` → Neon **development** branch (`DATABASE_URL` pooled, `DIRECT_URL`
-direct). `.env.test.local` → Neon **test** branch (`TEST_DATABASE_URL`, direct);
-integration tests use this and nothing else — it never falls back to
-`DATABASE_URL`. Templates: `.env.example`, `.env.test.example`. Production is
+Development and tests run on a **local PostgreSQL**, not Neon; see
+[`docs/local-database.md`](docs/local-database.md). `.env.local` → the local
+`ivo_dev` database. `.env.test.local` → the local `ivo_test` database
+(`TEST_DATABASE_URL`); integration tests use this and nothing else — it never
+falls back to `DATABASE_URL`. Templates: `.env.example`, `.env.test.example`.
+`scripts/setup-neon.sh` is obsolete for day-to-day work but kept for moving
+development back onto Neon. Production is
 never configured locally.
 
 Without a database you can still run `npm run build`, `npm run typecheck`,
@@ -64,7 +66,8 @@ lib/dal/              authz boundary + behavioural invariants (session.ts is ser
 messages/             en.json (complete) · bg.json (scaffold)
 prisma/schema.prisma  full v1 schema
 prisma/seed*          demo catalogue + fixtures
-scripts/setup-neon.sh guided Neon wiring wizard
+scripts/setup-neon.sh obsolete Neon wiring wizard (kept for moving back to Neon)
+scripts/setup-local-db.ts local PostgreSQL setup (see docs/local-database.md)
 scripts/*-test-db*    integration-test DB resolver (test branch only, no fallback)
 proxy.ts              locale routing + optimistic cookie auth redirect
 ```
