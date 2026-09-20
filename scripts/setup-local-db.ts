@@ -116,6 +116,9 @@ async function configure(): Promise<void> {
   rl.close();
   const port = Number(portText);
   const password = await readHidden("PostgreSQL password (hidden, type it then press Enter): ");
+  // Typing is invisible, so ask twice: a typo would otherwise only show up later as "authentication failed".
+  const again = await readHidden("Type the password again to confirm: ");
+  if (again !== password) return fail("The two passwords are not the same. Nothing was changed. Run configure again.");
 
   let plan;
   try {

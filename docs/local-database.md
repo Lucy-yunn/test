@@ -44,13 +44,39 @@ Run these yourself, in an interactive terminal (PowerShell or Windows Terminal),
 
 1. **Install PostgreSQL 18** and create the two databases `ivo_dev` and `ivo_test` (the service listens on `localhost:5432`).
 2. **Back up the current settings:** `npx tsx scripts/setup-local-db.ts backup`. This copies `.env.local` to `.env.neon-dev.local` and `.env.test.local` to `.env.neon-test.local`. Both are ignored by git, and an existing backup is never overwritten.
-3. **Write the local settings:** `npx tsx scripts/setup-local-db.ts configure`. It asks for the user name and port (defaults `postgres` and `5432`) and for the password at a hidden prompt. It changes only `DATABASE_URL` and `DIRECT_URL` in `.env.local` and `TEST_DATABASE_URL` and `TEST_DIRECT_URL` in `.env.test.local`. Every other line is left as it was.
+3. **Write the local settings:** `npx tsx scripts/setup-local-db.ts configure`. It asks for the user name and port (defaults `postgres` and `5432`) and for the password at a hidden prompt, twice, and refuses if the two differ. Typing is invisible, so pasting the password works too. It changes only `DATABASE_URL` and `DIRECT_URL` in `.env.local` and `TEST_DATABASE_URL` and `TEST_DIRECT_URL` in `.env.test.local`. Every other line is left as it was.
 4. **Check both databases answer:** `npx tsx scripts/setup-local-db.ts check`. It reads only and reports how many tables each database has.
 5. **Create the tables:** `npm run db:deploy`, then `npm run db:migrate:test`.
 6. **Load the demo data and staff accounts:** `npm run db:seed`, then `npm run db:seed:staff`.
 7. **Run the tests:** `npm run test:integration`.
 
 To go back to the Neon settings: `npx tsx scripts/setup-local-db.ts restore --yes`. Migrations, seeds and tests will still refuse a remote database after that, so a restored configuration is only for running the app.
+
+## Troubleshooting
+
+**`check` says "Could not confirm which database is connected".** The message is deliberately vague. Read the server side: PostgreSQL logs every failed login in `C:\Program Files\PostgreSQL\18\data\log\`. "password authentication failed" means the password in `.env.local` is not the one PostgreSQL has.
+
+**The password is lost or typing it keeps failing.** On a Windows machine with a Chinese input method, a typed password can silently differ from the one that was set. Instead of typing, let the machine generate one and set it, which needs an administrator PowerShell and only touches this local PostgreSQL:
+
+1. Back up `C:\Program Files\PostgreSQL\18\data\pg_hba.conf`.
+2. Temporarily change the two `host all all` lines for `127.0.0.1/32` and `::1/128` from `scram-sha-256` to `trust`, and restart the service `postgresql-x64-18`.
+3. Run `ALTER ROLE postgres WITH PASSWORD '<a random 24 character letters and digits string>'` through `psql`, keeping the password only in a PowerShell variable and the clipboard.
+4. In a `finally` block, always restore `pg_hba.conf` from the backup and restart the service, then log in once with the new password to prove it works.
+5. Paste the clipboard into `setup-local-db.ts configure`, then clear the clipboard with `Set-Clipboard -Value $null`.
+
+The local databases hold only seed data, so nothing is lost by resetting.
+
+**Pages return 404 or old data after switching to the local database.** A dev server that was already running keeps its old database client even after `.env.local` changes. Stop it and start `npm run dev` again, and make sure only one server is listening on port 3000.
+
+**A script ignores `.env.local`.** Importing `@prisma/client` copies `.env`, which holds a placeholder address, into the environment first, and `process.loadEnvFile` never overwrites an existing variable. The database scripts load their files with `loadEnvFileOverriding` instead, and `scripts/env-loading.test.ts` fails if one goes back to `process.loadEnvFile`.
+
+## Measured difference
+
+| | Neon in Frankfurt | Local PostgreSQL |
+|---|---|---|
+| One simple query | about 470 ms | under 1 ms |
+| Seller profile page | 4 to 21 seconds | about 0.5 seconds |
+| Full integration suite (147 tests) | many minutes | about 21 seconds |
 
 ## Things to know
 
