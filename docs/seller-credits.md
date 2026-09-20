@@ -80,6 +80,10 @@ A **seller** pays the founders outside the platform. **Staff** then, on the sell
 - **Adjust** — enter a positive or negative amount and a required note; an `adjustment` entry is
   written.
 
+Two build decisions the spec left open: an adjustment that would take the balance below zero is
+refused, and an inactive bundle cannot be chosen for a top-up. Staff manage the bundles on
+`/admin/credits`, and add credits and see the ledger on each seller's admin page.
+
 No payment provider is integrated in v1. Seller-initiated online top-up is a later layer that
 writes the same ledger entries.
 

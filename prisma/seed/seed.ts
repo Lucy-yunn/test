@@ -16,6 +16,7 @@ import { hashPassword } from "better-auth/crypto";
 import { verifyLocalConnection, type DatabaseRole } from "../../scripts/local-db-guard";
 import { GROUPS, CATEGORIES } from "./taxonomy";
 import { MAKES, MODEL_GROUPS, GENERATIONS } from "./vehicles";
+import { createBundle, topUp } from "../../lib/services/credits";
 
 export const DEMO_PASSWORD = "demo-password-123";
 
@@ -32,6 +33,7 @@ async function wipe(db: PrismaClient) {
   await db.favorite.deleteMany();
   await db.cancellationRequest.deleteMany();
   await db.order.deleteMany();
+  await db.creditLedgerEntry.deleteMany();
   await db.listingDefect.deleteMany();
   await db.listingPhoto.deleteMany();
   await db.listing.deleteMany();
@@ -46,6 +48,7 @@ async function wipe(db: PrismaClient) {
   await db.vehicleMake.deleteMany();
   await db.buyer.deleteMany();
   await db.seller.deleteMany();
+  await db.creditBundle.deleteMany();
   await db.session.deleteMany();
   await db.account.deleteMany();
   await db.verification.deleteMany();
@@ -209,6 +212,14 @@ export async function seedDatabase(
     ),
   );
   const loginSeller = sellers[0];
+
+  // --- Credit bundles and a starting balance (docs/seller-credits.md) -----
+  // PLACEHOLDER bundles and prices: the real ones are a founder decision before launch.
+  const starter = await createBundle(db, { name: "Starter 25", credits: 25, priceEur: "25.00", displayOrder: 1 });
+  await createBundle(db, { name: "Standard 100", credits: 100, priceEur: "80.00", displayOrder: 2 });
+  await createBundle(db, { name: "Pro 250", credits: 250, priceEur: "175.00", displayOrder: 3 });
+  // Every demo seller starts with one Starter bundle, so staff can publish for any of them.
+  for (const seller of sellers) await topUp(db, { sellerId: seller.id, bundleId: starter.id, createdBy: null });
 
   // --- Donor vehicles ----------------------------------------------------
   const genSlugs = [...generationBySlug.keys()];
@@ -485,5 +496,7 @@ export async function seedDatabase(
     threads: await db.thread.count(),
     messages: await db.message.count(),
     notifications: await db.notification.count(),
+    creditBundles: await db.creditBundle.count(),
+    creditEntries: await db.creditLedgerEntry.count(),
   };
 }

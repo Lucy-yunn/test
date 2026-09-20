@@ -12,6 +12,7 @@ export default function AdminLayout({ children }: LayoutProps<"/[locale]/admin">
         <nav className="flex flex-wrap gap-4 text-sm">
           <Link href="/admin" className="font-semibold">Admin</Link>
           <Link href="/admin/sellers">Sellers</Link>
+          <Link href="/admin/credits">Credits</Link>
           <Link href="/admin/buyers">Buyers</Link>
           <Link href="/admin/catalogue">Vehicle catalogue</Link>
           <Link href="/admin/parts">Parts</Link>
