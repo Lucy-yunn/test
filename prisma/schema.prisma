@@ -155,6 +155,7 @@ model User {
   lockedThreads  Thread[]       @relation("ThreadLockedBy")
   reportsMade    Report[]       @relation("ReportBy")
   reportsClosed  Report[]       @relation("ReportResolvedBy")
+  creditEntries  CreditLedgerEntry[]
 
   @@index([role])
   @@map("user")
@@ -255,6 +256,10 @@ model Seller {
   avatarUrl    String?
   lastActiveAt DateTime?
 
+  // Prepaid publishing credits (docs/seller-credits.md). A cache of the ledger sum, updated in
+  // the same transaction as every ledger row; the ledger stays the source of truth.
+  creditBalance Int @default(0)
+
   // Embedded Location — one per Seller in v1.
   locationName    String?
   locationLine1   String?
@@ -271,6 +276,7 @@ model Seller {
   orders        Order[]
   threads       Thread[]
   savedBy       SavedSeller[]
+  creditEntries CreditLedgerEntry[]
 }
 
 // ---------------------------------------------------------------------------
@@ -474,6 +480,7 @@ model Listing {
   defects      ListingDefect[]
   favorites    Favorite[]
   threads      Thread[]
+  creditEntries CreditLedgerEntry[]
   order        Order?
 
   @@index([partId])
@@ -661,4 +668,48 @@ model Notification {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, readAt])
+}
+
+// ---------------------------------------------------------------------------
+// Seller credits (docs/seller-credits.md, ADR-0010)
+// ---------------------------------------------------------------------------
+
+enum CreditEntryKind {
+  topup
+  publish
+  adjustment
+}
+
+/** A product the founders sell: a number of credits for a price. Edited by staff. */
+model CreditBundle {
+  id           String   @id @default(cuid())
+  name         String
+  credits      Int
+  priceEur     Decimal  @db.Decimal(10, 2)
+  isActive     Boolean  @default(true)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  entries CreditLedgerEntry[]
+}
+
+/** Append-only: one row per credit change. Never edited or deleted; a mistake is corrected with an adjustment. */
+model CreditLedgerEntry {
+  id        String          @id @default(cuid())
+  sellerId  String
+  delta     Int
+  kind      CreditEntryKind
+  bundleId  String?
+  listingId String?
+  note      String?
+  createdBy String?
+  createdAt DateTime        @default(now())
+
+  seller  Seller        @relation(fields: [sellerId], references: [id])
+  bundle  CreditBundle? @relation(fields: [bundleId], references: [id])
+  listing Listing?      @relation(fields: [listingId], references: [id])
+  creator User?         @relation(fields: [createdBy], references: [id])
+
+  @@index([sellerId, createdAt])
 }

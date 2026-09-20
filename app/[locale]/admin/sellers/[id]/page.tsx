@@ -5,6 +5,9 @@ import { requireStaff } from "@/lib/dal/session";
 import { SellerForm } from "../seller-form";
 import { LoginControls } from "../login-controls";
 import { AvatarPanel } from "../avatar-panel";
+import { CreditsPanel } from "../credits-panel";
+import { formatDay } from "@/lib/format-date";
+import { getCreditSummary, listBundles } from "@/lib/services/credits";
 
 export default async function SellerDetailPage({
   params,
@@ -33,6 +36,8 @@ export default async function SellerDetailPage({
     },
   });
   if (!seller) notFound();
+
+  const [credits, bundles] = await Promise.all([getCreditSummary(db, id), listBundles(db)]);
 
   return (
     <main className="flex flex-col gap-8">
@@ -65,6 +70,35 @@ export default async function SellerDetailPage({
       <section>
         <h2 className="mb-3 text-lg font-semibold">Avatar</h2>
         <AvatarPanel sellerId={seller.id} displayName={seller.displayName} avatarUrl={seller.avatarUrl} />
+      </section>
+
+      <section>
+        <h2 className="mb-1 text-lg font-semibold">Credits</h2>
+        <p className="mb-3 text-sm text-zinc-500">
+          Balance: <strong>{credits.balance}</strong>. Publishing a listing costs 1 credit; there are no refunds.
+        </p>
+        <CreditsPanel sellerId={seller.id} bundles={bundles.filter((b) => b.isActive)} />
+        <table className="mt-4 w-full text-sm">
+          <thead className="text-left text-zinc-500">
+            <tr>
+              <th className="py-2">When</th>
+              <th>Kind</th>
+              <th>Amount</th>
+              <th>Detail</th>
+            </tr>
+          </thead>
+          <tbody>
+            {credits.entries.map((e) => (
+              <tr key={e.id} className="border-t border-zinc-200 dark:border-zinc-800">
+                <td className="py-2">{formatDay(e.createdAt)}</td>
+                <td>{e.kind}</td>
+                <td>{e.delta > 0 ? `+${e.delta}` : e.delta}</td>
+                <td>{e.note ?? e.bundleName ?? e.listingCode ?? ""}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {credits.entries.length === 0 ? <p className="mt-2 text-sm text-zinc-500">No credit changes yet.</p> : null}
       </section>
 
       <section>

@@ -7,6 +7,7 @@ import { getSellerProfile, getDonorVehiclePage } from "./seller-profile";
 import { saveSeller, listSavedSellers } from "./saved-sellers";
 import { getListingDetail } from "./listing-detail";
 import { getPublishChecklist, publishListing } from "./listings";
+import { adjustCredits } from "./credits";
 import { countQueries } from "./query-counter";
 
 /**
@@ -85,6 +86,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await db.creditLedgerEntry.deleteMany({ where: { sellerId: { in: sellerIds } } });
   await db.savedSeller.deleteMany({ where: { sellerId: { in: sellerIds } } });
   await db.listing.deleteMany({ where: { id: { in: listingIds } } });
   await db.part.deleteMany({ where: { id: { in: partIds } } });
@@ -163,13 +165,15 @@ describe("hot paths send few SQL statements, and do not grow with the data", () 
   it("publishing evaluates the checklist once: it costs the checklist plus the write, not a second load", async () => {
     const id = await mkSeller("publish-cost", "active");
     const { listing } = await mkListing(id, "draft");
+    await adjustCredits(db, { sellerId: id, amount: 1, note: "test credit", createdBy: null });
 
     const checklist = await countQueries((c) => getPublishChecklist(c, listing.id));
     expect(checklist.result.ok).toBe(true);
 
     const publish = await countQueries((c) => publishListing(c, listing.id));
     expect((await db.listing.findUniqueOrThrow({ where: { id: listing.id } })).status).toBe("published");
-    // one evaluation of the checklist, plus the update (which may add a statement of its own)
-    expect(publish.statements).toBeLessThanOrEqual(checklist.statements + 2);
+    // one evaluation of the checklist, plus the transaction: BEGIN, the status update, the
+    // balance update, the ledger row and COMMIT. A second load of the listing would go over.
+    expect(publish.statements).toBeLessThanOrEqual(checklist.statements + 5);
   });
 });
