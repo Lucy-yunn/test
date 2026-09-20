@@ -173,7 +173,8 @@ describe("hot paths send few SQL statements, and do not grow with the data", () 
     const publish = await countQueries((c) => publishListing(c, listing.id));
     expect((await db.listing.findUniqueOrThrow({ where: { id: listing.id } })).status).toBe("published");
     // one evaluation of the checklist, plus the transaction: BEGIN, the status update, the
-    // balance update, the ledger row and COMMIT. A second load of the listing would go over.
-    expect(publish.statements).toBeLessThanOrEqual(checklist.statements + 5);
+    // balance update, the ledger row, the "out of credits" notification (this seller spends its
+    // last credit) and COMMIT. A second load of the listing would go over.
+    expect(publish.statements).toBeLessThanOrEqual(checklist.statements + 6);
   });
 });

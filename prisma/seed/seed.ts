@@ -424,13 +424,11 @@ export async function seedDatabase(
       await db.listing.update({ where: { id: listing.id }, data: { status: "sold" } });
     }
 
-    const buyerNotif: Array<
-      "order_placed" | "order_confirmed" | "order_shipped" | "order_delivered"
-    > = [];
-    // Notification types are revised in build step 14; until then completed reuses order_delivered.
-    if (o.status !== "cancelled") buyerNotif.push("order_placed");
+    // The buyer's feed (docs/notifications.md section 3.1): what the seller did with the order.
+    const buyerNotif: Array<"order_confirmed" | "order_completed" | "order_refused" | "cancellation_approved"> = [];
     if (["confirmed", "completed", "refused"].includes(o.status)) buyerNotif.push("order_confirmed");
-    if (o.status === "completed") buyerNotif.push("order_delivered");
+    if (o.status === "completed") buyerNotif.push("order_completed");
+    if (o.status === "refused") buyerNotif.push("order_refused");
     await db.notification.createMany({
       data: buyerNotif.map((type, i) => ({
         userId: buyer.userId!,
@@ -440,15 +438,18 @@ export async function seedDatabase(
         readAt: i < buyerNotif.length - 1 ? new Date(now - 8.64e7) : null,
       })),
     });
+    // The seller's feed: a new order, and a cancellation request where there is one.
     await db.notification.create({
-      data: {
-        userId: loginSellerUser.id,
-        type: "order_placed",
-        subjectType: "order",
-        subjectId: order.id,
-        readAt: null,
-      },
+      data: { userId: loginSellerUser.id, type: "order_placed", subjectType: "order", subjectId: order.id, readAt: null },
     });
+    if (o.status === "confirmed") {
+      const pending = await db.cancellationRequest.findUnique({ where: { orderId: order.id }, select: { id: true } });
+      if (pending) {
+        await db.notification.create({
+          data: { userId: loginSellerUser.id, type: "cancellation_requested", subjectType: "cancellation_request", subjectId: pending.id, readAt: null },
+        });
+      }
+    }
   }
 
   // --- Reviews of the login seller: with and without a purchase, with and without a reply ---

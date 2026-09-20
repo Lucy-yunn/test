@@ -5,6 +5,7 @@ import { assertTransition, ORDER_TRANSITIONS } from "../dal/transitions";
 import { SELLER_AVAILABILITY_SELECT, sellerIsAvailable } from "../dal/seller-availability";
 import { blankToNull } from "../text";
 import { nextInternalCode } from "./internal-code";
+import { notify } from "./notifications";
 import { isUniqueViolation } from "./prisma-errors";
 import { sellerContactFor, type SellerContact } from "./seller-contact";
 
@@ -116,6 +117,7 @@ export async function reserveListing(
           },
           select: { id: true, internalCode: true },
         });
+        await notify(tx, { userId: listing.seller.userId, type: "order_placed", subjectType: "order", subjectId: order.id });
         return { orderId: order.id, internalCode: order.internalCode };
       });
     } catch (err) {
@@ -142,6 +144,8 @@ async function lockAndLoad(tx: Tx, orderId: string) {
       sellerId: true,
       listingId: true,
       cancellationRequest: { select: { id: true, state: true, autoApproveAt: true } },
+      buyer: { select: { userId: true } },
+      seller: { select: { userId: true } },
     },
   });
   if (!order) throw new NotFoundError("Order not found");
@@ -170,6 +174,7 @@ export async function confirmOrder(db: PrismaClient, actor: Actor, orderId: stri
     assertSellerOwns(actor, order);
     assertTransition(ORDER_TRANSITIONS, order.status, "confirmed", "Order");
     await tx.order.update({ where: { id: orderId }, data: { status: "confirmed", confirmedAt: now } });
+    await notify(tx, { userId: order.buyer.userId, type: "order_confirmed", subjectType: "order", subjectId: orderId });
   });
 }
 
@@ -189,6 +194,7 @@ export async function completeOrder(db: PrismaClient, actor: Actor, orderId: str
     assertNoPendingCancellation(order);
     await tx.order.update({ where: { id: orderId }, data: { status: "completed", completedAt: now } });
     await tx.listing.updateMany({ where: { id: order.listingId, status: "reserved" }, data: { status: "sold" } });
+    await notify(tx, { userId: order.buyer.userId, type: "order_completed", subjectType: "order", subjectId: orderId });
   });
 }
 
@@ -210,6 +216,7 @@ export async function refuseOrder(
       data: { status: "refused", refusedAt: now, refusalNote: blankToNull(input.note) },
     });
     await releaseListing(tx, order.listingId);
+    await notify(tx, { userId: order.buyer.userId, type: "order_refused", subjectType: "order", subjectId: orderId });
   });
 }
 
@@ -236,6 +243,9 @@ async function cancelWithApproval(
     data: { status: "cancelled", lastReachedStatus: order.status, cancelledAt: now },
   });
   await releaseListing(tx, order.listingId);
+  if (resolvedBy !== "buyer" && requestId) {
+    await notify(tx, { userId: order.buyer.userId, type: "cancellation_approved", subjectType: "cancellation_request", subjectId: requestId });
+  }
 }
 
 /**
@@ -260,7 +270,7 @@ export async function cancelOrder(
     if (order.cancellationRequest) throw new InvariantError("A cancellation has already been requested for this order");
 
     const instant = order.status === "placed";
-    await tx.cancellationRequest.create({
+    const request = await tx.cancellationRequest.create({
       data: {
         orderId,
         reason: input.reason,
@@ -273,6 +283,9 @@ export async function cancelOrder(
     });
     // An instant cancellation was stored already approved; only the order and listing are left.
     if (instant) await cancelWithApproval(tx, order, "buyer", now);
+    await notify(tx, instant
+      ? { userId: order.seller.userId, type: "order_cancelled", subjectType: "order", subjectId: orderId }
+      : { userId: order.seller.userId, type: "cancellation_requested", subjectType: "cancellation_request", subjectId: request.id });
   });
 }
 

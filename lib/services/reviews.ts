@@ -3,6 +3,7 @@ import { isBuyer, isSeller, isStaff, type Actor } from "../dal/actor";
 import { ForbiddenError, InvariantError, NotFoundError } from "../dal/errors";
 import { summariseTotals, type RatingSummary } from "../rating";
 import { blankToNull } from "../text";
+import { notify } from "./notifications";
 import { isUniqueViolation } from "./prisma-errors";
 
 /**
@@ -37,7 +38,7 @@ export async function createReview(
     throw new InvariantError(`A review can be at most ${MAX_REVIEW_LENGTH} characters`);
   }
 
-  const seller = await db.seller.findUnique({ where: { id: input.sellerId }, select: { id: true } });
+  const seller = await db.seller.findUnique({ where: { id: input.sellerId }, select: { id: true, userId: true } });
   if (!seller) throw new NotFoundError("Seller not found");
 
   if (input.orderId) {
@@ -52,9 +53,14 @@ export async function createReview(
   }
 
   try {
-    return await db.review.create({
-      data: { sellerId: input.sellerId, buyerId: actor.buyerId!, orderId: input.orderId ?? null, rating: input.rating, body },
-      select: { id: true },
+    // The review and the seller's "new review" notification stand or fall together.
+    return await db.$transaction(async (tx) => {
+      const review = await tx.review.create({
+        data: { sellerId: input.sellerId, buyerId: actor.buyerId!, orderId: input.orderId ?? null, rating: input.rating, body },
+        select: { id: true },
+      });
+      await notify(tx, { userId: seller.userId, type: "review_received", subjectType: "review", subjectId: review.id });
+      return review;
     });
   } catch (err) {
     // Two reviews for the same order at once: the database allows only one.
@@ -191,17 +197,23 @@ export async function replyToReview(db: PrismaClient, actor: Actor, reviewId: st
   if (!reply) throw new InvariantError("Write a reply first");
   if (reply.length > MAX_REPLY_LENGTH) throw new InvariantError(`A reply can be at most ${MAX_REPLY_LENGTH} characters`);
 
-  const review = await db.review.findUnique({ where: { id: reviewId }, select: { sellerId: true, hiddenAt: true } });
+  const review = await db.review.findUnique({
+    where: { id: reviewId },
+    select: { sellerId: true, hiddenAt: true, buyer: { select: { userId: true } } },
+  });
   if (!review) throw new NotFoundError("Review not found");
   if (review.sellerId !== actor.sellerId) throw new ForbiddenError("Not a review of yours");
   if (review.hiddenAt) throw new InvariantError("This review is hidden");
 
   // The condition makes two replies at once safe: only the first one finds the reply still empty.
-  const { count } = await db.review.updateMany({
-    where: { id: reviewId, sellerReply: null, hiddenAt: null },
-    data: { sellerReply: reply, sellerRepliedAt: new Date() },
+  await db.$transaction(async (tx) => {
+    const { count } = await tx.review.updateMany({
+      where: { id: reviewId, sellerReply: null, hiddenAt: null },
+      data: { sellerReply: reply, sellerRepliedAt: new Date() },
+    });
+    if (count === 0) throw new InvariantError("You have already replied to this review");
+    await notify(tx, { userId: review.buyer.userId, type: "review_replied", subjectType: "review", subjectId: reviewId });
   });
-  if (count === 0) throw new InvariantError("You have already replied to this review");
 }
 
 // ---------------------------------------------------------------------------
