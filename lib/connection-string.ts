@@ -21,8 +21,8 @@ export function assertPostgresUrl(
   if (schemeCount !== 1) {
     throw new Error(
       `${name} contains ${schemeCount} "://" (length ${v.length}) — it looks ` +
-        `like the connection string was pasted more than once. Re-run ` +
-        `scripts/setup-neon.sh (paste it ONCE).`,
+        `like the connection string was pasted more than once. Set it again ` +
+        `(paste it ONCE); for the local databases see docs/local-database.md.`,
     );
   }
   if (!/^postgres(?:ql)?:\/\//.test(v)) {
