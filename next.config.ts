@@ -12,6 +12,9 @@ const nextConfig: NextConfig = {
   output: "standalone",
   // `sharp` (photo downscale on ingest) is a native module — keep it external.
   serverExternalPackages: ["sharp"],
+  // Lets the role guards answer a wrong-role request with a real 403 page (forbidden()), as
+  // docs/auth-and-permissions.md section 10 asks, instead of redirecting to a page that says 200.
+  experimental: { authInterrupts: true },
   images: {
     // Curated listing photos are served from Vercel Blob (ADR-0001). The exact
     // hostname is set once the store exists — see .env.example / docs/spec/seed-data.md.

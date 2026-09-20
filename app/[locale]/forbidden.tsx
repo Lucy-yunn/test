@@ -2,10 +2,10 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 
 /**
- * Plain 403 for an authenticated user hitting a surface their role can't reach
- * (docs/auth-and-permissions.md §10). The DAL redirects here.
+ * The plain 403 page (docs/auth-and-permissions.md section 10). The role guards call forbidden()
+ * when a signed-in user opens a surface their role cannot reach, and Next answers with status 403.
  */
-export default async function ForbiddenPage() {
+export default async function Forbidden() {
   const t = await getTranslations("Errors");
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">

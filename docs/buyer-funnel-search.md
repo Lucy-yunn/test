@@ -248,3 +248,15 @@ No dead ends.
 - Real transmission-of-the-*part* data — the Gearbox facet filters on the *donor* car only.
 - Buyer-reported "this didn't fit my car" feedback loop — map fog, may never graduate.
 - Full non-English translation content.
+
+---
+
+## 8. Build notes (step 15)
+
+- The footer and the `/info` policy pages take their wording from one module (`lib/policy-copy.ts`),
+  so they cannot disagree. The payment line reads cash on delivery. The legal copy is still a
+  placeholder and needs a real review before launch.
+- An address that no page matches shows the site's own Page not found inside the header and footer.
+- A signed-in user on a surface their role cannot reach gets a real 403 page (status 403), not a
+  redirect. This uses Next's experimental `authInterrupts` option and `forbidden()`.
+- The header's **My account** link leads to `/account`, a small home for the buyer areas.

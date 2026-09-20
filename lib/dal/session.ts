@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { forbidden, redirect } from "next/navigation";
 import { auth } from "../auth";
 import { db } from "../db";
 import type { Actor, Role } from "./actor";
@@ -54,7 +54,8 @@ async function require(role: Role): Promise<Actor> {
   const actor = await getActor();
   const outcome = checkRole(actor, role);
   if (outcome === "login") redirect("/login");
-  if (outcome === "forbidden") redirect("/forbidden");
+  // An authenticated user on a surface their role cannot reach: a plain 403 page, not a redirect.
+  if (outcome === "forbidden") forbidden();
   return actor as Actor;
 }
 

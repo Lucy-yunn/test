@@ -107,5 +107,20 @@ Wayfinding is complete; the build has started. Progress against
   VIN), defects, Buy/Save/Message states per the permission matrix (wired in
   6/7/9), and **"More parts from the same car"** (donor siblings, badge-free,
   8 + See-all, hidden when none) (5c).
-- [ ] 6. Favourites · 7. Checkout & orders · 8. Cancellation · 9. Messaging ·
-  10. Seller center · 11. Notifications · 12. Shell & polish
+- [x] **6. Favourites** (Saved Parts) · **7. Retrofit** for the 2026-09 scope change ·
+  **8. Seller profile, donor-vehicle page and Saved Sellers**
+- [x] **9. Credits** — bundles, the ledger, one credit per publish, the block at zero, the
+  admin Credits panel ([`docs/seller-credits.md`](docs/seller-credits.md))
+- [x] **10. Orders & cancellation** — reserve, the seller-operated lifecycle, instant and requested
+  cancellation, the 7-day cron sweep ([`docs/order-model.md`](docs/order-model.md))
+- [x] **11. Messaging** — threads, unread state, staff moderation
+  ([`docs/messaging-model.md`](docs/messaging-model.md))
+- [x] **12. Reviews** ([`docs/reviews.md`](docs/reviews.md)) · **13. Seller center**
+  ([`docs/seller-center.md`](docs/seller-center.md)) · **14. Notifications**
+  ([`docs/notifications.md`](docs/notifications.md))
+- [x] **15. Shell & polish** — language select, commerce footer and policy pages (legal copy is
+  **placeholder** and needs a real review before launch), the styled 404, a real 403 page, and a
+  buyer account home
+
+Still to do before any launch: the real legal copy, the real vehicle catalogue, the real credit
+bundle prices, and a working Vercel deployment.
