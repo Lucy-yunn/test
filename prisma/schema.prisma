@@ -105,19 +105,27 @@ enum SenderRole {
   staff
 }
 
+/// In-app events (docs/notifications.md section 3). Buyer: confirmed, completed, refused, cancellation
+/// approved, review replied. Seller: placed, cancellation requested, cancelled, review received, credits low or empty.
 enum NotificationType {
   order_placed
   order_confirmed
-  order_shipped
-  order_delivered
+  order_completed
+  order_refused
+  order_cancelled
   cancellation_requested
-  cancellation_warning
   cancellation_approved
+  review_received
+  review_replied
+  credits_low
+  credits_empty
 }
 
 enum NotificationSubjectType {
   order
   cancellation_request
+  review
+  credit_ledger_entry
 }
 
 enum ReportState {

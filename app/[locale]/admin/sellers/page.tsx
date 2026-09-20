@@ -15,6 +15,7 @@ export default async function SellersPage({ params }: PageProps<"/[locale]/admin
       displayName: true,
       locationCity: true,
       userId: true,
+      creditBalance: true,
       _count: { select: { listings: true, orders: true } },
     },
   });
@@ -33,6 +34,7 @@ export default async function SellersPage({ params }: PageProps<"/[locale]/admin
             <th className="py-2">Name</th>
             <th>City</th>
             <th>Login</th>
+            <th>Credits</th>
             <th>Listings</th>
             <th>Orders</th>
           </tr>
@@ -45,6 +47,7 @@ export default async function SellersPage({ params }: PageProps<"/[locale]/admin
               </td>
               <td>{s.locationCity}</td>
               <td>{s.userId ? "yes" : "—"}</td>
+              <td className={s.creditBalance <= 5 ? "font-semibold text-amber-700" : ""}>{s.creditBalance}</td>
               <td>{s._count.listings}</td>
               <td>{s._count.orders}</td>
             </tr>

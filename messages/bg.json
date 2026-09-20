@@ -15,6 +15,7 @@
     "messages": "Messages",
     "saved": "Saved",
     "myOrders": "My orders",
+    "notifications": "Notifications",
     "deliveryTo": "Delivery to {place}"
   },
   "LocaleSwitcher": {

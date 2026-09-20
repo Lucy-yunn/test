@@ -134,3 +134,16 @@ There is no delete for a single row and no preferences screen.
   The cancellation cron writes no warning.
 - **Credits and reviews** — each writes the events in §3.2 and §3.1.
 - **[ADR-0008](./adr/0008-in-app-notifications-email-deferred.md)** — its event list is amended by this document.
+
+---
+
+## 7. Build notes (step 14)
+
+- `credits_low` reads "5 or fewer credits left", because the balance can cross the threshold and land
+  below 5. When one charge or adjustment goes straight from above 5 to 0, only `credits_empty` is sent.
+- A seller with no login has nobody to notify, so nothing is written for them and nothing fails.
+- Opening a subject marks its notices read: an order (and its cancellation request), the seller's
+  Reviews, the seller's Credits, and a buyer's view of a seller's Reviews.
+- The migration removed the old shipping and warning notification rows, kept `order_delivered` as
+  `order_completed`, and removed the buyer `order_placed` rows.
+- The admin Sellers list shows each seller's credit balance, so staff can see who is running low.

@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import type { Actor } from "@/lib/dal/actor";
 import { Link } from "@/i18n/navigation";
 import { listSellerReviews, type ReviewSort } from "@/lib/services/reviews";
+import { markReviewsRead } from "@/lib/services/notifications";
 import { ReviewCard } from "../../../_components/review-card";
 
 const SORTS: { value: ReviewSort; label: string }[] = [
@@ -20,6 +21,8 @@ export function parseReviewSort(value: string | undefined): ReviewSort {
  */
 export async function ReviewsTab({ sellerId, sort, actor }: { sellerId: string; sort: ReviewSort; actor: Actor | null }) {
   const { summary, reviews } = await listSellerReviews(db, sellerId, sort);
+  // A buyer who opens the seller's Reviews has seen the seller's replies to their own reviews.
+  if (actor?.role === "buyer") await markReviewsRead(db, actor, sellerId);
   const reviewHref = `/sellers/${sellerId}/review`;
 
   return (

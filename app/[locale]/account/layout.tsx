@@ -15,6 +15,7 @@ export default async function AccountLayout({ children }: LayoutProps<"/[locale]
           <Link href="/account/orders">{t("orders")}</Link>
           <Link href="/account/saved">{t("saved")}</Link>
           <Link href="/account/messages">{t("messages")}</Link>
+          <Link href="/account/notifications">Notifications</Link>
           <Link href="/account/settings">{t("settings")}</Link>
         </nav>
         <LogoutButton />

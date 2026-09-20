@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient, CreditEntryKind } from "@prisma/client";
 import { InvariantError, NotFoundError } from "../dal/errors";
+import { notify } from "./notifications";
 
 /**
  * Seller credits (docs/seller-credits.md, ADR-0010). Node-safe.
@@ -179,13 +180,20 @@ async function applyChange(
     createdBy?: string | null;
   },
 ): Promise<boolean> {
-  const { count } = await tx.seller.updateMany({
-    where: { id: entry.sellerId, ...(entry.delta < 0 ? { creditBalance: { gte: -entry.delta } } : {}) },
-    data: { creditBalance: { increment: entry.delta } },
-  });
-  if (count === 0) return false;
+  // One statement changes the balance and returns the new one, or finds no row when the balance is too low.
+  let seller: { creditBalance: number; userId: string | null };
+  try {
+    seller = await tx.seller.update({
+      where: { id: entry.sellerId, ...(entry.delta < 0 ? { creditBalance: { gte: -entry.delta } } : {}) },
+      data: { creditBalance: { increment: entry.delta } },
+      select: { creditBalance: true, userId: true },
+    });
+  } catch (err) {
+    if (isRecordNotFound(err)) return false;
+    throw err;
+  }
 
-  await tx.creditLedgerEntry.create({
+  const written = await tx.creditLedgerEntry.create({
     data: {
       sellerId: entry.sellerId,
       delta: entry.delta,
@@ -195,8 +203,39 @@ async function applyChange(
       note: entry.note ?? null,
       createdBy: entry.createdBy ?? null,
     },
+    select: { id: true },
   });
+  if (entry.delta < 0) await notifyIfCrossed(tx, seller, entry.delta, written.id);
   return true;
+}
+
+/** Prisma's "record to update not found" error (P2025). */
+function isRecordNotFound(err: unknown): boolean {
+  return typeof err === "object" && err !== null && (err as { code?: string }).code === "P2025";
+}
+
+/** The threshold at or below which a seller is told their credits are running low. */
+const LOW_CREDITS = 5;
+
+/**
+ * Tell the seller when a charge or a downward adjustment makes the balance cross a threshold
+ * (docs/notifications.md section 3.2): out of credits on reaching 0, or "low" on falling from
+ * above 5 to between 1 and 5. A change that goes straight to 0 only says out of credits. Later
+ * charges below the threshold say nothing, and a top-up or an upward adjustment never notifies.
+ */
+async function notifyIfCrossed(
+  tx: Tx,
+  seller: { creditBalance: number; userId: string | null },
+  delta: number,
+  entryId: string,
+): Promise<void> {
+  const after = seller.creditBalance;
+  const before = after - delta;
+  if (after === 0 && before > 0) {
+    await notify(tx, { userId: seller.userId, type: "credits_empty", subjectType: "credit_ledger_entry", subjectId: entryId });
+  } else if (after > 0 && after <= LOW_CREDITS && before > LOW_CREDITS) {
+    await notify(tx, { userId: seller.userId, type: "credits_low", subjectType: "credit_ledger_entry", subjectId: entryId });
+  }
 }
 
 async function assertSellerExists(tx: Tx, sellerId: string): Promise<void> {

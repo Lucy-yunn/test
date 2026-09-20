@@ -2,6 +2,7 @@ import { setRequestLocale } from "next-intl/server";
 import { db } from "@/lib/db";
 import { requireSeller } from "@/lib/dal/session";
 import { getSellerRating, listReviewsForSeller } from "@/lib/services/reviews";
+import { markReviewsRead } from "@/lib/services/notifications";
 import { formatRating } from "@/lib/rating";
 import { ReviewCard } from "../../_components/review-card";
 import { ReplyToReviewForm } from "./reply-form";
@@ -13,6 +14,7 @@ export default async function SellerReviewsPage({ params }: PageProps<"/[locale]
   const actor = await requireSeller();
 
   const [reviews, rating] = await Promise.all([listReviewsForSeller(db, actor), getSellerRating(db, actor.sellerId!)]);
+  await markReviewsRead(db, actor); // opening your reviews clears the "new review" notices
 
   return (
     <main className="flex flex-col gap-2">
