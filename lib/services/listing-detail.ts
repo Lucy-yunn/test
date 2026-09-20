@@ -87,6 +87,7 @@ export async function getListingDetail(
   viewer: Actor | null = null,
 ): Promise<ListingDetail | null> {
   const l = await db.listing.findUnique({
+    relationLoadStrategy: "join",
     where: { internalCode },
     select: {
       id: true,
@@ -230,6 +231,7 @@ export async function getSiblingListings(
   args: { donorVehicleId: string; excludeListingId: string },
 ): Promise<SiblingCard[]> {
   const rows = await db.listing.findMany({
+    relationLoadStrategy: "join",
     where: {
       donorVehicleId: args.donorVehicleId,
       id: { not: args.excludeListingId },

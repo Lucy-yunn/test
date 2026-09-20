@@ -153,6 +153,7 @@ export async function browseListings(
       : {};
 
   const candidates = await db.listing.findMany({
+    relationLoadStrategy: "join",
     where: {
       status: { in: ["published", "reserved"] },
       ...(params.sellerId ? { sellerId: params.sellerId } : {}),
