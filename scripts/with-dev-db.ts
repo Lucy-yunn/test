@@ -11,14 +11,12 @@
  * `ivo_dev`. `runGuarded` then asks the live server which database it is before the
  * command runs. There is no override for a remote database.
  */
-import { existsSync } from "node:fs";
+import { loadEnvFileOverriding } from "./load-env-file";
 import { resolveDevDbEnv } from "./resolve-dev-db-env";
 import { runGuarded } from "./guarded-run";
 
-const ENV_FILE = ".env.local";
-if (existsSync(ENV_FILE)) {
-  process.loadEnvFile(ENV_FILE);
-}
+// .env.local must beat the placeholder that importing Prisma copies in from .env.
+loadEnvFileOverriding(".env.local");
 
 const [cmd, ...args] = process.argv.slice(2);
 if (!cmd) {

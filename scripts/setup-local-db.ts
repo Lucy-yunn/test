@@ -23,6 +23,7 @@ import { spawnSync } from "node:child_process";
 import { createInterface } from "node:readline/promises";
 import { PrismaClient } from "@prisma/client";
 import { setEnvValues } from "./env-file";
+import { loadEnvFileOverriding } from "./load-env-file";
 import { planLocalEnv } from "./local-db-config";
 import { verifyLocalConnection, UnsafeDatabaseError } from "./local-db-guard";
 import { resolveDevDbEnv } from "./resolve-dev-db-env";
@@ -151,8 +152,9 @@ async function probe(label: string, url: string, role: "dev" | "test"): Promise<
 }
 
 async function check(): Promise<void> {
-  if (existsSync(".env.local")) process.loadEnvFile(".env.local");
-  if (existsSync(".env.test.local")) process.loadEnvFile(".env.test.local");
+  // The files must beat the placeholder that importing Prisma copies in from .env.
+  loadEnvFileOverriding(".env.local");
+  loadEnvFileOverriding(".env.test.local");
 
   let dev;
   let test;

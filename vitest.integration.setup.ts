@@ -1,5 +1,5 @@
-import { existsSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
+import { loadEnvFileOverriding } from "./scripts/load-env-file";
 import { resolveTestDbEnv } from "./scripts/resolve-test-db-env";
 import { verifyLocalConnection } from "./scripts/local-db-guard";
 
@@ -12,10 +12,7 @@ import { verifyLocalConnection } from "./scripts/local-db-guard";
  * Before any test file runs, the live server is asked which database it is. If the
  * answer is not the local ivo_test, this throws and no test touches the database.
  */
-const ENV_FILE = ".env.test.local";
-if (existsSync(ENV_FILE)) {
-  process.loadEnvFile(ENV_FILE);
-}
+loadEnvFileOverriding(".env.test.local");
 
 const resolved = resolveTestDbEnv(process.env);
 process.env.DATABASE_URL = resolved.DATABASE_URL;
