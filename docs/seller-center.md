@@ -221,3 +221,16 @@ A buyer saves a `published` Listing that later goes `reserved` for someone else,
   `refused`, one `pending` cancellation, threads with unread messages, reviews with and without a
   reply, and a credit ledger with a low balance ([`spec/seed-data.md`](./spec/seed-data.md)).
 - **Auth** — how a seller login is provisioned and disabled: [`auth-and-permissions.md`](./auth-and-permissions.md) §4.
+
+---
+
+## 12. Build notes (step 13)
+
+- **Message buyer.** Messaging normally lets only a buyer start a thread
+  ([`messaging-model.md`](./messaging-model.md) §3.2). The one exception, decided when this step was
+  built: a seller may write first to the buyer of one of their own orders, so they can talk before
+  approving a cancellation. The order ties the two together, so the rule "a thread is for one
+  listing and one buyer" still holds, and an existing thread is reused.
+- The seller center's Notifications section arrives with build step 14.
+- Order actions refresh the whole seller area, so the overview figures stay current.
+- The demo seed gives the login seller a low credit balance and three reviews (one with a reply).

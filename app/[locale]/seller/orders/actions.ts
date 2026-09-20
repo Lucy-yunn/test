@@ -21,7 +21,8 @@ async function run(formData: FormData, act: (sellerActor: Awaited<ReturnType<typ
     }
     throw err;
   }
-  revalidatePath("/seller/orders");
+  // The list, the order page and the overview figures all change with an order.
+  revalidatePath("/seller", "layout");
   return undefined;
 }
 

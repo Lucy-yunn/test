@@ -16,7 +16,7 @@ import { hashPassword } from "better-auth/crypto";
 import { verifyLocalConnection, type DatabaseRole } from "../../scripts/local-db-guard";
 import { GROUPS, CATEGORIES } from "./taxonomy";
 import { MAKES, MODEL_GROUPS, GENERATIONS } from "./vehicles";
-import { createBundle, topUp } from "../../lib/services/credits";
+import { adjustCredits, createBundle, topUp } from "../../lib/services/credits";
 
 export const DEMO_PASSWORD = "demo-password-123";
 
@@ -27,6 +27,7 @@ type Role = "buyer" | "seller" | "staff";
 async function wipe(db: PrismaClient) {
   // FK-safe order.
   await db.notification.deleteMany();
+  await db.review.deleteMany();
   await db.report.deleteMany();
   await db.message.deleteMany();
   await db.thread.deleteMany();
@@ -220,6 +221,8 @@ export async function seedDatabase(
   await createBundle(db, { name: "Pro 250", credits: 250, priceEur: "175.00", displayOrder: 3 });
   // Every demo seller starts with one Starter bundle, so staff can publish for any of them.
   for (const seller of sellers) await topUp(db, { sellerId: seller.id, bundleId: starter.id, createdBy: null });
+  // The login seller has spent most of it, so the seller center's low-credit warning shows (docs/seller-center.md section 11).
+  await adjustCredits(db, { sellerId: loginSeller.id, amount: -21, note: "Demo: credits already spent", createdBy: null });
 
   // --- Donor vehicles ----------------------------------------------------
   const genSlugs = [...generationBySlug.keys()];
@@ -448,6 +451,27 @@ export async function seedDatabase(
     });
   }
 
+  // --- Reviews of the login seller: with and without a purchase, with and without a reply ---
+  const completedOrder = await db.order.findFirst({ where: { sellerId: loginSeller.id, status: "completed" }, select: { id: true, buyerId: true } });
+  const reviewers = [
+    { buyer: buyers[0], rating: 5, body: "Exactly as described and well packed.", orderId: null as string | null, reply: "Thank you, glad it fitted." },
+    { buyer: buyers[1], rating: 4, body: "Good part, a little slower than I hoped.", orderId: completedOrder?.id ?? null, reply: null as string | null },
+    { buyer: buyers[2], rating: 3, body: null as string | null, orderId: null as string | null, reply: null as string | null },
+  ];
+  for (const r of reviewers) {
+    await db.review.create({
+      data: {
+        sellerId: loginSeller.id,
+        buyerId: r.buyer.id,
+        orderId: r.orderId,
+        rating: r.rating,
+        body: r.body,
+        sellerReply: r.reply,
+        sellerRepliedAt: r.reply ? new Date() : null,
+      },
+    });
+  }
+
   // --- Threads with unread messages on the login seller's listings --------
   const threadTargets = sellerListings
     .filter((l) => ["published", "reserved"].includes(l.status))
@@ -504,5 +528,6 @@ export async function seedDatabase(
     notifications: await db.notification.count(),
     creditBundles: await db.creditBundle.count(),
     creditEntries: await db.creditLedgerEntry.count(),
+    reviews: await db.review.count(),
   };
 }

@@ -6,6 +6,8 @@ import {
   MAX_MESSAGE_LENGTH,
   startThread,
   findThreadForListing,
+  findThreadForOrder,
+  startThreadWithOrderBuyer,
   sendMessage,
   listThreads,
   getThread,
@@ -595,5 +597,81 @@ describe("the seller profile's 'which part?' picker", () => {
     expect(rows.map((r) => r.code)).toEqual([second.code, first.code]);
     expect(rows[0]).toMatchObject({ priceEur: "55", photoUrl: "https://x/p.jpg" });
     expect(rows[0].title).toMatch(/part-/);
+  });
+});
+
+describe("a seller writing first to the buyer of their own order (docs/seller-center.md section 3.3)", () => {
+  async function withOrder(label: string, listingStatus: "published" | "reserved" | "sold" = "reserved") {
+    const seller = await mkSeller(`o-s-${label}`);
+    const buyer = await mkBuyer(`o-b-${label}`);
+    const listing = await mkListing(seller.sellerId, listingStatus);
+    const order = await db.order.create({
+      data: {
+        internalCode: S(`ORD-${label}`), buyerId: buyer.buyerId!, sellerId: seller.sellerId, listingId: listing.id, itemPriceEur: "55.00",
+        recipientName: "R", phone: "1", addressLine1: "a", city: "c", postcode: "p",
+      },
+    });
+    return { seller, sellerActor: seller.actor!, buyer, listing, orderId: order.id };
+  }
+
+  it("creates the thread for that listing and buyer, with the seller's message first", async () => {
+    const t = await withOrder("start");
+    expect(await findThreadForOrder(db, t.sellerActor, t.orderId)).toBeNull();
+
+    const { threadId } = await startThreadWithOrderBuyer(db, t.sellerActor, { orderId: t.orderId, body: "  Please confirm your address  " });
+
+    const thread = await db.thread.findUniqueOrThrow({ where: { id: threadId }, include: { messages: true } });
+    expect(thread).toMatchObject({ listingId: t.listing.id, buyerId: t.buyer.buyerId, sellerId: t.seller.sellerId });
+    expect(thread.messages).toHaveLength(1);
+    expect(thread.messages[0]).toMatchObject({ senderRole: "seller", senderUserId: t.sellerActor.userId, body: "Please confirm your address" });
+    expect(await findThreadForOrder(db, t.sellerActor, t.orderId)).toBe(threadId);
+    expect((await getThread(db, t.buyer, threadId))?.messages.map((m) => m.from)).toEqual(["them"]);
+  });
+
+  it("uses the thread the buyer already opened, and works whatever the listing's status", async () => {
+    const t = await withOrder("reuse", "sold");
+    // The buyer opened this thread while the listing was still on sale.
+    const threadId = (
+      await db.thread.create({
+        data: {
+          listingId: t.listing.id,
+          buyerId: t.buyer.buyerId!,
+          sellerId: t.seller.sellerId,
+          messages: { create: { senderRole: "buyer", senderUserId: t.buyer.userId, body: "hello" } },
+        },
+      })
+    ).id;
+
+    const again = await startThreadWithOrderBuyer(db, t.sellerActor, { orderId: t.orderId, body: "Your part is ready" });
+
+    expect(again.threadId).toBe(threadId);
+    expect(await db.message.count({ where: { threadId } })).toBe(2);
+    expect(await db.thread.count({ where: { listingId: t.listing.id, buyerId: t.buyer.buyerId! } })).toBe(1);
+  });
+
+  it("is only for the seller the order belongs to, never a buyer, another seller or staff", async () => {
+    const t = await withOrder("who");
+    const other = await mkSeller("o-other");
+    for (const actor of [t.buyer, other.actor!, await mkStaff("o-staff")]) {
+      await expect(startThreadWithOrderBuyer(db, actor, { orderId: t.orderId, body: "hi" })).rejects.toBeInstanceOf(ForbiddenError);
+      expect(await findThreadForOrder(db, actor, t.orderId)).toBeNull();
+    }
+    expect(await db.thread.count({ where: { listingId: t.listing.id } })).toBe(0);
+    await expect(startThreadWithOrderBuyer(db, t.sellerActor, { orderId: "nope", body: "hi" })).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it("needs a message, and stops while the thread is locked or the seller is blocked", async () => {
+    const t = await withOrder("rules");
+    await expect(startThreadWithOrderBuyer(db, t.sellerActor, { orderId: t.orderId, body: "   " })).rejects.toBeInstanceOf(InvariantError);
+    expect(await db.thread.count({ where: { listingId: t.listing.id } })).toBe(0);
+
+    const { threadId } = await startThreadWithOrderBuyer(db, t.sellerActor, { orderId: t.orderId, body: "hello" });
+    const staff = await mkStaff("o-rules-staff");
+    await lockThread(db, staff, threadId);
+    await expect(startThreadWithOrderBuyer(db, t.sellerActor, { orderId: t.orderId, body: "again" })).rejects.toThrow(/closed by IVO/i);
+    await unlockThread(db, staff, threadId);
+
+    await setMessagingBlocked(db, staff, t.sellerActor.userId, true);
+    await expect(startThreadWithOrderBuyer(db, await actorOf(t.sellerActor.userId), { orderId: t.orderId, body: "again" })).rejects.toBeInstanceOf(InvariantError);
   });
 });

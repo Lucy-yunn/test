@@ -1,10 +1,14 @@
 import { describe, it, expect } from "vitest";
-import { CancellationReason, OrderStatus } from "@prisma/client";
-import { CANCELLATION_REASON_LABEL, ORDER_STATUS_LABEL, orderTracker } from "./order-labels";
+import { CancellationReason, ListingStatus, OrderStatus } from "@prisma/client";
+import { CANCELLATION_REASON_LABEL, LISTING_STATUS_LABEL, ORDER_STATUS_LABEL, orderTracker } from "./order-labels";
 
 describe("labels cover every value, so a new enum value cannot slip through unlabelled", () => {
   it("has a label for each order status", () => {
     expect(Object.keys(ORDER_STATUS_LABEL).sort()).toEqual(Object.values(OrderStatus).sort());
+  });
+
+  it("has a label for each listing status", () => {
+    expect(Object.keys(LISTING_STATUS_LABEL).sort()).toEqual(Object.values(ListingStatus).sort());
   });
 
   it("has a label for each cancellation reason", () => {

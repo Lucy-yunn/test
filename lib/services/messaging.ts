@@ -125,6 +125,72 @@ export async function startThread(
   throw new InvariantError("Could not start the conversation, try again");
 }
 
+/** The thread between a seller and the buyer of one of their orders, about that order's listing. */
+export async function findThreadForOrder(db: PrismaClient, actor: Actor, orderId: string): Promise<string | null> {
+  if (!isSeller(actor)) return null;
+  const order = await db.order.findUnique({ where: { id: orderId }, select: { sellerId: true, buyerId: true, listingId: true } });
+  if (!order || order.sellerId !== actor.sellerId) return null;
+  const thread = await db.thread.findUnique({
+    where: { listingId_buyerId: { listingId: order.listingId, buyerId: order.buyerId } },
+    select: { id: true },
+  });
+  return thread?.id ?? null;
+}
+
+/**
+ * A seller writes first to the buyer of one of their own orders, for example to talk before
+ * approving a cancellation (docs/seller-center.md section 3.3). This is the only way a seller
+ * starts a thread: the order already ties the two of them together. The thread and its first
+ * message are created together, and an existing thread for that listing and buyer is reused.
+ * It works whatever the listing's status, since the order exists.
+ */
+export async function startThreadWithOrderBuyer(
+  db: PrismaClient,
+  actor: Actor,
+  input: { orderId: string; body: string },
+): Promise<{ threadId: string }> {
+  if (!isSeller(actor)) throw new ForbiddenError("Only the seller of an order can write to its buyer this way");
+  const body = checkedBody(input.body);
+  assertNotBlocked(actor);
+
+  const order = await db.order.findUnique({ where: { id: input.orderId }, select: { sellerId: true, buyerId: true, listingId: true } });
+  if (!order) throw new NotFoundError("Order not found");
+  if (order.sellerId !== actor.sellerId) throw new ForbiddenError("Not your order");
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await db.$transaction(async (tx) => {
+        const existing = await tx.thread.findUnique({
+          where: { listingId_buyerId: { listingId: order.listingId, buyerId: order.buyerId } },
+          select: { id: true, lockedAt: true },
+        });
+        if (existing) {
+          if (existing.lockedAt) throw new InvariantError(CLOSED_BY_IVO);
+          await appendMessage(tx, existing.id, { userId: actor.userId, role: "seller" }, body);
+          return { threadId: existing.id };
+        }
+        const now = new Date();
+        const thread = await tx.thread.create({
+          data: {
+            listingId: order.listingId,
+            buyerId: order.buyerId,
+            sellerId: order.sellerId,
+            createdAt: now,
+            lastMessageAt: now,
+            messages: { create: { senderRole: "seller", senderUserId: actor.userId, body, sentAt: now } },
+          },
+          select: { id: true },
+        });
+        return { threadId: thread.id };
+      });
+    } catch (err) {
+      if (isUniqueViolation(err)) continue;
+      throw err;
+    }
+  }
+  throw new InvariantError("Could not start the conversation, try again");
+}
+
 /** A buyer or seller in the thread replies. Refused while the thread is locked or the sender is blocked. */
 export async function sendMessage(db: PrismaClient, actor: Actor, threadId: string, body: string): Promise<void> {
   if (!isBuyer(actor) && !isSeller(actor)) throw new ForbiddenError("Only the buyer and the seller can write here");
