@@ -7,6 +7,7 @@ import {
 } from "../dal/seller-availability";
 import { blankToNull, firstLine } from "../text";
 import { maskVin } from "./listing-detail";
+import { sellerContactFor, type SellerContact } from "./seller-contact";
 
 /**
  * The public seller profile (docs/seller-profile.md). Node-safe.
@@ -19,8 +20,8 @@ export interface SellerProfile {
   city: string;
   country: string;
   lastActiveAt: Date | null;
-  /** Only ever set for a signed-in viewer; anonymous visitors get null (ADR-0011). */
-  phone: string | null;
+  /** What the viewer may see of the seller's contact (ADR-0011). */
+  contact: SellerContact;
   /** Earliest publish date across the seller's listings. */
   onIvoSince: Date;
 }
@@ -38,8 +39,8 @@ export function sellerHasPublicProfile(
 
 /**
  * `viewer` is the signed-in Actor or null; it only decides whether the phone number is
- * returned. One read: the seller, its login state and its earliest publish date are
- * selected together instead of in three separate calls.
+ * returned (via sellerContactFor). One read: the seller, its login state and its earliest
+ * publish date are selected together instead of in three separate calls.
  */
 export async function getSellerProfile(
   db: PrismaClient,
@@ -73,7 +74,7 @@ export async function getSellerProfile(
     city: seller.locationCity,
     country: seller.locationCountry,
     lastActiveAt: seller.lastActiveAt,
-    phone: viewer ? seller.contactPhone : null,
+    contact: sellerContactFor(viewer, seller.contactPhone),
     onIvoSince: seller.listings[0].publishedAt as Date,
   };
 }

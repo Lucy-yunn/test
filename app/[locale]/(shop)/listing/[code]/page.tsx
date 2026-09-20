@@ -7,6 +7,7 @@ import { getListingDetail, getSiblingListings } from "@/lib/services/listing-det
 import { Link } from "@/i18n/navigation";
 import { getActor } from "@/lib/dal/session";
 import { formatDay } from "@/lib/format-date";
+import { SellerContactView } from "../../_components/seller-contact";
 import { PhotoGallery } from "./photo-gallery";
 import { ListingActions } from "./listing-actions";
 import { SiblingCard } from "./sibling-card";
@@ -116,23 +117,13 @@ export default async function ListingPage({ params }: PageProps<"/[locale]/listi
               </div>
             </div>
 
-            {actor ? (
-              d.seller.phone ? (
-                <p className="mt-2">
-                  Phone:{" "}
-                  <a href={`tel:${d.seller.phone.replace(/\s+/g, "")}`} className="text-purple-700 underline">
-                    {d.seller.phone}
-                  </a>
-                </p>
-              ) : null
-            ) : (
-              <Link
-                href={`/login?redirect=/listing/${d.internalCode}`}
-                className="mt-2 inline-block rounded border bg-white px-3 py-1 text-purple-800 hover:bg-zinc-50 dark:bg-transparent dark:text-purple-300 dark:hover:bg-zinc-900"
-              >
-                Sign in to get seller contact
-              </Link>
-            )}
+            <SellerContactView
+              contact={d.seller.contact}
+              signInHref={`/login?redirect=/listing/${d.internalCode}`}
+              signInClassName="mt-2 inline-block rounded border bg-white px-3 py-1 text-purple-800 hover:bg-zinc-50 dark:bg-transparent dark:text-purple-300 dark:hover:bg-zinc-900"
+              phoneLabel="Phone:"
+              phoneClassName="mt-2"
+            />
 
             {d.seller.available ? (
               <p className="mt-3">

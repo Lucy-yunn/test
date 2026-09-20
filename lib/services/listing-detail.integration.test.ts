@@ -152,13 +152,13 @@ describe("getListingDetail — the seller's phone number is for signed-in users 
 
     const detail = await getListingDetail(db, l.internalCode, null);
 
-    expect(detail?.seller.phone).toBeNull();
+    expect(detail?.seller.contact).toEqual({ kind: "sign_in" });
     expect(JSON.stringify(detail)).not.toContain(PHONE);
   });
 
   it("is hidden when no viewer is given at all", async () => {
     const l = await listing(donorId, "70.00", "published", 1);
-    expect((await getListingDetail(db, l.internalCode))?.seller.phone).toBeNull();
+    expect((await getListingDetail(db, l.internalCode))?.seller.contact).toEqual({ kind: "sign_in" });
   });
 
   it("is shown to any signed-in user", async () => {
@@ -166,14 +166,14 @@ describe("getListingDetail — the seller's phone number is for signed-in users 
 
     const detail = await getListingDetail(db, l.internalCode, signedIn);
 
-    expect(detail?.seller.phone).toBe(PHONE);
+    expect(detail?.seller.contact).toEqual({ kind: "phone", phone: PHONE });
   });
 
-  it("is null for a signed-in user when the seller has no phone on file", async () => {
+  it("tells a signed-in user there is no phone on file", async () => {
     await db.seller.update({ where: { id: sellerId }, data: { contactPhone: null } });
     try {
       const l = await listing(donorId, "70.00", "published", 1);
-      expect((await getListingDetail(db, l.internalCode, signedIn))?.seller.phone).toBeNull();
+      expect((await getListingDetail(db, l.internalCode, signedIn))?.seller.contact).toEqual({ kind: "none" });
     } finally {
       await db.seller.update({ where: { id: sellerId }, data: { contactPhone: PHONE } });
     }
