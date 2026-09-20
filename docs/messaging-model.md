@@ -265,3 +265,19 @@ that staff get a queue of reported Threads.)*
   the "both sides logged in, no staff relay" decision is [ADR-0006](./adr/0006-both-sides-login-messaging.md).
 - **Attachments in Threads** — deferred; a later enhancement, tied to the same blob-storage
   concern as the Listing model (#8).
+
+---
+
+## 10. Build notes (step 11)
+
+- A report's `reason` is optional in the database (`Report.reason` allows null).
+- Whether a user is blocked comes from the `Actor`, which is resolved from the database on every
+  request, so a block takes effect on the person's next request. Staff messages count as unread
+  for whichever of the two people opens the thread first.
+- Opening a thread as the buyer or the seller marks the other side's messages (and support's) as
+  read. The admin view marks nothing.
+- The pages refresh every 15 seconds while they are in view, instead of a real-time connection.
+- The seller-profile picker is the default described in `seller-profile.md` section 7. It is
+  still marked "founder to confirm".
+- Notifications for new messages are step 14, so nobody is told a message arrived except through
+  the unread counts.

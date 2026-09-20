@@ -7,8 +7,7 @@ import { Link } from "@/i18n/navigation";
 /**
  * Reserve / Save / Message seller (docs/auth-and-permissions.md §7.1).
  * Anonymous → routed through /login. seller / staff → disabled. Message needs
- * the seller to have a login. Save is live (build step 6) and Reserve is live (step 10);
- * Message is wired in step 11.
+ * the seller to have a login. Save (build step 6), Reserve (step 10) and Message seller (step 11) are live.
  */
 export async function ListingActions({
   code,
@@ -75,13 +74,12 @@ export async function ListingActions({
 
         {sellerAvailable ? (
           actor && !isBuyer ? null : (
-            <button
-              disabled
-              title="Messaging arrives in build step 11"
-              className="rounded border px-4 py-2 text-sm opacity-60"
+            <Link
+              href={`/listing/${code}/message`}
+              className="rounded border px-4 py-2 text-center text-sm"
             >
               Message seller
-            </button>
+            </Link>
           )
         ) : (
           <p className="text-xs text-zinc-500">Messaging isn&rsquo;t available for this seller.</p>

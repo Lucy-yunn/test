@@ -394,6 +394,8 @@ export interface StaffThreadView {
   buyerName: string;
   sellerName: string;
   locked: boolean;
+  /** The two people, with whether staff have blocked each from messaging. */
+  people: { role: "buyer" | "seller"; userId: string | null; name: string; blocked: boolean }[];
   messages: { id: string; body: string; sentAt: Date; from: "buyer" | "seller" | "support" }[];
   reports: { id: string; reportedByRole: SenderRole; reason: string | null; state: "open" | "resolved"; createdAt: Date }[];
 }
@@ -407,8 +409,8 @@ export async function getThreadForStaff(db: PrismaClient, actor: Actor, threadId
       id: true,
       lockedAt: true,
       listing: { select: { internalCode: true, status: true, part: { select: { name: true } } } },
-      buyer: { select: { user: { select: { name: true } } } },
-      seller: { select: { displayName: true } },
+      buyer: { select: { user: { select: { id: true, name: true, messagingBlockedAt: true } } } },
+      seller: { select: { displayName: true, user: { select: { id: true, messagingBlockedAt: true } } } },
       messages: { orderBy: [{ sentAt: "asc" }, { id: "asc" }], select: { id: true, body: true, sentAt: true, senderRole: true } },
       reports: { orderBy: { createdAt: "asc" }, select: { id: true, reportedByRole: true, reason: true, state: true, createdAt: true } },
     },
@@ -420,6 +422,10 @@ export async function getThreadForStaff(db: PrismaClient, actor: Actor, threadId
     buyerName: t.buyer.user.name,
     sellerName: t.seller.displayName,
     locked: t.lockedAt !== null,
+    people: [
+      { role: "buyer", userId: t.buyer.user.id, name: t.buyer.user.name, blocked: t.buyer.user.messagingBlockedAt !== null },
+      { role: "seller", userId: t.seller.user?.id ?? null, name: t.seller.displayName, blocked: t.seller.user?.messagingBlockedAt != null },
+    ],
     messages: t.messages.map((m) => ({
       id: m.id,
       body: m.body,

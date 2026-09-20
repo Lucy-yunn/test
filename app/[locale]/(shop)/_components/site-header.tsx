@@ -1,6 +1,8 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
+import { db } from "@/lib/db";
 import { getActor } from "@/lib/dal/session";
+import { getUnreadCount } from "@/lib/services/messaging";
 import { DeliveryTo } from "./delivery-to";
 import { currentDeliveryLocation } from "./delivery-location";
 import { LocaleSelect } from "./locale-select";
@@ -9,6 +11,7 @@ export async function SiteHeader() {
   const t = await getTranslations("Nav");
   const actor = await getActor();
   const { city, source } = await currentDeliveryLocation();
+  const unread = actor?.role === "buyer" ? await getUnreadCount(db, actor) : 0;
 
   return (
     <header className="bg-purple-800 text-white">
@@ -36,7 +39,14 @@ export async function SiteHeader() {
           {actor?.role === "buyer" ? (
             <>
               <Link href="/account/orders">{t("myOrders")}</Link>
-              <Link href="/account/messages">{t("messages")}</Link>
+              <Link href="/account/messages">
+                {t("messages")}
+                {unread > 0 ? (
+                  <span className="ml-1 rounded-full bg-amber-300 px-2 py-0.5 text-xs text-purple-900" aria-label={`${unread} unread`}>
+                    {unread}
+                  </span>
+                ) : null}
+              </Link>
               <Link href="/account/saved/parts">{t("saved")}</Link>
               <Link href="/account">{t("account")}</Link>
             </>

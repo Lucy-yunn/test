@@ -500,6 +500,13 @@ describe("what staff can do", () => {
     expect(view.messages.map((m) => [m.from, m.body])).toEqual([["buyer", "Is it still available?"], ["seller", "Yes"]]);
     expect(view.reports).toEqual([expect.objectContaining({ reportedByRole: "seller", reason: "rude", state: "open" })]);
     expect(view).toMatchObject({ locked: false, buyerName: S("Buyer b-staff-open"), sellerName: S("Seller s-staff-open") });
+    // who can be blocked from messaging, and whether they already are
+    expect(view.people).toEqual([
+      { role: "buyer", userId: t.buyer.userId, name: S("Buyer b-staff-open"), blocked: false },
+      { role: "seller", userId: t.seller.userId, name: S("Seller s-staff-open"), blocked: false },
+    ]);
+    await setMessagingBlocked(db, await mkStaff("staff-open-block"), t.buyer.userId, true);
+    expect((await getThreadForStaff(db, await mkStaff("staff-open-s2"), t.threadId)).people[0].blocked).toBe(true);
   });
 
   it("posts as IVO Support, which both people see as support and never as the seller, even in a locked thread", async () => {
