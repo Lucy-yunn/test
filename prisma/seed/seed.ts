@@ -348,15 +348,15 @@ export async function seedDatabase(
   const sellerListings = listings.filter((l) => l.sellerId === loginSeller.id);
   const orderPlan: Array<{
     listing: string;
-    status: "placed" | "confirmed" | "shipped" | "delivered" | "cancelled";
+    status: "placed" | "confirmed" | "completed" | "refused" | "cancelled";
     buyer: number;
   }> = [
     { listing: sellerListings.find((l) => l.status === "reserved")!.internalCode, status: "confirmed", buyer: 0 },
-    { listing: sellerListings.find((l) => l.status === "sold")!.internalCode, status: "delivered", buyer: 1 },
+    { listing: sellerListings.find((l) => l.status === "sold")!.internalCode, status: "completed", buyer: 1 },
   ];
   const spare = sellerListings.filter((l) => l.status === "published").slice(0, 3);
   orderPlan.push({ listing: spare[0].internalCode, status: "placed", buyer: 2 });
-  orderPlan.push({ listing: spare[1].internalCode, status: "shipped", buyer: 0 });
+  orderPlan.push({ listing: spare[1].internalCode, status: "refused", buyer: 0 });
   orderPlan.push({ listing: spare[2].internalCode, status: "cancelled", buyer: 1 });
 
   const listingByCode = new Map(listings.map((l) => [l.internalCode, l]));
@@ -375,23 +375,13 @@ export async function seedDatabase(
         status: o.status,
         lastReachedStatus: o.status === "cancelled" ? "confirmed" : null,
         confirmedAt:
-          ["confirmed", "shipped", "delivered", "cancelled"].includes(o.status)
+          ["confirmed", "completed", "refused", "cancelled"].includes(o.status)
             ? new Date(now - 6 * 8.64e7)
             : null,
-        shippedAt: ["shipped", "delivered"].includes(o.status)
-          ? new Date(now - 3 * 8.64e7)
-          : null,
-        deliveredAt: o.status === "delivered" ? new Date(now - 8.64e7) : null,
+        completedAt: o.status === "completed" ? new Date(now - 8.64e7) : null,
+        refusedAt: o.status === "refused" ? new Date(now - 8.64e7) : null,
+        refusalNote: o.status === "refused" ? "Buyer inspected the part at the courier and declined it." : null,
         cancelledAt: o.status === "cancelled" ? new Date(now - 2 * 8.64e7) : null,
-        expectedTimeRange: ["shipped", "delivered"].includes(o.status)
-          ? "3–5 working days"
-          : null,
-        trackingNumber: ["shipped", "delivered"].includes(o.status)
-          ? "BG" + (1000000 + orderCounter)
-          : null,
-        shippingCostEur: ["confirmed", "shipped", "delivered"].includes(o.status)
-          ? "12.00"
-          : null,
         recipientName: buyer.recipientName!,
         phone: buyer.phone!,
         addressLine1: buyer.addressLine1!,
@@ -405,23 +395,39 @@ export async function seedDatabase(
       await db.cancellationRequest.create({
         data: {
           orderId: order.id,
-          requestedBy: "buyer",
           reason: "found_elsewhere",
           state: "pending",
           autoApproveAt: new Date(now + 5 * 8.64e7),
         },
       });
     }
+    if (o.status === "cancelled") {
+      await db.cancellationRequest.create({
+        data: {
+          orderId: order.id,
+          reason: "no_longer_needed",
+          state: "approved",
+          createdAt: new Date(now - 4 * 8.64e7),
+          autoApproveAt: new Date(now + 3 * 8.64e7),
+          resolvedAt: new Date(now - 2 * 8.64e7),
+          resolvedBy: "seller",
+        },
+      });
+    }
+    // An open order holds its listing, and a completed one has sold it.
+    if (o.status === "placed" || o.status === "confirmed") {
+      await db.listing.update({ where: { id: listing.id }, data: { status: "reserved" } });
+    } else if (o.status === "completed") {
+      await db.listing.update({ where: { id: listing.id }, data: { status: "sold" } });
+    }
 
     const buyerNotif: Array<
       "order_placed" | "order_confirmed" | "order_shipped" | "order_delivered"
     > = [];
-    if (["placed", "confirmed", "shipped", "delivered"].includes(o.status))
-      buyerNotif.push("order_placed");
-    if (["confirmed", "shipped", "delivered"].includes(o.status))
-      buyerNotif.push("order_confirmed");
-    if (["shipped", "delivered"].includes(o.status)) buyerNotif.push("order_shipped");
-    if (o.status === "delivered") buyerNotif.push("order_delivered");
+    // Notification types are revised in build step 14; until then completed reuses order_delivered.
+    if (o.status !== "cancelled") buyerNotif.push("order_placed");
+    if (["confirmed", "completed", "refused"].includes(o.status)) buyerNotif.push("order_confirmed");
+    if (o.status === "completed") buyerNotif.push("order_delivered");
     await db.notification.createMany({
       data: buyerNotif.map((type, i) => ({
         userId: buyer.userId!,

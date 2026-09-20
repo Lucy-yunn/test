@@ -319,3 +319,18 @@ Invariants, enforced in the DAL:
 - **Notifications** — [`notifications.md`](./notifications.md).
 - Decision records: [ADR-0005](./adr/0005-always-approves-cancellation.md) (amended),
   [ADR-0009](./adr/0009-seller-operated-orders-cash-on-delivery.md).
+
+---
+
+## 13. Build notes (step 10)
+
+- `Order.listingId` is not unique. A listing goes back on sale after a cancelled or refused order
+  and can be reserved again, so one listing can have several orders over time. Only one is open at
+  a time, because reserving needs the listing to move `published -> reserved`.
+- Every change to an order locks the order row first, then reads its state. A click on **Mark
+  completed** and the buyer's cancellation request therefore cannot both win.
+- The daily sweep is `GET /api/cron/cancellations`, scheduled in `vercel.json`. It needs the
+  `CRON_SECRET` environment variable and refuses every request without it.
+- Notifications are written in build step 14, so placing or changing an order does not notify yet.
+- The buyer order page has no **Leave a review** button until reviews (step 12), and **Message
+  seller** is disabled until messaging (step 11).

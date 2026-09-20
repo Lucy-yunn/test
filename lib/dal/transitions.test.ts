@@ -8,21 +8,27 @@ import {
 } from "./transitions";
 import { InvariantError } from "./errors";
 
-describe("order status machine", () => {
-  it("allows the pre-ship path and pre-ship cancellation", () => {
+describe("order status machine (docs/order-model.md section 3)", () => {
+  it("allows the seller's path, the buyer's cancellation and the seller's two endings", () => {
     expect(canTransition(ORDER_TRANSITIONS, "placed", "confirmed")).toBe(true);
-    expect(canTransition(ORDER_TRANSITIONS, "confirmed", "shipped")).toBe(true);
-    expect(canTransition(ORDER_TRANSITIONS, "shipped", "delivered")).toBe(true);
+    expect(canTransition(ORDER_TRANSITIONS, "confirmed", "completed")).toBe(true);
+    expect(canTransition(ORDER_TRANSITIONS, "confirmed", "refused")).toBe(true);
     expect(canTransition(ORDER_TRANSITIONS, "placed", "cancelled")).toBe(true);
     expect(canTransition(ORDER_TRANSITIONS, "confirmed", "cancelled")).toBe(true);
   });
 
-  it("forbids cancelling once shipped, skipping states, and leaving terminal states", () => {
-    expect(canTransition(ORDER_TRANSITIONS, "shipped", "cancelled")).toBe(false);
-    expect(canTransition(ORDER_TRANSITIONS, "placed", "shipped")).toBe(false);
-    expect(canTransition(ORDER_TRANSITIONS, "placed", "delivered")).toBe(false);
-    expect(canTransition(ORDER_TRANSITIONS, "delivered", "cancelled")).toBe(false);
-    expect(canTransition(ORDER_TRANSITIONS, "cancelled", "placed")).toBe(false);
+  it("forbids skipping states, and completing or refusing an order that is not confirmed", () => {
+    expect(canTransition(ORDER_TRANSITIONS, "placed", "completed")).toBe(false);
+    expect(canTransition(ORDER_TRANSITIONS, "placed", "refused")).toBe(false);
+    expect(canTransition(ORDER_TRANSITIONS, "confirmed", "placed")).toBe(false);
+  });
+
+  it("has no way out of a terminal state", () => {
+    for (const from of ["completed", "refused", "cancelled"] as const) {
+      for (const to of ["placed", "confirmed", "completed", "cancelled", "refused"] as const) {
+        expect(canTransition(ORDER_TRANSITIONS, from, to)).toBe(false);
+      }
+    }
   });
 });
 
@@ -57,11 +63,11 @@ describe("part status machine", () => {
 describe("assertTransition", () => {
   it("passes a valid transition and throws InvariantError on an invalid one", () => {
     expect(() => assertTransition(ORDER_TRANSITIONS, "placed", "confirmed", "Order")).not.toThrow();
-    expect(() => assertTransition(ORDER_TRANSITIONS, "shipped", "cancelled", "Order")).toThrow(
+    expect(() => assertTransition(ORDER_TRANSITIONS, "completed", "cancelled", "Order")).toThrow(
       InvariantError,
     );
-    expect(() => assertTransition(ORDER_TRANSITIONS, "shipped", "cancelled", "Order")).toThrow(
-      /Order.*shipped.*cancelled/,
+    expect(() => assertTransition(ORDER_TRANSITIONS, "completed", "cancelled", "Order")).toThrow(
+      /Order.*completed.*cancelled/,
     );
   });
 });
