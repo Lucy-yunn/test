@@ -48,6 +48,7 @@ export async function getSellerProfile(
   viewer: Actor | null = null,
 ): Promise<SellerProfile | null> {
   const seller = await db.seller.findUnique({
+    relationLoadStrategy: "join",
     where: { id: sellerId },
     select: {
       displayName: true,
@@ -158,6 +159,7 @@ export async function listSellerCars(
   options: SellerCarsOptions,
 ): Promise<SellerCarsResult> {
   const donors = await db.donorVehicle.findMany({
+    relationLoadStrategy: "join",
     where: { sellerId, listings: { some: { status: { in: [...VISIBLE_ON_CAR_PAGE] } } } },
     select: {
       id: true,
@@ -291,6 +293,7 @@ export async function getDonorVehiclePage(
   donorVehicleId: string,
 ): Promise<DonorVehiclePage | null> {
   const d = await db.donorVehicle.findUnique({
+    relationLoadStrategy: "join",
     where: { id: donorVehicleId },
     select: {
       id: true,
