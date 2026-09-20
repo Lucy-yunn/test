@@ -37,10 +37,9 @@ export default async function SellerProfilePage({
   const sp = (await searchParams) as SP;
 
   const actor = await getActor();
-  const profile = await getSellerProfile(db, id, actor);
+  // Independent of each other, so ask together. A saved flag for a seller with no profile is simply unused.
+  const [profile, saved] = await Promise.all([getSellerProfile(db, id, actor), isSellerSaved(db, actor, id)]);
   if (!profile) notFound();
-
-  const saved = await isSellerSaved(db, actor, id);
   const requested = typeof sp.tab === "string" ? sp.tab : "cars";
   const tab = TABS.find((t) => t.key === requested)?.key ?? "cars";
 

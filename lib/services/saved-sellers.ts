@@ -1,7 +1,8 @@
 import type { PrismaClient } from "@prisma/client";
 import { isBuyer, type Actor } from "../dal/actor";
 import { ForbiddenError, NotFoundError } from "../dal/errors";
-import { getSellerProfile } from "./seller-profile";
+import { SELLER_AVAILABILITY_SELECT } from "../dal/seller-availability";
+import { getSellerProfile, sellerHasPublicProfile } from "./seller-profile";
 
 /**
  * Saved Sellers: a buyer's saved sellers (docs/seller-profile.md section 8). Node-safe;
@@ -47,6 +48,11 @@ export async function isSellerSaved(db: PrismaClient, actor: Actor | null, selle
   return (await db.savedSeller.count({ where: { buyerId: actor.buyerId!, sellerId } })) > 0;
 }
 
+/**
+ * One read for the whole list, however many sellers are saved. Whether a card is still
+ * `available` is decided by the same rule as the public profile (`sellerHasPublicProfile`)
+ * over what this read already loaded, not by asking the database once per seller.
+ */
 export async function listSavedSellers(db: PrismaClient, actor: Actor): Promise<SavedSellerCard[]> {
   requireBuyer(actor);
   const rows = await db.savedSeller.findMany({
@@ -60,23 +66,21 @@ export async function listSavedSellers(db: PrismaClient, actor: Actor): Promise<
           avatarUrl: true,
           locationCity: true,
           lastActiveAt: true,
-          userId: true,
-          user: { select: { banned: true } },
-          _count: { select: { listings: { where: { status: { in: ["published", "reserved"] } } } } },
+          ...SELLER_AVAILABILITY_SELECT,
+          // every listing that has ever been published: it decides the profile and gives the shelf count
+          listings: { where: { publishedAt: { not: null } }, select: { status: true } },
         },
       },
     },
   });
 
-  return Promise.all(
-    rows.map(async ({ seller }) => ({
-      sellerId: seller.id,
-      name: seller.displayName,
-      avatarUrl: seller.avatarUrl,
-      city: seller.locationCity,
-      lastActiveAt: seller.lastActiveAt,
-      onShelf: seller._count.listings,
-      available: (await getSellerProfile(db, seller.id)) !== null,
-    })),
-  );
+  return rows.map(({ seller }) => ({
+    sellerId: seller.id,
+    name: seller.displayName,
+    avatarUrl: seller.avatarUrl,
+    city: seller.locationCity,
+    lastActiveAt: seller.lastActiveAt,
+    onShelf: seller.listings.filter((l) => l.status === "published" || l.status === "reserved").length,
+    available: sellerHasPublicProfile(seller),
+  }));
 }

@@ -1,5 +1,10 @@
 import type { PrismaClient } from "@prisma/client";
 import type { Actor } from "../dal/actor";
+import {
+  SELLER_AVAILABILITY_SELECT,
+  sellerIsAvailable,
+  type SellerLoginState,
+} from "../dal/seller-availability";
 import { maskVin } from "./listing-detail";
 
 /**
@@ -21,8 +26,19 @@ export interface SellerProfile {
 
 /**
  * A seller has a public profile only when it is available (an active login, auth §4.4)
- * and has published at least one listing. `viewer` is the signed-in Actor or null; it
- * only decides whether the phone number is returned.
+ * and has published at least one listing. This is the one place that says so: the profile,
+ * the donor-vehicle page and the saved-sellers list all decide through it.
+ */
+export function sellerHasPublicProfile(
+  seller: SellerLoginState & { listings: readonly unknown[] },
+): boolean {
+  return sellerIsAvailable(seller) && seller.listings.length > 0;
+}
+
+/**
+ * `viewer` is the signed-in Actor or null; it only decides whether the phone number is
+ * returned. One read: the seller, its login state and its earliest publish date are
+ * selected together instead of in three separate calls.
  */
 export async function getSellerProfile(
   db: PrismaClient,
@@ -38,18 +54,16 @@ export async function getSellerProfile(
       locationCountry: true,
       lastActiveAt: true,
       contactPhone: true,
-      userId: true,
-      user: { select: { banned: true } },
+      ...SELLER_AVAILABILITY_SELECT,
+      listings: {
+        where: { publishedAt: { not: null } },
+        orderBy: { publishedAt: "asc" },
+        take: 1,
+        select: { publishedAt: true },
+      },
     },
   });
-  if (!seller || seller.userId == null || seller.user?.banned) return null;
-
-  const first = await db.listing.aggregate({
-    where: { sellerId, publishedAt: { not: null } },
-    _min: { publishedAt: true },
-  });
-
-  if (!first._min.publishedAt) return null;
+  if (!seller || !sellerHasPublicProfile(seller)) return null;
 
   return {
     id: sellerId,
@@ -59,7 +73,7 @@ export async function getSellerProfile(
     country: seller.locationCountry,
     lastActiveAt: seller.lastActiveAt,
     phone: viewer ? seller.contactPhone : null,
-    onIvoSince: first._min.publishedAt,
+    onIvoSince: seller.listings[0].publishedAt as Date,
   };
 }
 
@@ -301,8 +315,7 @@ export async function getDonorVehiclePage(
           displayName: true,
           avatarUrl: true,
           locationCity: true,
-          userId: true,
-          user: { select: { banned: true } },
+          ...SELLER_AVAILABILITY_SELECT,
         },
       },
       listings: {
@@ -319,7 +332,7 @@ export async function getDonorVehiclePage(
       },
     },
   });
-  if (!d || d.seller.userId == null || d.seller.user?.banned || d.listings.length === 0) return null;
+  if (!d || !sellerIsAvailable(d.seller) || d.listings.length === 0) return null;
 
   const toPart = (l: (typeof d.listings)[number]): DonorVehiclePart => ({
     code: l.internalCode,

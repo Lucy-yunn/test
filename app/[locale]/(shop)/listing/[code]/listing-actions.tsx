@@ -14,12 +14,12 @@ export async function ListingActions({
   code,
   price,
   negotiable,
-  sellerHasLogin,
+  sellerAvailable,
 }: {
   code: string;
   price: string;
   negotiable: boolean;
-  sellerHasLogin: boolean;
+  sellerAvailable: boolean;
 }) {
   const actor = await getActor();
   const backTo = `/listing/${code}`;
@@ -60,7 +60,7 @@ export async function ListingActions({
           <p className="text-sm text-zinc-500">Reserving is for buyer accounts.</p>
         )}
 
-        {sellerHasLogin ? (
+        {sellerAvailable ? (
           actor && !isBuyer ? null : (
             <button
               disabled
