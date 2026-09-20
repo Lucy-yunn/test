@@ -281,3 +281,6 @@ that staff get a queue of reported Threads.)*
   still marked "founder to confirm".
 - Notifications for new messages are step 14, so nobody is told a message arrived except through
   the unread counts.
+- **Seller writing first (step 13).** A seller can start a thread with the buyer of one of their own
+  orders (`startThreadWithOrderBuyer`), and only in that case. See
+  [`seller-center.md`](./seller-center.md) §12.

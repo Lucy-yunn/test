@@ -8,7 +8,7 @@ import { formatDay } from "@/lib/format-date";
 import { getBuyerOrder } from "@/lib/services/orders";
 import { CANCELLATION_REASON_LABEL, ORDER_STATUS_LABEL, ORDER_STEP_NOTE } from "@/lib/order-labels";
 import { SellerContactView } from "@/app/[locale]/(shop)/_components/seller-contact";
-import { OrderTracker } from "./order-tracker";
+import { OrderTracker } from "../../../_components/order-tracker";
 import { CancelForm } from "./cancel-form";
 
 /** The buyer's order page (docs/order-model.md section 7). Reachable only by the buyer who placed it. */

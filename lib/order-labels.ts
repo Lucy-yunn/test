@@ -1,4 +1,4 @@
-import type { CancellationReason, OrderStatus } from "@prisma/client";
+import type { CancellationReason, ListingStatus, OrderStatus } from "@prisma/client";
 
 /** Wording for orders (docs/order-model.md sections 3, 6.1 and 7). Node-safe. */
 
@@ -8,6 +8,15 @@ export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   completed: "Completed",
   cancelled: "Cancelled",
   refused: "Refused",
+};
+
+export const LISTING_STATUS_LABEL: Record<ListingStatus, string> = {
+  draft: "Draft",
+  published: "Published",
+  reserved: "Reserved",
+  sold: "Sold",
+  cancelled: "Cancelled",
+  archived: "Archived",
 };
 
 export const CANCELLATION_REASON_LABEL: Record<CancellationReason, string> = {
