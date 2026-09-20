@@ -1,21 +1,21 @@
 /**
- * Runs a command with the environment pointed at the Neon `test` branch.
+ * Runs a command against the LOCAL `ivo_test` database, and nothing else.
  *
  *   tsx scripts/with-test-db.ts prisma migrate deploy
  *   tsx scripts/with-test-db.ts prisma db seed
  *
- * Loads `.env.test.local` (if present), then applies `resolveTestDbEnv` — which
- * throws unless `TEST_DATABASE_URL` is set and distinct from `DATABASE_URL`.
+ * Loads `.env.test.local` (if present), then applies `resolveTestDbEnv`, which throws
+ * unless `TEST_DATABASE_URL` is set, differs from `DATABASE_URL`, and is localhost /
+ * 127.0.0.1 with the database `ivo_test`. `runGuarded` then asks the live server which
+ * database it is before the command runs. There is no override for a remote database.
  * Never reads a fallback database URL.
  */
-import { existsSync } from "node:fs";
-import { spawnSync } from "node:child_process";
+import { loadEnvFileOverriding } from "./load-env-file";
 import { resolveTestDbEnv } from "./resolve-test-db-env";
+import { runGuarded } from "./guarded-run";
 
-const ENV_FILE = ".env.test.local";
-if (existsSync(ENV_FILE)) {
-  process.loadEnvFile(ENV_FILE);
-}
+// The file must win over anything already in the environment, including values Prisma copies in from .env.
+loadEnvFileOverriding(".env.test.local");
 
 const [cmd, ...args] = process.argv.slice(2);
 if (!cmd) {
@@ -31,10 +31,4 @@ try {
   process.exit(1);
 }
 
-const result = spawnSync(cmd, args, {
-  stdio: "inherit",
-  shell: true,
-  env: { ...process.env, ...resolved },
-});
-
-process.exit(result.status ?? 1);
+void runGuarded({ role: "test", env: resolved, command: cmd, args }).then((code) => process.exit(code));

@@ -13,6 +13,7 @@
  */
 import type { PrismaClient } from "@prisma/client";
 import { hashPassword } from "better-auth/crypto";
+import { verifyLocalConnection, type DatabaseRole } from "../../scripts/local-db-guard";
 import { GROUPS, CATEGORIES } from "./taxonomy";
 import { MAKES, MODEL_GROUPS, GENERATIONS } from "./vehicles";
 
@@ -111,10 +112,20 @@ const pad = (prefix: string, n: number) =>
 const PLACEHOLDER_PHOTO = (label: string) =>
   `https://placehold.co/800x600?text=${encodeURIComponent(label)}`;
 
-export async function seedDatabase(db: PrismaClient): Promise<SeedCounts> {
+/**
+ * Wipes every table, then inserts the demo dataset. Before anything is touched it asks
+ * the live connection which database it is: only the local database for `options.role`
+ * (`ivo_dev` or `ivo_test`) is accepted. There is no way to seed a remote database.
+ */
+export async function seedDatabase(
+  db: PrismaClient,
+  options: { role: DatabaseRole },
+): Promise<SeedCounts> {
   if (process.env.NODE_ENV === "production") {
     throw new Error("Refusing to seed a production database.");
   }
+
+  await verifyLocalConnection(db, options.role);
 
   await wipe(db);
 

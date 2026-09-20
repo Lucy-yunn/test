@@ -3,15 +3,19 @@
  * Next.js. Keep this file free of Next-only / `server-only` imports; the logic
  * lives in the node-safe `./seed/seed` module.
  *
- * Run: npm run db:seed         (development branch, reads .env.local)
- *      npm run db:seed:test    (test branch, reads .env.test.local)
+ * Run: npm run db:seed         (local ivo_dev, reads .env.local through scripts/with-dev-db.ts)
+ *      npm run db:seed:test    (local ivo_test, reads .env.test.local through scripts/with-test-db.ts)
+ *
+ * The seed wipes every table first, so it only ever accepts the local database for its
+ * role. `with-test-db.ts` sets NODE_ENV=test; anything else is the dev seed.
  */
 import { PrismaClient } from "@prisma/client";
 import { seedDatabase, DEMO_PASSWORD } from "./seed/seed";
 
 const db = new PrismaClient();
+const role = process.env.NODE_ENV === "test" ? "test" : "dev";
 
-seedDatabase(db)
+seedDatabase(db, { role })
   .then((counts) => {
     console.log("Seed complete:", counts);
     console.log(`\nDemo login password for every account: ${DEMO_PASSWORD}`);
