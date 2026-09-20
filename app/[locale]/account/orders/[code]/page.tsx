@@ -42,6 +42,15 @@ export default async function OrderPage({ params }: PageProps<"/[locale]/account
         {ORDER_STEP_NOTE[order.status] ? (
           <p className="text-sm text-zinc-600 dark:text-zinc-400">{ORDER_STEP_NOTE[order.status]}</p>
         ) : null}
+        {order.status === "completed" && order.seller.available ? (
+          order.reviewed ? (
+            <span className="w-fit rounded border border-zinc-300 px-4 py-2 text-sm text-zinc-500 dark:border-zinc-700">Reviewed ✓</span>
+          ) : (
+            <Link href={`/sellers/${order.seller.id}/review?order=${order.id}`} className="w-fit rounded bg-purple-700 px-4 py-2 text-sm text-white">
+              Review
+            </Link>
+          )
+        ) : null}
         {pending ? (
           <p className="rounded bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
             Cancellation requested. Auto-approves {formatDay(request.autoApproveAt)}.
@@ -113,11 +122,6 @@ export default async function OrderPage({ params }: PageProps<"/[locale]/account
       </section>
 
       <section className="flex flex-col gap-3">
-        {order.status === "completed" && !order.reviewed && order.seller.available ? (
-          <Link href={`/sellers/${order.seller.id}/review?order=${order.id}`} className="w-fit rounded bg-purple-700 px-4 py-2 text-sm text-white">
-            Leave a review
-          </Link>
-        ) : null}
         {canCancel ? <CancelForm orderId={order.id} orderCode={order.code} instant={order.status === "placed"} /> : null}
         {order.seller.available ? (
           <Link href={`/listing/${order.listing.code}/message`} className="w-fit rounded border px-4 py-2 text-sm">

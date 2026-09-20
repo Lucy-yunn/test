@@ -4,19 +4,23 @@ import { useActionState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { FormMessage } from "./form";
 import type { AuthFormState } from "../register/actions";
-import { reportThreadAction, sendMessageAction, startThreadAction } from "./thread-actions";
+import { reportThreadAction, restoreThreadAction, sendMessageAction, startThreadAction, trashThreadAction } from "./thread-actions";
 
 const MAX = 4000;
 
 const textareaClass =
   "w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900";
 
-/** The first message about a listing. */
-export function StartThreadForm({ listingCode }: { listingCode: string }) {
+/** The first message, about a listing or (with a seller id) direct to a seller. */
+export function StartThreadForm(props: { listingCode: string } | { sellerId: string }) {
   const [state, action, pending] = useActionState<AuthFormState, FormData>(startThreadAction, undefined);
   return (
     <form action={action} className="flex flex-col gap-3">
-      <input type="hidden" name="listingCode" value={listingCode} />
+      {"listingCode" in props ? (
+        <input type="hidden" name="listingCode" value={props.listingCode} />
+      ) : (
+        <input type="hidden" name="sellerId" value={props.sellerId} />
+      )}
       <label htmlFor="body" className="text-sm font-medium">
         Your message to the seller
       </label>
@@ -94,4 +98,17 @@ export function AutoRefresh({ seconds = 15 }: { seconds?: number }) {
     return () => clearInterval(id);
   }, [router, seconds]);
   return null;
+}
+
+/** Move the conversation to the person's own trash, or, when it is already there, take it out. */
+export function TrashButton({ threadId, path, trashed }: { threadId: string; path: string; trashed: boolean }) {
+  return (
+    <form action={trashed ? restoreThreadAction : trashThreadAction}>
+      <input type="hidden" name="threadId" value={threadId} />
+      <input type="hidden" name="path" value={path} />
+      <button type="submit" className="rounded border px-3 py-1 text-sm">
+        {trashed ? "Move back to inbox" : "Move to trash"}
+      </button>
+    </form>
+  );
 }

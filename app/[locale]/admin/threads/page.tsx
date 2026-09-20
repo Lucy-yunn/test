@@ -39,9 +39,9 @@ export default async function AdminThreadsPage({ params }: PageProps<"/[locale]/
               <tr key={t.id} className="border-t border-zinc-200 dark:border-zinc-800">
                 <td className="py-2">
                   <Link href={`/admin/threads/${t.id}`} className="underline">
-                    {t.listing.title}
+                    {t.listing?.title ?? "Direct conversation"}
                   </Link>
-                  <div className="text-xs text-zinc-500">{t.listing.code}</div>
+                  {t.listing ? <div className="text-xs text-zinc-500">{t.listing.code}</div> : null}
                 </td>
                 <td>{t.buyerName}</td>
                 <td>{t.sellerName}</td>

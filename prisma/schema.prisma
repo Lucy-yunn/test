@@ -610,15 +610,21 @@ model SavedSeller {
 
 model Thread {
   id            String    @id @default(cuid())
-  listingId     String
+  // Null for a direct conversation: a buyer and a seller talking about no listing in particular.
+  // One direct thread per (seller, buyer) is enforced by a partial unique index that only the
+  // migration knows about (Thread_direct_pair_key), since Prisma cannot express it.
+  listingId     String?
   buyerId       String
-  sellerId      String // invariant: == listing.sellerId
+  sellerId      String // invariant: == listing.sellerId, when there is a listing
   createdAt     DateTime  @default(now())
   lastMessageAt DateTime  @default(now())
   lockedAt      DateTime?
   lockedById    String?
+  // Each person's own trash. A new message from the other side (or from support) clears it.
+  buyerTrashedAt  DateTime?
+  sellerTrashedAt DateTime?
 
-  listing  Listing   @relation(fields: [listingId], references: [id])
+  listing  Listing?  @relation(fields: [listingId], references: [id], onDelete: Restrict)
   buyer    Buyer     @relation(fields: [buyerId], references: [id])
   seller   Seller    @relation(fields: [sellerId], references: [id])
   lockedBy User?     @relation("ThreadLockedBy", fields: [lockedById], references: [id])

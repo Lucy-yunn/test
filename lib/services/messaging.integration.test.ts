@@ -21,6 +21,10 @@ import {
   unlockThread,
   resolveReport,
   setMessagingBlocked,
+  moveToTrash,
+  restoreFromTrash,
+  startDirectThread,
+  findDirectThread,
 } from "./messaging";
 
 /**
@@ -136,7 +140,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await db.thread.deleteMany({ where: { listingId: { in: listingIds } } }); // messages and reports cascade
+  // Messages and reports cascade. Direct threads have no listing, so they are found by seller.
+  await db.thread.deleteMany({ where: { OR: [{ listingId: { in: listingIds } }, { sellerId: { in: sellerIds } }] } });
   await db.order.deleteMany({ where: { sellerId: { in: sellerIds } } });
   await db.listing.deleteMany({ where: { id: { in: listingIds } } });
   await db.part.deleteMany({ where: { id: { in: partIds } } });
@@ -425,18 +430,18 @@ describe("reading and unread state", () => {
       },
     });
     view = await getThread(db, t.buyer, t.threadId);
-    expect(view?.listing.badge).toBe("You've reserved this item");
-    expect((await getThread(db, t.sellerActor, t.threadId))?.listing.badge).toBe("Reserved");
+    expect(view?.listing?.badge).toBe("You've reserved this item");
+    expect((await getThread(db, t.sellerActor, t.threadId))?.listing?.badge).toBe("Reserved");
 
     const other = await mkBuyer("header-other");
     const otherThread = (await startThread(db, other, { listingCode: t.listing.code, body: "still there?" })).threadId;
-    expect((await getThread(db, other, otherThread))?.listing.badge).toBe("Reserved by another buyer");
+    expect((await getThread(db, other, otherThread))?.listing?.badge).toBe("Reserved by another buyer");
 
     await db.order.deleteMany({ where: { listingId: t.listing.id } });
     await db.listing.update({ where: { id: t.listing.id }, data: { status: "sold" } });
-    expect((await getThread(db, t.buyer, t.threadId))?.listing.badge).toBe("Sold");
+    expect((await getThread(db, t.buyer, t.threadId))?.listing?.badge).toBe("Sold");
     await db.listing.update({ where: { id: t.listing.id }, data: { status: "archived" } });
-    expect((await getThread(db, t.buyer, t.threadId))?.listing.badge).toBe("No longer listed");
+    expect((await getThread(db, t.buyer, t.threadId))?.listing?.badge).toBe("No longer listed");
   });
 
   it("never gives a buyer the seller's contact details or street address", async () => {
@@ -673,5 +678,200 @@ describe("a seller writing first to the buyer of their own order (docs/seller-ce
 
     await setMessagingBlocked(db, staff, t.sellerActor.userId, true);
     await expect(startThreadWithOrderBuyer(db, await actorOf(t.sellerActor.userId), { orderId: t.orderId, body: "again" })).rejects.toBeInstanceOf(InvariantError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The inbox: who owes a reply, and the trash (each side has its own)
+// ---------------------------------------------------------------------------
+
+const itemFor = async (actor: Actor, threadId: string) => (await listThreads(db, actor)).find((x) => x.id === threadId)!;
+
+describe("who owes a reply", () => {
+  it("is the seller after the buyer writes, the buyer after the seller replies, and support messages change nothing", async () => {
+    const t = await withThread("needs-reply");
+    expect((await itemFor(t.sellerActor, t.threadId)).needsReply).toBe(true);
+    expect((await itemFor(t.buyer, t.threadId)).needsReply).toBe(false);
+
+    await pause();
+    await sendMessage(db, t.sellerActor, t.threadId, "Yes it is");
+    expect((await itemFor(t.sellerActor, t.threadId)).needsReply).toBe(false);
+    expect((await itemFor(t.buyer, t.threadId)).needsReply).toBe(true);
+
+    await pause();
+    const staff = await mkStaff("needs-reply-staff");
+    await postSupportMessage(db, staff, t.threadId, "Hello from support");
+    expect((await itemFor(t.sellerActor, t.threadId)).needsReply).toBe(false);
+    expect((await itemFor(t.buyer, t.threadId)).needsReply).toBe(true);
+  });
+});
+
+describe("moving a conversation to the trash", () => {
+  it("is each person's own: the other side still sees it in the inbox", async () => {
+    const t = await withThread("trash-own");
+    await moveToTrash(db, t.sellerActor, t.threadId);
+
+    expect((await itemFor(t.sellerActor, t.threadId)).trashed).toBe(true);
+    expect((await itemFor(t.buyer, t.threadId)).trashed).toBe(false);
+
+    await moveToTrash(db, t.buyer, t.threadId);
+    expect((await itemFor(t.buyer, t.threadId)).trashed).toBe(true);
+  });
+
+  it("marks what was waiting as read, so the unread badge does not keep counting it", async () => {
+    const t = await withThread("trash-read");
+    expect(await getUnreadCount(db, t.sellerActor)).toBe(1);
+    await moveToTrash(db, t.sellerActor, t.threadId);
+    expect(await getUnreadCount(db, t.sellerActor)).toBe(0);
+  });
+
+  it("brings it back to the inbox when the other side writes again", async () => {
+    const t = await withThread("trash-back");
+    await moveToTrash(db, t.sellerActor, t.threadId);
+    await pause();
+    await sendMessage(db, t.buyer, t.threadId, "Hello? Still there?");
+
+    const item = await itemFor(t.sellerActor, t.threadId);
+    expect(item.trashed).toBe(false);
+    expect(item.needsReply).toBe(true);
+    expect(item.unread).toBe(1);
+  });
+
+  it("brings it back for the buyer too, when the seller writes again", async () => {
+    const t = await withThread("trash-back-buyer");
+    await moveToTrash(db, t.buyer, t.threadId);
+    await pause();
+    await sendMessage(db, t.sellerActor, t.threadId, "Sorry for the delay");
+    expect((await itemFor(t.buyer, t.threadId)).trashed).toBe(false);
+  });
+
+  it("comes out of the trash for the person who writes in it", async () => {
+    const t = await withThread("trash-own-write");
+    await moveToTrash(db, t.sellerActor, t.threadId);
+    await sendMessage(db, t.sellerActor, t.threadId, "Actually, yes");
+    expect((await itemFor(t.sellerActor, t.threadId)).trashed).toBe(false);
+  });
+
+  it("is undone by restoring, and a support message brings it back for both people", async () => {
+    const t = await withThread("trash-restore");
+    await moveToTrash(db, t.sellerActor, t.threadId);
+    await restoreFromTrash(db, t.sellerActor, t.threadId);
+    expect((await itemFor(t.sellerActor, t.threadId)).trashed).toBe(false);
+
+    await moveToTrash(db, t.sellerActor, t.threadId);
+    await moveToTrash(db, t.buyer, t.threadId);
+    await pause();
+    await postSupportMessage(db, await mkStaff("trash-restore-staff"), t.threadId, "IVO here");
+    expect((await itemFor(t.sellerActor, t.threadId)).trashed).toBe(false);
+    expect((await itemFor(t.buyer, t.threadId)).trashed).toBe(false);
+  });
+
+  it("is only for the two people in the thread", async () => {
+    const t = await withThread("trash-party");
+    const stranger = await mkBuyer("trash-party-stranger");
+    const staff = await mkStaff("trash-party-staff");
+    await expect(moveToTrash(db, stranger, t.threadId)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(moveToTrash(db, staff, t.threadId)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(restoreFromTrash(db, stranger, t.threadId)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(moveToTrash(db, t.buyer, "nope")).rejects.toBeInstanceOf(NotFoundError);
+    expect((await itemFor(t.sellerActor, t.threadId)).trashed).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A direct conversation: a buyer and a seller, about no listing in particular
+// ---------------------------------------------------------------------------
+
+describe("a direct conversation with a seller", () => {
+  it("creates a thread with no listing and the buyer's first message together", async () => {
+    const seller = await mkSeller("direct-s");
+    const buyer = await mkBuyer("direct-b");
+    const { threadId } = await startDirectThread(db, buyer, { sellerId: seller.sellerId, body: "Do you ship to Varna?" });
+
+    const thread = await db.thread.findUniqueOrThrow({ where: { id: threadId }, include: { messages: true } });
+    expect(thread).toMatchObject({ listingId: null, buyerId: buyer.buyerId, sellerId: seller.sellerId });
+    expect(thread.messages.map((m) => [m.senderRole, m.body])).toEqual([["buyer", "Do you ship to Varna?"]]);
+  });
+
+  it("is one thread per buyer and seller: writing again, even at the same moment, goes into it", async () => {
+    const seller = await mkSeller("direct-one-s");
+    const buyer = await mkBuyer("direct-one-b");
+    const [x, y] = await Promise.all([
+      startDirectThread(db, buyer, { sellerId: seller.sellerId, body: "first" }),
+      startDirectThread(db, buyer, { sellerId: seller.sellerId, body: "second" }),
+    ]);
+    const z = await startDirectThread(db, buyer, { sellerId: seller.sellerId, body: "third" });
+
+    expect(new Set([x.threadId, y.threadId, z.threadId]).size).toBe(1);
+    expect(await db.thread.count({ where: { sellerId: seller.sellerId, buyerId: buyer.buyerId!, listingId: null } })).toBe(1);
+    expect(await db.message.count({ where: { threadId: x.threadId } })).toBe(3);
+    expect(await findDirectThread(db, buyer, seller.sellerId)).toBe(x.threadId);
+  });
+
+  it("is separate from the buyer's threads about that seller's listings, and from other buyers and sellers", async () => {
+    const seller = await mkSeller("direct-sep-s");
+    const other = await mkSeller("direct-sep-o");
+    const buyer = await mkBuyer("direct-sep-b");
+    const buyer2 = await mkBuyer("direct-sep-b2");
+    const listing = await mkListing(seller.sellerId);
+    const about = (await startThread(db, buyer, { listingCode: listing.code, body: "about the part" })).threadId;
+
+    const direct = (await startDirectThread(db, buyer, { sellerId: seller.sellerId, body: "in general" })).threadId;
+    const otherSeller = (await startDirectThread(db, buyer, { sellerId: other.sellerId, body: "hi" })).threadId;
+    const otherBuyer = (await startDirectThread(db, buyer2, { sellerId: seller.sellerId, body: "hi" })).threadId;
+
+    expect(new Set([about, direct, otherSeller, otherBuyer]).size).toBe(4);
+    expect(await findDirectThread(db, buyer, seller.sellerId)).toBe(direct);
+    expect(await findDirectThread(db, buyer, "nope")).toBeNull();
+  });
+
+  it("is for buyers, to a seller who has a login, who are not blocked, with a real message", async () => {
+    const seller = await mkSeller("direct-rules-s");
+    const noLogin = await mkSeller("direct-rules-n", "none");
+    const banned = await mkSeller("direct-rules-x", "banned");
+    const buyer = await mkBuyer("direct-rules-b");
+
+    await expect(startDirectThread(db, seller.actor!, { sellerId: seller.sellerId, body: "hi" })).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(startDirectThread(db, buyer, { sellerId: noLogin.sellerId, body: "hi" })).rejects.toBeInstanceOf(InvariantError);
+    await expect(startDirectThread(db, buyer, { sellerId: banned.sellerId, body: "hi" })).rejects.toBeInstanceOf(InvariantError);
+    await expect(startDirectThread(db, buyer, { sellerId: "nope", body: "hi" })).rejects.toBeInstanceOf(NotFoundError);
+    await expect(startDirectThread(db, buyer, { sellerId: seller.sellerId, body: "   " })).rejects.toBeInstanceOf(InvariantError);
+
+    const staff = await mkStaff("direct-rules-staff");
+    await setMessagingBlocked(db, staff, buyer.userId, true);
+    await expect(startDirectThread(db, await actorOf(buyer.userId), { sellerId: seller.sellerId, body: "hi" })).rejects.toBeInstanceOf(InvariantError);
+    expect(await db.thread.count({ where: { sellerId: { in: [seller.sellerId, noLogin.sellerId, banned.sellerId] } } })).toBe(0);
+  });
+
+  it("shows in both people's lists and opens with no listing header, and both can write in it", async () => {
+    const seller = await mkSeller("direct-view-s");
+    const buyer = await mkBuyer("direct-view-b");
+    const { threadId } = await startDirectThread(db, buyer, { sellerId: seller.sellerId, body: "Do you have a gearbox for a Golf?" });
+
+    expect(await itemFor(seller.actor!, threadId)).toMatchObject({
+      listing: null,
+      otherPartyName: S("Buyer direct-view-b"),
+      otherPartyId: buyer.buyerId,
+      needsReply: true,
+    });
+    expect(await itemFor(buyer, threadId)).toMatchObject({
+      listing: null,
+      otherPartyName: S("Seller direct-view-s"),
+      otherPartyId: seller.sellerId,
+    });
+
+    expect(await getThread(db, seller.actor!, threadId)).toMatchObject({ listing: null, state: "open" });
+    await sendMessage(db, seller.actor!, threadId, "Yes, I do");
+    expect((await getThread(db, buyer, threadId))!.messages.map((m) => m.from)).toEqual(["me", "them"]);
+  });
+
+  it("is visible to staff, who see that it is about no listing", async () => {
+    const seller = await mkSeller("direct-staff-s");
+    const buyer = await mkBuyer("direct-staff-b");
+    const { threadId } = await startDirectThread(db, buyer, { sellerId: seller.sellerId, body: "hello" });
+    const staff = await mkStaff("direct-staff-staff");
+
+    expect((await listThreadsForStaff(db, staff)).find((x) => x.id === threadId)).toMatchObject({ listing: null });
+    expect(await getThreadForStaff(db, staff, threadId)).toMatchObject({ listing: null, buyerName: S("Buyer direct-staff-b") });
   });
 });
