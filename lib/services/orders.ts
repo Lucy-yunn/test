@@ -357,6 +357,8 @@ export interface OrderView {
 }
 
 export interface BuyerOrderView extends OrderView {
+  /** Whether this order already has a review, so the page stops offering Leave a review. */
+  reviewed: boolean;
   seller: {
     id: string;
     name: string;
@@ -458,6 +460,7 @@ export async function getBuyerOrder(
     where: mine,
     select: {
       ...orderSelect,
+      review: { select: { id: true } },
       seller: {
         select: {
           id: true,
@@ -474,6 +477,7 @@ export async function getBuyerOrder(
 
   return {
     ...toView(o),
+    reviewed: o.review !== null,
     seller: {
       id: o.seller.id,
       name: o.seller.displayName,
