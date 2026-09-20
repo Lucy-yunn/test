@@ -3,6 +3,7 @@ import { Link } from "@/i18n/navigation";
 import { db } from "@/lib/db";
 import { getActor } from "@/lib/dal/session";
 import { getUnreadCount } from "@/lib/services/messaging";
+import { getNotificationUnreadCount } from "@/lib/services/notifications";
 import { DeliveryTo } from "./delivery-to";
 import { currentDeliveryLocation } from "./delivery-location";
 import { LocaleSelect } from "./locale-select";
@@ -11,7 +12,10 @@ export async function SiteHeader() {
   const t = await getTranslations("Nav");
   const actor = await getActor();
   const { city, source } = await currentDeliveryLocation();
-  const unread = actor?.role === "buyer" ? await getUnreadCount(db, actor) : 0;
+  const [unread, alerts] =
+    actor?.role === "buyer"
+      ? await Promise.all([getUnreadCount(db, actor), getNotificationUnreadCount(db, actor)])
+      : [0, 0];
 
   return (
     <header className="bg-purple-800 text-white">
@@ -38,6 +42,14 @@ export async function SiteHeader() {
         <div className="flex items-center gap-4 text-sm">
           {actor?.role === "buyer" ? (
             <>
+              <Link href="/account/notifications" aria-label={t("notifications")}>
+                <span aria-hidden>🔔</span>
+                {alerts > 0 ? (
+                  <span className="ml-1 rounded-full bg-amber-300 px-2 py-0.5 text-xs text-purple-900" aria-label={`${alerts} unread`}>
+                    {alerts}
+                  </span>
+                ) : null}
+              </Link>
               <Link href="/account/orders">{t("myOrders")}</Link>
               <Link href="/account/messages">
                 {t("messages")}

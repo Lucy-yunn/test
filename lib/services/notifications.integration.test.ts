@@ -10,6 +10,7 @@ import {
   listNotifications,
   markRead,
   markAllRead,
+  markReviewsRead,
 } from "./notifications";
 
 /**
@@ -414,5 +415,26 @@ describe("the feed", () => {
   it("returns only the newest ones when asked for a limit", async () => {
     const t = await withFeed("limit");
     expect((await listNotifications(db, t.buyer, { limit: 1 })).map((n) => n.type)).toEqual(["order_completed"]);
+  });
+});
+
+describe("opening a seller's reviews", () => {
+  it("marks a buyer's reply notices for that seller only, and a seller's review notices all", async () => {
+    const a = await mkSeller("rv-a");
+    const b = await mkSeller("rv-b");
+    const buyer = await mkBuyer("rv");
+    for (const seller of [a, b]) {
+      const { id } = await createReview(db, buyer, { sellerId: seller.sellerId, rating: 5 });
+      await replyToReview(db, seller.actor, id, "Thanks");
+    }
+    expect(await getNotificationUnreadCount(db, buyer)).toBe(2);
+
+    expect(await markReviewsRead(db, buyer, a.sellerId)).toBe(1);
+
+    expect(await getNotificationUnreadCount(db, buyer)).toBe(1);
+    expect((await listNotifications(db, buyer)).filter((n) => !n.readAt).map((n) => n.href)).toEqual([`/sellers/${b.sellerId}?tab=reviews`]);
+    expect(await markReviewsRead(db, a.actor)).toBe(1);
+    expect(await getNotificationUnreadCount(db, a.actor)).toBe(0);
+    expect(await getNotificationUnreadCount(db, b.actor)).toBe(1); // another seller's notice is untouched
   });
 });

@@ -335,6 +335,7 @@ export async function sweepOverdueCancellations(
 // ---------------------------------------------------------------------------
 
 export interface OrderCancellationView {
+  id: string;
   state: "pending" | "approved";
   reason: CancellationReason;
   reasonDetail: string | null;
@@ -410,7 +411,7 @@ export const orderSelect = {
   postcode: true,
   country: true,
   cancellationRequest: {
-    select: { state: true, reason: true, reasonDetail: true, autoApproveAt: true, resolvedAt: true, resolvedBy: true },
+    select: { id: true, state: true, reason: true, reasonDetail: true, autoApproveAt: true, resolvedAt: true, resolvedBy: true },
   },
   listing: {
     select: {

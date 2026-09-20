@@ -102,6 +102,17 @@ export async function markRead(
   return count;
 }
 
+/**
+ * Opening a seller's Reviews. A seller marks all their review notices read. A buyer marks the
+ * "the seller replied" notices for their own reviews of that seller.
+ */
+export async function markReviewsRead(db: PrismaClient, actor: Actor, sellerId?: string): Promise<number> {
+  if (isSeller(actor)) return markRead(db, actor, { subjectType: "review" });
+  if (!isBuyer(actor) || !sellerId) return 0;
+  const mine = await db.review.findMany({ where: { buyerId: actor.buyerId!, sellerId }, select: { id: true } });
+  return markRead(db, actor, { subjectType: "review", subjectIds: mine.map((r) => r.id) });
+}
+
 /** Mark all as read: clears the person's feed. */
 export async function markAllRead(db: PrismaClient, actor: Actor): Promise<number> {
   if (!hasFeed(actor)) return 0;

@@ -4,6 +4,7 @@ import { requireSeller } from "@/lib/dal/session";
 import { formatDay } from "@/lib/format-date";
 import { getCreditSummary } from "@/lib/services/credits";
 import { LOW_CREDIT_THRESHOLD } from "@/lib/services/seller-center";
+import { markRead } from "@/lib/services/notifications";
 
 const KIND_LABEL = { topup: "Top-up", publish: "Listing published", adjustment: "Adjustment" } as const;
 
@@ -14,6 +15,7 @@ export default async function SellerCreditsPage({ params }: PageProps<"/[locale]
   const actor = await requireSeller();
 
   const { balance, entries } = await getCreditSummary(db, actor.sellerId!);
+  await markRead(db, actor, { subjectType: "credit_ledger_entry" }); // opening your credits clears the low-credit notices
   const low = balance <= LOW_CREDIT_THRESHOLD;
 
   return (

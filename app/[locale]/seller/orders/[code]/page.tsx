@@ -6,6 +6,7 @@ import { requireSeller } from "@/lib/dal/session";
 import { Link } from "@/i18n/navigation";
 import { formatDay } from "@/lib/format-date";
 import { getSellerOrder } from "@/lib/services/seller-center";
+import { markRead } from "@/lib/services/notifications";
 import { CANCELLATION_REASON_LABEL, ORDER_STATUS_LABEL } from "@/lib/order-labels";
 import { OrderTracker } from "../../../_components/order-tracker";
 import { OrderButtons } from "../order-buttons";
@@ -24,6 +25,9 @@ export default async function SellerOrderPage({ params }: PageProps<"/[locale]/s
 
   const o = await getSellerOrder(db, actor, decodeURIComponent(code));
   if (!o) notFound();
+  // Opening the order marks the notices about it (and about its cancellation request) as read.
+  await markRead(db, actor, { subjectType: "order", subjectIds: [o.id] });
+  if (o.cancellation) await markRead(db, actor, { subjectType: "cancellation_request", subjectIds: [o.cancellation.id] });
 
   const a = o.address;
   const pending = o.cancellation?.state === "pending";
