@@ -1,4 +1,5 @@
 import type { PrismaClient, Prisma, NumberType } from "@prisma/client";
+import { blankToNull } from "../text";
 import { ConflictError, InvariantError, NotFoundError } from "../dal/errors";
 import { assertTransition, PART_STATUS_TRANSITIONS } from "../dal/transitions";
 import { normalizePartNumber } from "../dal/part-number";
@@ -64,7 +65,7 @@ export async function createPart(
           categoryId: input.categoryId,
           name: input.name.trim(),
           attributes: attributes as Prisma.InputJsonValue,
-          notes: input.notes?.trim() || null,
+          notes: blankToNull(input.notes),
           createdBy: input.createdBy ?? null,
         },
         select: { id: true, internalCode: true },
@@ -97,7 +98,7 @@ export async function updatePart(
 
   const data: Prisma.PartUpdateInput = {};
   if (patch.name !== undefined) data.name = patch.name.trim();
-  if (patch.notes !== undefined) data.notes = patch.notes?.trim() || null;
+  if (patch.notes !== undefined) data.notes = blankToNull(patch.notes);
 
   const categoryId = patch.categoryId ?? part.categoryId;
   if (patch.categoryId !== undefined) {
@@ -182,7 +183,7 @@ export async function addPartNumber(
         raw: input.raw.trim(),
         normalized,
         numberType: input.numberType ?? "oem",
-        brand: input.brand?.trim() || null,
+        brand: blankToNull(input.brand),
         isPrimary: input.isPrimary ?? false,
         verified: input.verified ?? false,
       },
@@ -218,7 +219,7 @@ export async function updatePartNumber(
       data.normalized = normalizePartNumber(patch.raw);
     }
     if (patch.numberType !== undefined) data.numberType = patch.numberType;
-    if (patch.brand !== undefined) data.brand = patch.brand?.trim() || null;
+    if (patch.brand !== undefined) data.brand = blankToNull(patch.brand);
     if (patch.isPrimary !== undefined) data.isPrimary = patch.isPrimary;
     if (patch.verified !== undefined) data.verified = patch.verified;
     await tx.partNumber.update({ where: { id }, data });

@@ -5,6 +5,7 @@ import {
   sellerIsAvailable,
   type SellerLoginState,
 } from "../dal/seller-availability";
+import { blankToNull, firstLine } from "../text";
 import { maskVin } from "./listing-detail";
 
 /**
@@ -145,8 +146,6 @@ export interface SellerCarsResult {
     fuels: string[];
   };
 }
-
-export const firstLine = (text: string | null): string | null => text?.split(/\r?\n/, 1)[0]?.trim() || null;
 
 /**
  * A seller's donor vehicles that have at least one part on the shelf or sold. A car
@@ -360,7 +359,7 @@ export async function getDonorVehiclePage(
     transmission: d.transmission,
     bodyStyle: d.bodyStyle,
     drivetrain: d.drivetrain,
-    scrapReason: d.scrapReason?.trim() || null,
+    scrapReason: blankToNull(d.scrapReason),
     photos: d.photos,
     seller: {
       id: d.seller.id,

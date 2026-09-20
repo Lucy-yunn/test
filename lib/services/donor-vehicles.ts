@@ -1,4 +1,5 @@
 import type { PrismaClient, Transmission } from "@prisma/client";
+import { blankToNull } from "../text";
 import { NotFoundError } from "../dal/errors";
 
 /**
@@ -27,7 +28,6 @@ export interface DonorVehicleInput {
   drivetrain?: string | null;
 }
 
-const clean = (s?: string | null) => s?.trim() || null;
 
 export async function createDonorVehicle(
   db: PrismaClient,
@@ -46,18 +46,18 @@ export async function createDonorVehicle(
       generationId: input.generationId,
       label: input.label.trim(),
       donorYear: input.donorYear ?? null,
-      vin: clean(input.vin),
-      vinDerivedNotes: clean(input.vinDerivedNotes),
+      vin: blankToNull(input.vin),
+      vinDerivedNotes: blankToNull(input.vinDerivedNotes),
       mileageKm: input.mileageKm ?? null,
-      registrationCountry: clean(input.registrationCountry),
-      notes: clean(input.notes),
-      scrapReason: clean(input.scrapReason),
-      engine: clean(input.engine),
-      engineCode: clean(input.engineCode),
-      fuel: clean(input.fuel),
+      registrationCountry: blankToNull(input.registrationCountry),
+      notes: blankToNull(input.notes),
+      scrapReason: blankToNull(input.scrapReason),
+      engine: blankToNull(input.engine),
+      engineCode: blankToNull(input.engineCode),
+      fuel: blankToNull(input.fuel),
       transmission: input.transmission ?? null,
-      bodyStyle: clean(input.bodyStyle),
-      drivetrain: clean(input.drivetrain),
+      bodyStyle: blankToNull(input.bodyStyle),
+      drivetrain: blankToNull(input.drivetrain),
       createdBy: createdBy ?? null,
     },
     select: { id: true },
@@ -83,18 +83,18 @@ export async function updateDonorVehicle(
   if (patch.generationId !== undefined) data.generationId = patch.generationId;
   if (patch.label !== undefined) data.label = patch.label.trim();
   if (patch.donorYear !== undefined) data.donorYear = patch.donorYear ?? null;
-  if (patch.vin !== undefined) data.vin = clean(patch.vin);
-  if (patch.vinDerivedNotes !== undefined) data.vinDerivedNotes = clean(patch.vinDerivedNotes);
+  if (patch.vin !== undefined) data.vin = blankToNull(patch.vin);
+  if (patch.vinDerivedNotes !== undefined) data.vinDerivedNotes = blankToNull(patch.vinDerivedNotes);
   if (patch.mileageKm !== undefined) data.mileageKm = patch.mileageKm ?? null;
-  if (patch.registrationCountry !== undefined) data.registrationCountry = clean(patch.registrationCountry);
-  if (patch.notes !== undefined) data.notes = clean(patch.notes);
-  if (patch.scrapReason !== undefined) data.scrapReason = clean(patch.scrapReason);
-  if (patch.engine !== undefined) data.engine = clean(patch.engine);
-  if (patch.engineCode !== undefined) data.engineCode = clean(patch.engineCode);
-  if (patch.fuel !== undefined) data.fuel = clean(patch.fuel);
+  if (patch.registrationCountry !== undefined) data.registrationCountry = blankToNull(patch.registrationCountry);
+  if (patch.notes !== undefined) data.notes = blankToNull(patch.notes);
+  if (patch.scrapReason !== undefined) data.scrapReason = blankToNull(patch.scrapReason);
+  if (patch.engine !== undefined) data.engine = blankToNull(patch.engine);
+  if (patch.engineCode !== undefined) data.engineCode = blankToNull(patch.engineCode);
+  if (patch.fuel !== undefined) data.fuel = blankToNull(patch.fuel);
   if (patch.transmission !== undefined) data.transmission = patch.transmission ?? null;
-  if (patch.bodyStyle !== undefined) data.bodyStyle = clean(patch.bodyStyle);
-  if (patch.drivetrain !== undefined) data.drivetrain = clean(patch.drivetrain);
+  if (patch.bodyStyle !== undefined) data.bodyStyle = blankToNull(patch.bodyStyle);
+  if (patch.drivetrain !== undefined) data.drivetrain = blankToNull(patch.drivetrain);
 
   await db.donorVehicle.update({ where: { id }, data });
 }

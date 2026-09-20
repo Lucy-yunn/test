@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
+import { blankToNull } from "../text";
 import { ConflictError, NotFoundError } from "../dal/errors";
 import { slugify } from "./slug";
 
@@ -16,8 +17,8 @@ export async function addMake(
 ): Promise<{ id: string }> {
   return create(db, "vehicleMake", {
     name: input.name.trim(),
-    slug: input.slug?.trim() || slugify(input.name),
-    country: input.country?.trim() || null,
+    slug: blankToNull(input.slug) ?? slugify(input.name),
+    country: blankToNull(input.country),
     displayOrder: input.displayOrder ?? 0,
   });
 }
@@ -30,7 +31,7 @@ export async function addModelGroup(
   return create(db, "vehicleModelGroup", {
     makeId: input.makeId,
     name: input.name.trim(),
-    slug: input.slug?.trim() || slugify(input.name),
+    slug: blankToNull(input.slug) ?? slugify(input.name),
     displayOrder: input.displayOrder ?? 0,
   });
 }
@@ -54,7 +55,7 @@ export async function addGeneration(
   return create(db, "vehicleGeneration", {
     modelGroupId: input.modelGroupId,
     label: input.label.trim(),
-    slug: input.slug?.trim() || slugify(input.label),
+    slug: blankToNull(input.slug) ?? slugify(input.label),
     chassisCodes: (input.chassisCodes ?? []).map((c) => c.trim()).filter(Boolean),
     productionStart: input.productionStart ?? null,
     productionEnd: input.productionEnd ?? null,
@@ -90,7 +91,7 @@ export async function renameCatalogueRow(
   const data: Record<string, unknown> = {};
   if (patch.name !== undefined) data.name = patch.name.trim();
   if (patch.label !== undefined) data.label = patch.label.trim();
-  if (patch.country !== undefined) data.country = patch.country?.trim() || null;
+  if (patch.country !== undefined) data.country = blankToNull(patch.country);
   if (patch.displayOrder !== undefined) data.displayOrder = patch.displayOrder;
   if (model === "vehicleMake") await db.vehicleMake.update({ where: { id }, data });
   else if (model === "vehicleModelGroup") await db.vehicleModelGroup.update({ where: { id }, data });

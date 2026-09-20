@@ -1,4 +1,5 @@
 import type { PrismaClient, Prisma, Condition, ListingStatus } from "@prisma/client";
+import { blankToNull } from "../text";
 import { InvariantError, NotFoundError } from "../dal/errors";
 import { assertTransition, LISTING_TRANSITIONS } from "../dal/transitions";
 import { assertSellerOwnsDonorVehicle } from "../dal/invariants";
@@ -21,15 +22,6 @@ import {
  * `draft → published` gate, and the staff-allowed status transitions
  * (never `reserved` / `sold` — those are order-driven).
  */
-
-/**
- * Blank or whitespace-only → `null`; any real value (including `"0"` / `"0.00"`)
- * is trimmed and kept. Used for BOTH free-text and decimal-string columns —
- * Prisma's `Decimal` input rejects `""` ("Failed to parse empty string"), so an
- * unknown measurement must reach it as `null`, never `""`.
- */
-export const blankToNull = (s?: string | null): string | null =>
-  s?.trim() || null;
 
 export interface CreateListingInput {
   donorVehicleId: string;
