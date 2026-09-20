@@ -48,7 +48,10 @@ export function SellerHeader({
 
       <div className="min-w-0 flex-1">
         <h1 className="text-2xl font-semibold">{profile.name}</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">{formatRating(rating)}</p>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          {rating.isNew ? null : <span aria-hidden className="mr-1 text-amber-500">★</span>}
+          {formatRating(rating)}
+        </p>
       </div>
 
       <dl className="grid gap-1 text-sm">
@@ -87,7 +90,14 @@ export function SellerHeader({
           <details className="relative">
             <summary className="cursor-pointer list-none rounded border px-3 py-1 text-sm">Message</summary>
             <div className="absolute right-0 z-10 mt-2 w-72 rounded border border-zinc-200 bg-white p-3 text-sm text-zinc-900 shadow dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
-              <p className="font-medium">Which part is your message about?</p>
+              <Link
+                href={`/sellers/${profile.id}/message`}
+                className="block rounded bg-purple-700 px-2 py-1.5 text-center font-medium text-white hover:bg-purple-800"
+              >
+                Direct message
+              </Link>
+              <p className="mt-1 text-xs text-zinc-500">Not about a particular part.</p>
+              <p className="mt-3 font-medium">Or about a part:</p>
               {messageable.length === 0 ? (
                 <p className="mt-2 text-zinc-500">This seller has no parts on sale right now.</p>
               ) : (

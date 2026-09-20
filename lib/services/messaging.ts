@@ -36,7 +36,11 @@ function assertNotBlocked(actor: Actor): void {
   if (actor.messagingBlocked) throw new InvariantError("Messaging has been turned off for your account");
 }
 
-/** Append a message and move the thread to the top. `sentAt` and `lastMessageAt` stay equal. */
+/**
+ * Append a message and move the thread to the top. `sentAt` and `lastMessageAt` stay equal.
+ * A new message also takes the thread out of both people's trash: the other side must see it,
+ * and the sender is plainly not done with it.
+ */
 async function appendMessage(
   tx: Prisma.TransactionClient,
   threadId: string,
@@ -47,7 +51,7 @@ async function appendMessage(
   await tx.message.create({
     data: { threadId, senderRole: sender.role, senderUserId: sender.userId, body, sentAt: now },
   });
-  await tx.thread.update({ where: { id: threadId }, data: { lastMessageAt: now } });
+  await tx.thread.update({ where: { id: threadId }, data: { lastMessageAt: now, buyerTrashedAt: null, sellerTrashedAt: null } });
 }
 
 function assertStaff(actor: Actor): void {
@@ -109,6 +113,66 @@ export async function startThread(
             listingId: listing.id,
             buyerId: actor.buyerId!,
             sellerId: listing.sellerId,
+            createdAt: now,
+            lastMessageAt: now,
+            messages: { create: { senderRole: "buyer", senderUserId: actor.userId, body, sentAt: now } },
+          },
+          select: { id: true },
+        });
+        return { threadId: thread.id };
+      });
+    } catch (err) {
+      if (isUniqueViolation(err)) continue;
+      throw err;
+    }
+  }
+  throw new InvariantError("Could not start the conversation, try again");
+}
+
+/** The buyer's direct conversation with a seller (about no listing), or null when they have not written yet. */
+export async function findDirectThread(db: PrismaClient, actor: Actor, sellerId: string): Promise<string | null> {
+  if (!isBuyer(actor)) return null;
+  const thread = await db.thread.findFirst({ where: { listingId: null, buyerId: actor.buyerId!, sellerId }, select: { id: true } });
+  return thread?.id ?? null;
+}
+
+/**
+ * A buyer writes to a seller about no listing in particular (docs/messaging-model.md section
+ * 3.5). There is one such thread per buyer and seller, so writing again goes into it. The
+ * thread and its first message are created together.
+ */
+export async function startDirectThread(
+  db: PrismaClient,
+  actor: Actor,
+  input: { sellerId: string; body: string },
+): Promise<{ threadId: string }> {
+  if (!isBuyer(actor)) throw new ForbiddenError("Messaging a seller is for buyer accounts");
+  const body = checkedBody(input.body);
+  assertNotBlocked(actor);
+
+  const seller = await db.seller.findUnique({ where: { id: input.sellerId }, select: SELLER_AVAILABILITY_SELECT });
+  if (!seller) throw new NotFoundError("Seller not found");
+  if (!sellerIsAvailable(seller)) throw new InvariantError("Messaging isn't available for this seller");
+
+  // Two starts at the same moment: one creates the thread, the other finds it on its retry.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await db.$transaction(async (tx) => {
+        const existing = await tx.thread.findFirst({
+          where: { listingId: null, buyerId: actor.buyerId!, sellerId: input.sellerId },
+          select: { id: true, lockedAt: true },
+        });
+        if (existing) {
+          if (existing.lockedAt) throw new InvariantError(CLOSED_BY_IVO);
+          await appendMessage(tx, existing.id, { userId: actor.userId, role: "buyer" }, body);
+          return { threadId: existing.id };
+        }
+        const now = new Date();
+        const thread = await tx.thread.create({
+          data: {
+            listingId: null,
+            buyerId: actor.buyerId!,
+            sellerId: input.sellerId,
             createdAt: now,
             lastMessageAt: now,
             messages: { create: { senderRole: "buyer", senderUserId: actor.userId, body, sentAt: now } },
@@ -217,13 +281,20 @@ export async function sendMessage(db: PrismaClient, actor: Actor, threadId: stri
 
 export interface ThreadListItem {
   id: string;
-  listing: { code: string; title: string; photoUrl: string | null };
+  /** Null for a direct conversation, which is about no listing in particular. */
+  listing: { code: string; title: string; photoUrl: string | null } | null;
   /** The seller's display name for a buyer, the buyer's name for a seller. */
   otherPartyName: string;
+  /** The other person's id (the seller's for a buyer, the buyer's for a seller), to group by. */
+  otherPartyId: string;
   lastMessage: { body: string; from: "me" | "them" | "support" } | null;
   lastMessageAt: Date;
   unread: number;
   locked: boolean;
+  /** The other side wrote last (support messages do not count): this person owes the reply. */
+  needsReply: boolean;
+  /** In this person's own trash. */
+  trashed: boolean;
 }
 
 export interface ThreadMessageView {
@@ -237,6 +308,7 @@ export interface ThreadMessageView {
 export interface ThreadView {
   id: string;
   otherPartyName: string;
+  /** Null for a direct conversation: there is no listing header. */
   listing: {
     code: string;
     title: string;
@@ -244,9 +316,11 @@ export interface ThreadView {
     photoUrl: string | null;
     status: ListingStatus;
     badge: string | null;
-  };
+  } | null;
   /** `open`, `locked` by staff, or `blocked` (this person may read but not write). */
   state: "open" | "locked" | "blocked";
+  /** In this person's own trash. */
+  trashed: boolean;
   reportedByMe: boolean;
   messages: ThreadMessageView[];
 }
@@ -265,8 +339,12 @@ export async function listThreads(db: PrismaClient, actor: Actor): Promise<Threa
     orderBy: [{ lastMessageAt: "desc" }, { id: "desc" }],
     select: {
       id: true,
+      buyerId: true,
+      sellerId: true,
       lastMessageAt: true,
       lockedAt: true,
+      buyerTrashedAt: true,
+      sellerTrashedAt: true,
       listing: {
         select: {
           internalCode: true,
@@ -281,16 +359,57 @@ export async function listThreads(db: PrismaClient, actor: Actor): Promise<Threa
     },
   });
 
+  // Who wrote last, leaving support out: a support message does not answer anyone's question.
+  const lastByAPerson = await db.message.findMany({
+    where: { threadId: { in: rows.map((r) => r.id) }, senderRole: { not: "staff" } },
+    orderBy: [{ sentAt: "desc" }, { id: "desc" }],
+    distinct: ["threadId"],
+    select: { threadId: true, senderRole: true },
+  });
+  const lastRole = new Map(lastByAPerson.map((m) => [m.threadId, m.senderRole]));
+  const otherRole: SenderRole = viewerRole === "buyer" ? "seller" : "buyer";
+
   return rows.map((t) => ({
     id: t.id,
-    listing: { code: t.listing.internalCode, title: t.listing.part.name, photoUrl: t.listing.photos[0]?.url ?? null },
+    listing: t.listing
+      ? { code: t.listing.internalCode, title: t.listing.part.name, photoUrl: t.listing.photos[0]?.url ?? null }
+      : null,
     otherPartyName: viewerRole === "buyer" ? t.seller.displayName : t.buyer.user.name,
+    otherPartyId: viewerRole === "buyer" ? t.sellerId : t.buyerId,
     lastMessage: t.messages[0] ? { body: t.messages[0].body, from: fromViewer(t.messages[0].senderRole, viewerRole) } : null,
     lastMessageAt: t.lastMessageAt,
     unread: t._count.messages,
     locked: t.lockedAt !== null,
+    needsReply: lastRole.get(t.id) === otherRole,
+    trashed: (viewerRole === "buyer" ? t.buyerTrashedAt : t.sellerTrashedAt) !== null,
   }));
 }
+
+async function setTrashed(db: PrismaClient, actor: Actor, threadId: string, trashed: boolean): Promise<void> {
+  if (!isBuyer(actor) && !isSeller(actor)) throw new ForbiddenError("Only the buyer and the seller can move a conversation");
+  const thread = await db.thread.findUnique({ where: { id: threadId }, select: { buyerId: true, sellerId: true } });
+  if (!thread) throw new NotFoundError("Conversation not found");
+  const isParty = isBuyer(actor) ? actor.buyerId === thread.buyerId : actor.sellerId === thread.sellerId;
+  if (!isParty) throw new ForbiddenError("Not your conversation");
+
+  const column = isBuyer(actor) ? "buyerTrashedAt" : "sellerTrashedAt";
+  await db.$transaction(async (tx) => {
+    await tx.thread.update({ where: { id: threadId }, data: { [column]: trashed ? new Date() : null } });
+    // What the person threw away should not keep showing on their unread badge.
+    if (trashed) {
+      await tx.message.updateMany({
+        where: { threadId, readAt: null, senderUserId: { not: actor.userId } },
+        data: { readAt: new Date() },
+      });
+    }
+  });
+}
+
+/** Put a conversation in this person's own trash. The other side is not told and still sees it. */
+export const moveToTrash = (db: PrismaClient, actor: Actor, threadId: string) => setTrashed(db, actor, threadId, true);
+
+/** Take a conversation out of this person's trash. (A new message from the other side does it too.) */
+export const restoreFromTrash = (db: PrismaClient, actor: Actor, threadId: string) => setTrashed(db, actor, threadId, false);
 
 /** How many messages from the other side (or from support) this person has not opened yet. */
 export async function getUnreadCount(db: PrismaClient, actor: Actor): Promise<number> {
@@ -320,6 +439,8 @@ export async function getThread(db: PrismaClient, actor: Actor, threadId: string
       buyerId: true,
       sellerId: true,
       lockedAt: true,
+      buyerTrashedAt: true,
+      sellerTrashedAt: true,
       listing: {
         select: {
           internalCode: true,
@@ -349,25 +470,29 @@ export async function getThread(db: PrismaClient, actor: Actor, threadId: string
     select: { id: true, body: true, sentAt: true, senderRole: true },
   });
 
+  const listing = thread.listing;
   const reservedBy: ReservedBy =
-    thread.listing.status !== "reserved" || viewerRole === "seller"
+    !listing || listing.status !== "reserved" || viewerRole === "seller"
       ? "none"
-      : thread.listing.orders[0]?.buyerId === actor.buyerId
+      : listing.orders[0]?.buyerId === actor.buyerId
         ? "viewer"
         : "someone_else";
 
   return {
     id: thread.id,
     otherPartyName: viewerRole === "buyer" ? thread.seller.displayName : thread.buyer.user.name,
-    listing: {
-      code: thread.listing.internalCode,
-      title: thread.listing.part.name,
-      priceEur: String(thread.listing.priceEur),
-      photoUrl: thread.listing.photos[0]?.url ?? null,
-      status: thread.listing.status,
-      badge: threadListingBadge(thread.listing.status, reservedBy),
-    },
+    listing: listing
+      ? {
+          code: listing.internalCode,
+          title: listing.part.name,
+          priceEur: String(listing.priceEur),
+          photoUrl: listing.photos[0]?.url ?? null,
+          status: listing.status,
+          badge: threadListingBadge(listing.status, reservedBy),
+        }
+      : null,
     state: thread.lockedAt ? "locked" : actor.messagingBlocked ? "blocked" : "open",
+    trashed: (viewerRole === "buyer" ? thread.buyerTrashedAt : thread.sellerTrashedAt) !== null,
     reportedByMe: thread.reports.length > 0,
     messages: messages.map((m) => ({ id: m.id, body: m.body, sentAt: m.sentAt, from: fromViewer(m.senderRole, viewerRole) })),
   };
@@ -418,7 +543,8 @@ export async function reportThread(db: PrismaClient, actor: Actor, threadId: str
 
 export interface StaffThreadListItem {
   id: string;
-  listing: { code: string; title: string };
+  /** Null for a direct conversation. */
+  listing: { code: string; title: string } | null;
   buyerName: string;
   sellerName: string;
   lastMessageAt: Date;
@@ -444,7 +570,7 @@ export async function listThreadsForStaff(db: PrismaClient, actor: Actor): Promi
   });
   return rows.map((t) => ({
     id: t.id,
-    listing: { code: t.listing.internalCode, title: t.listing.part.name },
+    listing: t.listing ? { code: t.listing.internalCode, title: t.listing.part.name } : null,
     buyerName: t.buyer.user.name,
     sellerName: t.seller.displayName,
     lastMessageAt: t.lastMessageAt,
@@ -456,7 +582,8 @@ export async function listThreadsForStaff(db: PrismaClient, actor: Actor): Promi
 
 export interface StaffThreadView {
   id: string;
-  listing: { code: string; title: string; status: ListingStatus };
+  /** Null for a direct conversation. */
+  listing: { code: string; title: string; status: ListingStatus } | null;
   buyerName: string;
   sellerName: string;
   locked: boolean;
@@ -484,7 +611,7 @@ export async function getThreadForStaff(db: PrismaClient, actor: Actor, threadId
   if (!t) throw new NotFoundError("Conversation not found");
   return {
     id: t.id,
-    listing: { code: t.listing.internalCode, title: t.listing.part.name, status: t.listing.status },
+    listing: t.listing ? { code: t.listing.internalCode, title: t.listing.part.name, status: t.listing.status } : null,
     buyerName: t.buyer.user.name,
     sellerName: t.seller.displayName,
     locked: t.lockedAt !== null,

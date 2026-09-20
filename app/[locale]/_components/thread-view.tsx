@@ -1,42 +1,50 @@
 import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import type { ThreadView } from "@/lib/services/messaging";
-import { AutoRefresh, ReplyForm, ReportForm } from "./thread-forms";
+import { AutoRefresh, ReplyForm, ReportForm, TrashButton } from "./thread-forms";
 
 const WHEN = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
 
 /**
  * One conversation, for the buyer or the seller (docs/messaging-model.md sections 3 to 5):
- * the pinned listing header with its badge, the messages, and the reply box. Support messages
- * are shown as IVO Support and never as the other person.
+ * the pinned listing header with its badge (a direct conversation has none), the messages, and
+ * the reply box. Support messages are shown as IVO Support and never as the other person.
  */
 export function ThreadPanel({ view, path }: { view: ThreadView; path: string }) {
-  const onSale = view.listing.status === "published" || view.listing.status === "reserved";
+  const listing = view.listing;
+  const onSale = listing?.status === "published" || listing?.status === "reserved";
   return (
     <div className="flex flex-col gap-4">
       <AutoRefresh />
 
-      <div className="flex items-center gap-3 rounded border border-zinc-200 p-3 dark:border-zinc-800">
-        {view.listing.photoUrl ? (
-          <Image src={view.listing.photoUrl} alt="" width={64} height={64} unoptimized className="h-16 w-16 rounded object-cover" />
-        ) : null}
-        <div className="min-w-0 flex-1">
-          {onSale ? (
-            <Link href={`/listing/${view.listing.code}`} className="font-medium underline">
-              {view.listing.title}
-            </Link>
-          ) : (
-            <span className="font-medium">{view.listing.title}</span>
-          )}
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">€{view.listing.priceEur}</p>
-          {view.listing.badge ? (
-            <span className="mt-1 inline-block rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-              {view.listing.badge}
-            </span>
+      {listing ? (
+        <div className="flex items-center gap-3 rounded border border-zinc-200 p-3 dark:border-zinc-800">
+          {listing.photoUrl ? (
+            <Image src={listing.photoUrl} alt="" width={64} height={64} unoptimized className="h-16 w-16 rounded object-cover" />
           ) : null}
+          <div className="min-w-0 flex-1">
+            {onSale ? (
+              <Link href={`/listing/${listing.code}`} className="font-medium underline">
+                {listing.title}
+              </Link>
+            ) : (
+              <span className="font-medium">{listing.title}</span>
+            )}
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">€{listing.priceEur}</p>
+            {listing.badge ? (
+              <span className="mt-1 inline-block rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+                {listing.badge}
+              </span>
+            ) : null}
+          </div>
+          <p className="text-sm text-zinc-500">With {view.otherPartyName}</p>
         </div>
-        <p className="text-sm text-zinc-500">With {view.otherPartyName}</p>
-      </div>
+      ) : (
+        <div className="rounded border border-zinc-200 p-3 dark:border-zinc-800">
+          <p className="font-medium">Direct conversation with {view.otherPartyName}</p>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">Not about a particular part.</p>
+        </div>
+      )}
 
       <ol className="flex flex-col gap-3" aria-label="Messages">
         {view.messages.map((m) => (
@@ -67,7 +75,10 @@ export function ThreadPanel({ view, path }: { view: ThreadView; path: string }) 
         <ReplyForm threadId={view.id} path={path} />
       )}
 
-      <ReportForm threadId={view.id} path={path} alreadyReported={view.reportedByMe} />
+      <div className="flex flex-wrap items-center gap-4">
+        <TrashButton threadId={view.id} path={path} trashed={view.trashed} />
+        <ReportForm threadId={view.id} path={path} alreadyReported={view.reportedByMe} />
+      </div>
     </div>
   );
 }

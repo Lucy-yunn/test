@@ -62,12 +62,15 @@ no buyer channel — is accepted for v1. Recorded as
 
 ## 3. Threads
 
-### 3.1 Every Thread is triggered by a Listing
+### 3.1 A Thread is about a Listing, or is a direct conversation
 
-The buyer opens a Thread **from a specific listing page** — never a generic "contact this
-seller". There is no per-seller inbox conversation: a buyer talking to one seller about three
-listings has **three** Threads. This keeps `(listingId, buyerId)` a true unique key and means
-every message exchange has an unambiguous subject.
+A Thread about a part is opened **from that listing's page**. A buyer talking to one seller
+about three listings has **three** such Threads, which keeps `(listingId, buyerId)` a true unique
+key and gives each exchange an unambiguous subject.
+
+Since [ADR-0013](./adr/0013-direct-conversations-and-inbox-folders.md) a buyer can also open a
+**direct conversation** with a seller, about no listing in particular (§3.5). The earlier rule,
+"never a generic contact this seller", is reversed.
 
 ### 3.2 Starting a Thread
 
@@ -107,6 +110,27 @@ When the Listing is no longer available to this buyer, the header shows a badge:
 - **Placing an order does not auto-create a Thread** (locked in #10). The order detail page's
   **Message seller** link opens or re-uses the same `(listing, buyer)` Thread.
 
+### 3.5 Direct conversations
+
+- A buyer starts one from **Direct message**, the first item in the seller profile's **Message**
+  menu (`/sellers/[id]/message`). Same conditions as §3.2 for the buyer and the seller; there is
+  no listing status to check.
+- It is a Thread with **no `listingId`**: **one per (seller, buyer)**, so writing again goes into
+  it. The database enforces this with a partial unique index (`Thread_direct_pair_key`, in the
+  migration only). The first message and the Thread are created together.
+- The Thread view shows **Direct conversation with …** in place of the listing header. It cannot
+  be attached to a listing later: asking about a part starts a Thread from that part.
+- Only a buyer starts one. A seller still starts a Thread only with the buyer of one of their
+  orders (about that order's listing).
+
+### 3.6 The trash
+
+Each person has their **own** trash (`Thread.buyerTrashedAt`, `sellerTrashedAt`), reached from
+**Move to trash** in the Thread view and undone by **Move back to inbox**. The other side is not
+told and still sees the Thread. Moving to trash marks the waiting messages read. **Any new
+message**, from the other side, from support, or sent by the person themselves, takes the Thread
+out of **both** trashes. A trashed Thread is still readable and still counts in the staff views.
+
 ---
 
 ## 4. Messages
@@ -145,9 +169,23 @@ conversation; it is expected to be rare.
 
 | Role | Reads / writes where | Notes |
 |---|---|---|
-| **Buyer** | a dedicated **Messages** area (all their Threads, newest first); a Thread is also opened from the **listing page** and from the **order detail page** | starts a Thread only from a listing page (§3.2) |
-| **Seller** (with login) | a **Messages** section in the **seller center** | **the one write action in an otherwise read-only seller center** — a context note is on [Seller center (#13)](https://github.com/Lucy-yunn/test/issues/13) so it plans for a reply box |
+| **Buyer** | a dedicated **Messages** area with **Inbox** and **Trash**; a Thread is also opened from the **listing page**, the **order detail page** and the seller profile's **Direct message** | starts a Thread from a listing page (§3.2) or a direct one (§3.5) |
+| **Seller** (with login) | a **Messages** section in the **seller center**, with **Unanswered**, **Answered** and **Trash** | **the one write action in an otherwise read-only seller center** — a context note is on [Seller center (#13)](https://github.com/Lucy-yunn/test/issues/13) so it plans for a reply box |
 | **Staff** | the **admin tool** — a Threads view listing every Thread, with the **report queue** (§7); can open any Thread, post as *IVO Support*, lock, and block | read access is unconditional — Threads are not private from the operator |
+
+### The inbox
+
+- **Folders.** *Unanswered* is a Thread whose last message from a person (not from support) is
+  the other side's; *Answered* is the rest; a trashed Thread shows only in *Trash*. A buyer's
+  *Inbox* is every Thread that is not trashed.
+- **Layout**, on both sides, in the address as `?folder=` and `?by=`: **Latest** (flat, newest
+  first), **By buyer** (a buyer's **By seller**), and **By listing**. Each group shows its
+  conversation count and unread total and is ordered by its newest message. Direct conversations
+  form one group at the end of **By listing**. A seller uses **By buyer** to see everything one
+  buyer asked about (one parcel, one delivery) and **By listing** to see every buyer of one part
+  side by side, which helps when buyers haggle.
+- Combined shipping and price offers stay conversations: there is no multi-item order and no
+  offer field in v1 (ADR-0013).
 
 ### Identity shown
 

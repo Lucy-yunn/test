@@ -31,9 +31,10 @@ export default async function AdminThreadPage({ params }: PageProps<"/[locale]/a
         All conversations
       </Link>
       <div>
-        <h1 className="text-xl font-semibold">{view.listing.title}</h1>
+        <h1 className="text-xl font-semibold">{view.listing?.title ?? "Direct conversation"}</h1>
         <p className="text-sm text-zinc-500">
-          {view.listing.code} · listing {view.listing.status} · {view.buyerName} with {view.sellerName}
+          {view.listing ? `${view.listing.code} · listing ${view.listing.status} · ` : "About no listing · "}
+          {view.buyerName} with {view.sellerName}
         </p>
       </div>
 
