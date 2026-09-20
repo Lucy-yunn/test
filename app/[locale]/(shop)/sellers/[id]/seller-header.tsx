@@ -15,10 +15,13 @@ export function SellerHeader({
   profile,
   actor,
   saved,
+  messageable,
 }: {
   profile: SellerProfile;
   actor: Actor | null;
   saved: boolean;
+  /** The seller's parts on sale, for the "Which part is your message about?" picker. */
+  messageable: { code: string; title: string; priceEur: string }[];
 }) {
   const backTo = `/sellers/${profile.id}`;
   const isBuyer = actor?.role === "buyer";
@@ -69,14 +72,36 @@ export function SellerHeader({
       </dl>
 
       <div className="flex items-center gap-2">
-        <button
-          type="button"
-          disabled
-          title="Messaging arrives in build step 11"
-          className="rounded border px-3 py-1 text-sm opacity-60"
-        >
-          Message
-        </button>
+        {actor && !isBuyer ? (
+          <button
+            type="button"
+            disabled
+            title="Messaging a seller is for buyer accounts"
+            className="rounded border px-3 py-1 text-sm opacity-60"
+          >
+            Message
+          </button>
+        ) : (
+          <details className="relative">
+            <summary className="cursor-pointer list-none rounded border px-3 py-1 text-sm">Message</summary>
+            <div className="absolute right-0 z-10 mt-2 w-72 rounded border border-zinc-200 bg-white p-3 text-sm text-zinc-900 shadow dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
+              <p className="font-medium">Which part is your message about?</p>
+              {messageable.length === 0 ? (
+                <p className="mt-2 text-zinc-500">This seller has no parts on sale right now.</p>
+              ) : (
+                <ul className="mt-2 flex max-h-64 flex-col gap-1 overflow-y-auto">
+                  {messageable.map((l) => (
+                    <li key={l.code}>
+                      <Link href={`/listing/${l.code}/message`} className="block rounded px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                        {l.title} <span className="text-zinc-500">€{l.priceEur}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </details>
+        )}
 
         {!actor ? (
           <Link href={`/login?redirect=${backTo}`} className="rounded border px-3 py-1 text-sm">

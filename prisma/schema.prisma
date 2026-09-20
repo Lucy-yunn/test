@@ -638,7 +638,7 @@ model Report {
   threadId       String
   reportedById   String
   reportedByRole SenderRole // buyer | seller
-  reason         String
+  reason         String? // optional short free text
   state          ReportState @default(open)
   createdAt      DateTime    @default(now())
   resolvedAt     DateTime?

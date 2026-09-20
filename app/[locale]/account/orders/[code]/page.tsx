@@ -110,14 +110,13 @@ export default async function OrderPage({ params }: PageProps<"/[locale]/account
 
       <section className="flex flex-col gap-3">
         {canCancel ? <CancelForm orderId={order.id} orderCode={order.code} instant={order.status === "placed"} /> : null}
-        <button
-          type="button"
-          disabled
-          title="Messaging arrives in build step 11"
-          className="w-fit rounded border px-4 py-2 text-sm opacity-60"
-        >
-          Message seller
-        </button>
+        {order.seller.available ? (
+          <Link href={`/listing/${order.listing.code}/message`} className="w-fit rounded border px-4 py-2 text-sm">
+            Message seller
+          </Link>
+        ) : (
+          <p className="text-xs text-zinc-500">Messaging isn&rsquo;t available for this seller.</p>
+        )}
       </section>
     </div>
   );

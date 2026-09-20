@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { getActor } from "@/lib/dal/session";
 import { getSellerProfile } from "@/lib/services/seller-profile";
 import { isSellerSaved } from "@/lib/services/saved-sellers";
+import { listMessageableListings } from "@/lib/services/messaging";
 import type { SP } from "../../browse/browse-nav";
 import { SellerHeader } from "./seller-header";
 import { CarsTab } from "./cars-tab";
@@ -38,14 +39,20 @@ export default async function SellerProfilePage({
 
   const actor = await getActor();
   // Independent of each other, so ask together. A saved flag for a seller with no profile is simply unused.
-  const [profile, saved] = await Promise.all([getSellerProfile(db, id, actor), isSellerSaved(db, actor, id)]);
+  // The parts a buyer can ask about are only needed for buyers and visitors, who see the Message picker.
+  const canMessage = !actor || actor.role === "buyer";
+  const [profile, saved, messageable] = await Promise.all([
+    getSellerProfile(db, id, actor),
+    isSellerSaved(db, actor, id),
+    canMessage ? listMessageableListings(db, id) : Promise.resolve([]),
+  ]);
   if (!profile) notFound();
   const requested = typeof sp.tab === "string" ? sp.tab : "cars";
   const tab = TABS.find((t) => t.key === requested)?.key ?? "cars";
 
   return (
     <div>
-      <SellerHeader profile={profile} actor={actor} saved={saved} />
+      <SellerHeader profile={profile} actor={actor} saved={saved} messageable={messageable} />
 
       <nav className="flex border-b border-zinc-200 text-sm font-medium dark:border-zinc-800">
         {TABS.map((t) => (
