@@ -10,6 +10,7 @@ import {
 } from "../dal/seller-availability";
 import { nextInternalCode } from "./internal-code";
 import { chargeForPublish } from "./credits";
+import { isUniqueViolation } from "./prisma-errors";
 import {
   evaluatePublishChecklist,
   type PublishChecklistResult,
@@ -297,13 +298,4 @@ export async function setListingStatusByStaff(
     return;
   }
   await db.listing.update({ where: { id: listingId }, data: { status: to } });
-}
-
-function isUniqueViolation(err: unknown): boolean {
-  return (
-    typeof err === "object" &&
-    err !== null &&
-    "code" in err &&
-    (err as { code?: string }).code === "P2002"
-  );
 }

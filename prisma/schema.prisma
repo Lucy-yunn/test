@@ -48,9 +48,9 @@ enum ListingStatus {
 enum OrderStatus {
   placed
   confirmed
-  shipped
-  delivered
+  completed
   cancelled
+  refused
 }
 
 enum PartStatus {
@@ -481,7 +481,7 @@ model Listing {
   favorites    Favorite[]
   threads      Thread[]
   creditEntries CreditLedgerEntry[]
-  order        Order?
+  orders       Order[]
 
   @@index([partId])
   @@index([sellerId])
@@ -520,16 +520,12 @@ model Order {
   internalCode String      @unique // ORD-000123
   buyerId      String
   sellerId     String // denormalised from the Listing
-  listingId    String      @unique
+  listingId    String // a listing can be reserved again after a cancelled or refused order
   itemPriceEur Decimal     @db.Decimal(10, 2)
-
-  shippingCostEur Decimal? @db.Decimal(10, 2)
-  shippingNotes   String?
 
   status            OrderStatus  @default(placed)
   lastReachedStatus OrderStatus? // set only on cancellation
-  expectedTimeRange String?
-  trackingNumber    String?
+  refusalNote       String? // optional, when the seller marks the order refused
 
   // Delivery-address snapshot (flat, never an FK).
   recipientName String
@@ -542,9 +538,9 @@ model Order {
 
   placedAt    DateTime  @default(now())
   confirmedAt DateTime?
-  shippedAt   DateTime?
-  deliveredAt DateTime?
+  completedAt DateTime?
   cancelledAt DateTime?
+  refusedAt   DateTime?
 
   buyer               Buyer                @relation(fields: [buyerId], references: [id])
   seller              Seller               @relation(fields: [sellerId], references: [id])
@@ -553,20 +549,20 @@ model Order {
 
   @@index([buyerId])
   @@index([sellerId])
+  @@index([listingId])
   @@index([status])
 }
 
 model CancellationRequest {
   id           String             @id @default(cuid())
   orderId      String             @unique
-  requestedBy  CancellationActor // buyer | staff (DAL-restricted)
   reason       CancellationReason
   reasonDetail String? // required when reason = other (DAL-enforced)
   state        CancellationState  @default(pending)
   createdAt    DateTime           @default(now())
   autoApproveAt DateTime // createdAt + 7 days
   resolvedAt   DateTime?
-  resolvedBy   CancellationActor? // seller | staff | auto
+  resolvedBy   CancellationActor? // buyer | seller | auto (DAL-restricted)
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 

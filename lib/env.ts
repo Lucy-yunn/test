@@ -15,6 +15,10 @@ const schema = z.object({
   BETTER_AUTH_SECRET: z.string().min(16),
   BETTER_AUTH_URL: z.string().url().default("http://localhost:3000"),
 
+  // Shared secret Vercel Cron sends to /api/cron/cancellations. Without it the endpoint refuses
+  // every request, so it is never open by accident.
+  CRON_SECRET: z.string().min(16).optional(),
+
   // Vercel Blob (curated listing photos). Optional until the store is created.
   BLOB_READ_WRITE_TOKEN: z.string().optional(),
 
@@ -35,6 +39,7 @@ const raw = {
   BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
   BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
   BLOB_READ_WRITE_TOKEN: process.env.BLOB_READ_WRITE_TOKEN,
+  CRON_SECRET: process.env.CRON_SECRET,
   NODE_ENV: process.env.NODE_ENV,
 };
 
