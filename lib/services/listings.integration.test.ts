@@ -11,6 +11,7 @@ import {
   setListingStatusByStaff,
 } from "./listings";
 import { createPart } from "./parts";
+import { adjustCredits } from "./credits";
 import { InvariantError, NotFoundError } from "../dal/errors";
 
 const TAG = `lst-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -47,6 +48,7 @@ beforeAll(async () => {
   sellerA = (await db.seller.create({ data: { displayName: `A ${TAG}`, contactName: "A", contactEmail: `a-${TAG}@x.test`, locationCity: "Sofia", userId: loginA.id } })).id;
   sellerB = (await db.seller.create({ data: { displayName: `B ${TAG}`, contactName: "B", contactEmail: `b-${TAG}@x.test`, locationCity: "Varna" } })).id;
 
+  await adjustCredits(db, { sellerId: sellerA, amount: 20, note: "test credits", createdBy: null });
   donorA = (await createDonorVehicle(db, { sellerId: sellerA, generationId, label: `Donor ${TAG}` })).id;
   partId = (await createPart(db, { categoryId, name: `Part ${TAG}` })).id;
   partIds.push(partId);
@@ -58,6 +60,7 @@ afterAll(async () => {
   await db.donorVehicle.deleteMany({ where: { label: { contains: TAG } } });
   await db.partNumber.deleteMany({ where: { partId: { in: partIds } } });
   await db.part.deleteMany({ where: { id: { in: partIds } } });
+  await db.creditLedgerEntry.deleteMany({ where: { sellerId: { in: [sellerA, sellerB, ...extraSellerIds] } } });
   await db.seller.deleteMany({ where: { id: { in: [sellerA, sellerB, ...extraSellerIds] } } });
   await db.user.deleteMany({ where: { id: { in: extraUserIds } } });
   await db.category.deleteMany({ where: { slug: `cat-${TAG}` } });
@@ -189,11 +192,13 @@ describe("publish checklist", () => {
     check = await getPublishChecklist(db, l.id);
     expect(check.ok).toBe(true);
 
-    await publishListing(db, l.id, "staff-1");
+    const staff = await db.user.create({ data: { name: `Staff ${TAG}`, email: `staff-${TAG}@example.test`, role: "staff" } });
+    extraUserIds.push(staff.id);
+    await publishListing(db, l.id, staff.id);
     const row = await db.listing.findUnique({ where: { id: l.id } });
     expect(row?.status).toBe("published");
     expect(row?.publishedAt).toBeTruthy();
-    expect(row?.reviewedBy).toBe("staff-1");
+    expect(row?.reviewedBy).toBe(staff.id);
   });
 
   it("accepts the 'no visible number' tick", async () => {
@@ -258,6 +263,7 @@ describe("publishing needs an available seller (docs/auth-and-permissions.md §4
       data: { displayName: `Av ${login} ${TAG}`, contactName: "S", contactEmail: `av-${TAG}@x.test`, locationCity: "Sofia", userId },
     });
     extraSellerIds.push(seller.id);
+    await adjustCredits(db, { sellerId: seller.id, amount: 1, note: "test credit", createdBy: null });
     const donor = await createDonorVehicle(db, { sellerId: seller.id, generationId, label: `Donor av ${login} ${TAG}` });
     const listing = await createListing(db, {
       donorVehicleId: donor.id,

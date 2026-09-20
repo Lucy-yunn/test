@@ -116,11 +116,11 @@ export async function publishListingAction(
 }
 
 export async function setListingStatusAction(formData: FormData): Promise<void> {
-  await requireStaff();
+  const actor = await requireStaff();
   const to = String(formData.get("to")) as
     | "published"
     | "cancelled"
     | "archived";
-  await setListingStatusByStaff(db, String(formData.get("listingId")), to);
+  await setListingStatusByStaff(db, String(formData.get("listingId")), to, actor.userId);
   revalidatePath("/admin/listings");
 }

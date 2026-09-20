@@ -9,6 +9,7 @@ import {
   sellerIsAvailable,
 } from "../dal/seller-availability";
 import { nextInternalCode } from "./internal-code";
+import { chargeForPublish } from "./credits";
 import {
   evaluatePublishChecklist,
   type PublishChecklistResult,
@@ -165,6 +166,7 @@ async function loadForPublish(db: PrismaClient, listingId: string) {
     where: { id: listingId },
     select: {
       status: true,
+      sellerId: true,
       condition: true,
       priceEur: true,
       donorVehicleId: true,
@@ -228,10 +230,39 @@ export async function publishListing(
     );
   }
 
-  await db.listing.update({
-    where: { id: listingId },
-    data: { status: "published", publishedAt: new Date(), reviewedBy: reviewedBy ?? null },
+  await db.$transaction(async (tx) => {
+    await moveIntoPublished(tx, {
+      listingId,
+      sellerId: listing.sellerId,
+      from: listing.status,
+      data: { publishedAt: new Date(), reviewedBy: reviewedBy ?? null },
+      changedBy: reviewedBy,
+    });
   });
+}
+
+/**
+ * The one place a listing moves into `published` on staff's say-so. It costs the seller one
+ * credit (docs/seller-credits.md section 3), and the status change and the charge are one
+ * transaction: if the seller has no credit, nothing changes. The status is only changed while
+ * it is still what the caller saw, so two requests for the same listing cannot both charge.
+ */
+async function moveIntoPublished(
+  tx: Prisma.TransactionClient,
+  args: {
+    listingId: string;
+    sellerId: string;
+    from: ListingStatus;
+    data: Prisma.ListingUpdateManyMutationInput;
+    changedBy?: string | null;
+  },
+): Promise<void> {
+  const { count } = await tx.listing.updateMany({
+    where: { id: args.listingId, status: args.from },
+    data: { ...args.data, status: "published" },
+  });
+  if (count === 0) throw new InvariantError("The listing changed while it was being published, try again");
+  await chargeForPublish(tx, { sellerId: args.sellerId, listingId: args.listingId, createdBy: args.changedBy });
 }
 
 const STAFF_TRANSITIONS: Partial<Record<ListingStatus, ListingStatus[]>> = {
@@ -244,10 +275,11 @@ export async function setListingStatusByStaff(
   db: PrismaClient,
   listingId: string,
   to: ListingStatus,
+  changedBy?: string | null,
 ): Promise<void> {
   const listing = await db.listing.findUnique({
     where: { id: listingId },
-    select: { status: true },
+    select: { status: true, sellerId: true },
   });
   if (!listing) throw new NotFoundError("Listing not found");
 
@@ -257,6 +289,13 @@ export async function setListingStatusByStaff(
     );
   }
   assertTransition(LISTING_TRANSITIONS, listing.status, to, "Listing");
+
+  if (to === "published") {
+    await db.$transaction((tx) =>
+      moveIntoPublished(tx, { listingId, sellerId: listing.sellerId, from: listing.status, data: {}, changedBy }),
+    );
+    return;
+  }
   await db.listing.update({ where: { id: listingId }, data: { status: to } });
 }
 
