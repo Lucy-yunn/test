@@ -1,7 +1,7 @@
 # v1 Domain Model — entities & relationships
 
-Resolves [Core domain model — entities & relationships (#2)](https://github.com/Lucy-yunn/test/issues/2)
-on the [Wayfinder map (#1)](https://github.com/Lucy-yunn/test/issues/1).
+Resolves [Core domain model — entities & relationships (#2)](https://github.com/Lucy-yunn/carparts/issues/2)
+on the [Wayfinder map (#1)](https://github.com/Lucy-yunn/carparts/issues/1).
 
 This is the entity-relationship skeleton the remaining tickets build on. It defines *what the
 entities are, what they hold at a conceptual level, and how they relate* — not table DDL,
@@ -38,7 +38,7 @@ per car. Embedding would re-type VIN / mileage / engine code on every Listing.
 **One path only: Provenance.** The vehicle catalogue is `VehicleMake → VehicleModelGroup →
 VehicleGeneration`, and a `Listing` reaches its vehicle through
 `Listing → DonorVehicle → VehicleGeneration` (`DonorVehicle.generationId` is **required** — see
-[Listing model (#8)](https://github.com/Lucy-yunn/test/issues/8); there is no unknown-donor
+[Listing model (#8)](https://github.com/Lucy-yunn/carparts/issues/8); there is no unknown-donor
 case, staff always identify the donor to a Generation, extending the hand-built catalogue
 during intake when needed).
 
@@ -50,7 +50,7 @@ compatibility guarantee — same-generation provenance does **not** mean the par
 interchangeable; buyers check the part number and the donor vehicle's structured details
 (engine, engine code, gearbox, drivetrain — all shown on the Listing) before purchasing.
 Cross-vehicle compatibility is deferred (see the map's *Out of scope*); amended by
-[#21](https://github.com/Lucy-yunn/test/issues/21).
+[#21](https://github.com/Lucy-yunn/carparts/issues/21).
 
 ### 3. Is User one entity with a role, or separate Buyer / Seller / Staff entities?
 
@@ -98,7 +98,7 @@ The login identity for every person who can sign in. Owned by Better Auth.
   [`docs/messaging-model.md`](./messaging-model.md))
 - Relationships: 1:1 optional → `Buyer`; 1:1 optional → `Seller`. A `staff` User has neither.
 
-Permission matrix and session detail: [Auth, roles & permissions (#12)](https://github.com/Lucy-yunn/test/issues/12).
+Permission matrix and session detail: [Auth, roles & permissions (#12)](https://github.com/Lucy-yunn/carparts/issues/12).
 
 #### Buyer
 A party who browses and purchases. Created automatically when a person self-registers.
@@ -148,7 +148,7 @@ A selectable leaf part type. Plus one "Other / not listed" catch-all.
 - Relationships: → many `Part`
 
 Exact leaf list is finalised with the seed-data plan (see map). Full taxonomy rules:
-[v1 category taxonomy (#3)](https://github.com/Lucy-yunn/test/issues/3).
+[v1 category taxonomy (#3)](https://github.com/Lucy-yunn/carparts/issues/3).
 
 #### Part
 The platform's canonical technical identity of a component. One Part, many Listings.
@@ -165,7 +165,7 @@ The platform's canonical technical identity of a component. One Part, many Listi
 - Relationships: → many `PartNumber`, → many `Listing`
 
 Merge semantics, de-dup workflow, supersession (deferred):
-[Part identity & OEM part-number model (#5)](https://github.com/Lucy-yunn/test/issues/5).
+[Part identity & OEM part-number model (#5)](https://github.com/Lucy-yunn/carparts/issues/5).
 
 #### PartNumber
 One number a Part is known by. A Part has 0..n; zero is valid.
@@ -184,8 +184,8 @@ Cross-brand numbers join the same Part **only after staff verify interchangeabil
 
 Hand-built catalogue; only Generations matching pilot sellers' real donor vehicles. Stored
 as a repo seed fixture; admin CRUD deferred. Detail:
-[Vehicle reference data strategy (#4)](https://github.com/Lucy-yunn/test/issues/4). Grain and
-the grouped `VehicleModelGroup` level: [#21](https://github.com/Lucy-yunn/test/issues/21).
+[Vehicle reference data strategy (#4)](https://github.com/Lucy-yunn/carparts/issues/4). Grain and
+the grouped `VehicleModelGroup` level: [#21](https://github.com/Lucy-yunn/carparts/issues/21).
 
 #### VehicleMake
 - `name`, `slug`, `country` (nullable, display), `displayOrder`, `isActive`
@@ -217,16 +217,16 @@ production-date range.
 
 There is **no `Fitment` entity in v1.** Platform-verified `Part ↔ vehicle` compatibility —
 staff asserting which other vehicles a part fits — is **out of scope** (map's *Out of scope*;
-[#21](https://github.com/Lucy-yunn/test/issues/21) removed it, reversing [#7](https://github.com/Lucy-yunn/test/issues/7)).
+[#21](https://github.com/Lucy-yunn/carparts/issues/21) removed it, reversing [#7](https://github.com/Lucy-yunn/carparts/issues/7)).
 Buyer discovery is provenance-only: see question 2 above, and buyer search in
 [`docs/buyer-funnel-search.md`](./buyer-funnel-search.md) §3 (resolves
-[#9](https://github.com/Lucy-yunn/test/issues/9), absorbs the former Fitment doc).
+[#9](https://github.com/Lucy-yunn/carparts/issues/9), absorbs the former Fitment doc).
 
 ### Selling & buying
 
 #### DonorVehicle
 The physical car a Seller dismantled. Entered once by staff; parts added against it. Full
-model resolved by [Listing model (#8)](https://github.com/Lucy-yunn/test/issues/8).
+model resolved by [Listing model (#8)](https://github.com/Lucy-yunn/carparts/issues/8).
 
 - `sellerId` — required
 - `generationId` — **required** (no unknown-donor case; catalogue is extended during intake)
@@ -252,7 +252,7 @@ model resolved by [Listing model (#8)](https://github.com/Lucy-yunn/test/issues/
 
 #### Listing
 One physical used item one Seller has for sale. A single unique unit. Full model resolved by
-[Listing model (#8)](https://github.com/Lucy-yunn/test/issues/8).
+[Listing model (#8)](https://github.com/Lucy-yunn/carparts/issues/8).
 
 - `internalCode` — readable, e.g. `LST-000123`, unique
 - `partId` — required (Part must have a leaf `Category`)
@@ -263,7 +263,7 @@ One physical used item one Seller has for sale. A single unique unit. Full model
 - `removalNotes` — nullable, part-specific provenance detail
 - `sellerSku`, `warehouseLocation` — nullable
 - `lengthCm`, `widthCm`, `heightCm`, `weightKg`, `packageSizeNotes` — nullable (shipping;
-  [Order model (#10)](https://github.com/Lucy-yunn/test/issues/10) consumes these)
+  [Order model (#10)](https://github.com/Lucy-yunn/carparts/issues/10) consumes these)
 - `status` — `draft` | `published` | `reserved` | `sold` | `cancelled` | `archived`
 - `publishedAt`, `reviewedBy` (nullable), `createdBy`
 - Title is auto-composed for display, not stored
@@ -403,12 +403,12 @@ no edit or delete by anyone.
 
 Full rules — the both-sides-login gate, surfaces, unread state, moderation (report / lock /
 block), and the `Report` flag entity: [`docs/messaging-model.md`](./messaging-model.md)
-(resolves [#11](https://github.com/Lucy-yunn/test/issues/11)).
+(resolves [#11](https://github.com/Lucy-yunn/carparts/issues/11)).
 
 #### Notification
 A durable in-app record of one event, addressed to one recipient with a login. The whole v1
 notification mechanism — **there is no notification email in v1**
-([Auth (#12)](https://github.com/Lucy-yunn/test/issues/12) §6). New-message alerting is **not**
+([Auth (#12)](https://github.com/Lucy-yunn/carparts/issues/12) §6). New-message alerting is **not**
 a Notification (it stays on `Message.readAt`).
 
 - `userId` — required; the recipient, whose `role` is `buyer` or `seller` (never `staff`)
@@ -422,7 +422,7 @@ a Notification (it stays on `Message.readAt`).
 
 Written by the DAL functions in the same transaction as the change they describe. Full event →
 audience matrix and the feed rules:
-[`docs/notifications.md`](./notifications.md) (resolves [#17](https://github.com/Lucy-yunn/test/issues/17)).
+[`docs/notifications.md`](./notifications.md) (resolves [#17](https://github.com/Lucy-yunn/carparts/issues/17)).
 
 ---
 
@@ -484,8 +484,8 @@ erDiagram
 | **`User` + separate `Buyer` / `Seller` profile entities** | Buyer self-registers, Seller is staff-created with an optional login; each profile is a clean home for role-specific data | Single `User.role` with no profiles (no home for delivery address / Location / business identity); fully separate tables with no shared login (Better Auth wants one `User`) |
 | **Staff has no profile entity** | Only two people, no domain data beyond the role | A `Staff` table for symmetry (empty) |
 | **`Group` is a table, not a label on `Category`** | Funnel menu needs stable ordering + slugs; makes leaf-only structural | `group` enum/string on Category |
-| **No `Fitment` entity; vehicle catalogue is `VehicleGeneration`-grain; buyer discovery is provenance-only** ([#21](https://github.com/Lucy-yunn/test/issues/21), reverses [#7](https://github.com/Lucy-yunn/test/issues/7)) | A two-person team cannot research/assert/maintain a compatibility database; generation-grain keeps the hand-built catalogue to ~150 rows, not ~1000; the donor Generation + part number + shown donor details are enough for a provenance-first marketplace | Engine-grain `Modification` catalogue + staff-verified `Fitment` rows + a Fitment ∪ Provenance search union with confirmed-fit badges (the [#4](https://github.com/Lucy-yunn/test/issues/4)/[#7](https://github.com/Lucy-yunn/test/issues/7) design; too much ongoing curation for v1) |
-| **`VehicleModelGroup` groups model designations (`A4, S4`); no per-nameplate level** ([#21](https://github.com/Lucy-yunn/test/issues/21)) | Matches how RRR/Ovoko group these and the founder's mocks; keeps the catalogue at three levels | A distinct `VehicleModel` per nameplate under a family level (an extra buyer-facing click that teaches nothing) |
+| **No `Fitment` entity; vehicle catalogue is `VehicleGeneration`-grain; buyer discovery is provenance-only** ([#21](https://github.com/Lucy-yunn/carparts/issues/21), reverses [#7](https://github.com/Lucy-yunn/carparts/issues/7)) | A two-person team cannot research/assert/maintain a compatibility database; generation-grain keeps the hand-built catalogue to ~150 rows, not ~1000; the donor Generation + part number + shown donor details are enough for a provenance-first marketplace | Engine-grain `Modification` catalogue + staff-verified `Fitment` rows + a Fitment ∪ Provenance search union with confirmed-fit badges (the [#4](https://github.com/Lucy-yunn/carparts/issues/4)/[#7](https://github.com/Lucy-yunn/carparts/issues/7) design; too much ongoing curation for v1) |
+| **`VehicleModelGroup` groups model designations (`A4, S4`); no per-nameplate level** ([#21](https://github.com/Lucy-yunn/carparts/issues/21)) | Matches how RRR/Ovoko group these and the founder's mocks; keeps the catalogue at three levels | A distinct `VehicleModel` per nameplate under a family level (an extra buyer-facing click that teaches nothing) |
 | **No cart / `OrderItem` in v1** | Every part is a unique single unit; multi-seller carts split into N orders anyway; payment is cash on delivery per part, so one-payment-many-items has no value | Cart + `Order → OrderItem` split now |
 | **`Listing.sellerId` kept explicit** (redundant with `donorVehicle.sellerId`) | Nearly every query is "listings/orders by seller"; invariant enforced in the DAL | Derive seller through the DonorVehicle on every query |
 | **`DonorVehicle.generationId` required** (reverses the "unknown donor allowed" note from #2) | Provenance stays meaningful; it is the only buyer-discovery path; the hand-built catalogue already only holds real pilot-donor Generations, so staff extend it during intake | Nullable generation — but then a part is barely discoverable |
@@ -496,13 +496,13 @@ erDiagram
 | **Credits are an append-only ledger; publishing costs one** ([ADR-0010](./adr/0010-prepaid-seller-credits.md)) | Revenue that does not depend on seeing off-platform sales; full audit trail | Commission; subscription |
 | **Reviews are open to any signed-in buyer and labelled** ([ADR-0012](./adr/0012-reviews-open-to-any-buyer.md)) | Few completed orders in the pilot; a purchase-only rule would leave ratings empty | Purchase-only reviews |
 
-These two calls are recorded as ADRs (written by the Final spec assembly ticket, [#26](https://github.com/Lucy-yunn/test/issues/26)):
+These two calls are recorded as ADRs (written by the Final spec assembly ticket, [#26](https://github.com/Lucy-yunn/carparts/issues/26)):
 
 - [ADR-0002](./adr/0002-donorvehicle-provenance-as-relationship.md) — `DonorVehicle` as a
   first-class entity; Provenance is the `Listing → DonorVehicle` link (surprising against the
   map's Q6);
 - [ADR-0003](./adr/0003-provenance-first-generation-grain.md) — provenance-first,
-  `VehicleGeneration`-grain, no `Fitment` in v1 ([#21](https://github.com/Lucy-yunn/test/issues/21)).
+  `VehicleGeneration`-grain, no `Fitment` in v1 ([#21](https://github.com/Lucy-yunn/carparts/issues/21)).
 
 The full v1 spec is assembled at [`docs/spec/`](./spec/) (front door: [`docs/spec/README.md`](./spec/README.md)).
 
@@ -512,12 +512,12 @@ The full v1 spec is assembled at [`docs/spec/`](./spec/) (front door: [`docs/spe
 
 | Ticket | Owns |
 |---|---|
-| [Fitment model & staff-entry workflow (#7)](https://github.com/Lucy-yunn/test/issues/7) | ⚠️ **Resolved, then amended by [#21](https://github.com/Lucy-yunn/test/issues/21)** — the `Fitment` entity, staff fitment workflow, confirmed-fit badges and the Fitment ∪ Provenance search union are **removed from v1**. `docs/fitment-and-compatibility-search.md` is deleted; its surviving content (the provenance match query, partial-funnel widening) moved into [`docs/buyer-funnel-search.md`](./buyer-funnel-search.md) §3. |
-| [Listing model (#8)](https://github.com/Lucy-yunn/test/issues/8) | ✅ **Resolved** — `Listing` / `DonorVehicle` / `ListingPhoto` / `ListingDefect` above; lifecycle, publish checklist, buyer visibility. Seller-facing intake spun off to its own ticket. `DonorVehicle` gained structured `engine`/`fuel`/`bodyStyle`/`drivetrain` and `generationId` replaced `modificationId` ([#21](https://github.com/Lucy-yunn/test/issues/21)). |
-| [Buyer funnel search UX (#9)](https://github.com/Lucy-yunn/test/issues/9) | ✅ **Resolved** ([`docs/buyer-funnel-search.md`](./buyer-funnel-search.md)) — funnel `Make → Model → Generation → Category`; provenance-only results, no fit badges ([#21](https://github.com/Lucy-yunn/test/issues/21)); Engine/Fuel/Gearbox as provenance-narrowing facets. |
-| [Order model & stubbed checkout (#10)](https://github.com/Lucy-yunn/test/issues/10) | ✅ **Resolved** — `Order` + `CancellationRequest` above; full lifecycle, checkout flow, cancellation flow, shipping, visibility in [`docs/order-model.md`](./order-model.md) |
-| [In-app messaging model (#11)](https://github.com/Lucy-yunn/test/issues/11) | ✅ **Resolved** — Thread exists only when both parties have a login (no staff relay); `Message` = explicit `senderRole` + `senderUserId`, immutable, text-only; in-app unread via `readAt`; moderation = staff report queue / lock / block. Full spec in [`docs/messaging-model.md`](./messaging-model.md). Email/push notifications split out to a new cross-cutting ticket. |
-| [Auth, roles & permissions (#12)](https://github.com/Lucy-yunn/test/issues/12) | ✅ **Resolved** — Better Auth + `admin` plugin; buyer self-registration (atomic `User` + `Buyer`); two-phase seller provisioning; one role per `User` ([ADR-0004](./adr/0004-one-role-per-user.md)); the full permission matrix; DAL enforcement. Full spec in [`docs/auth-and-permissions.md`](./auth-and-permissions.md). |
-| [Seller center (#13)](https://github.com/Lucy-yunn/test/issues/13) | ✅ **Resolved** — five near-read-only sections, exactly two write actions, live-count metrics only, the Q15 boundary. Full spec in [`docs/seller-center.md`](./seller-center.md). |
-| [Notifications (#17)](https://github.com/Lucy-yunn/test/issues/17) | ✅ **Resolved** — `Notification` above; in-app only (no email in v1 — [ADR-0008](./adr/0008-in-app-notifications-email-deferred.md)), event → audience matrix, the per-user feed in [`docs/notifications.md`](./notifications.md) |
-| [Final spec assembly (#26)](https://github.com/Lucy-yunn/test/issues/26) | ✅ **Resolved** — the build-ready SPEC front door, screen inventory, and admin-tool spec in [`docs/spec/`](./spec/); the eight ADRs in [`docs/adr/`](./adr/). |
+| [Fitment model & staff-entry workflow (#7)](https://github.com/Lucy-yunn/carparts/issues/7) | ⚠️ **Resolved, then amended by [#21](https://github.com/Lucy-yunn/carparts/issues/21)** — the `Fitment` entity, staff fitment workflow, confirmed-fit badges and the Fitment ∪ Provenance search union are **removed from v1**. `docs/fitment-and-compatibility-search.md` is deleted; its surviving content (the provenance match query, partial-funnel widening) moved into [`docs/buyer-funnel-search.md`](./buyer-funnel-search.md) §3. |
+| [Listing model (#8)](https://github.com/Lucy-yunn/carparts/issues/8) | ✅ **Resolved** — `Listing` / `DonorVehicle` / `ListingPhoto` / `ListingDefect` above; lifecycle, publish checklist, buyer visibility. Seller-facing intake spun off to its own ticket. `DonorVehicle` gained structured `engine`/`fuel`/`bodyStyle`/`drivetrain` and `generationId` replaced `modificationId` ([#21](https://github.com/Lucy-yunn/carparts/issues/21)). |
+| [Buyer funnel search UX (#9)](https://github.com/Lucy-yunn/carparts/issues/9) | ✅ **Resolved** ([`docs/buyer-funnel-search.md`](./buyer-funnel-search.md)) — funnel `Make → Model → Generation → Category`; provenance-only results, no fit badges ([#21](https://github.com/Lucy-yunn/carparts/issues/21)); Engine/Fuel/Gearbox as provenance-narrowing facets. |
+| [Order model & stubbed checkout (#10)](https://github.com/Lucy-yunn/carparts/issues/10) | ✅ **Resolved** — `Order` + `CancellationRequest` above; full lifecycle, checkout flow, cancellation flow, shipping, visibility in [`docs/order-model.md`](./order-model.md) |
+| [In-app messaging model (#11)](https://github.com/Lucy-yunn/carparts/issues/11) | ✅ **Resolved** — Thread exists only when both parties have a login (no staff relay); `Message` = explicit `senderRole` + `senderUserId`, immutable, text-only; in-app unread via `readAt`; moderation = staff report queue / lock / block. Full spec in [`docs/messaging-model.md`](./messaging-model.md). Email/push notifications split out to a new cross-cutting ticket. |
+| [Auth, roles & permissions (#12)](https://github.com/Lucy-yunn/carparts/issues/12) | ✅ **Resolved** — Better Auth + `admin` plugin; buyer self-registration (atomic `User` + `Buyer`); two-phase seller provisioning; one role per `User` ([ADR-0004](./adr/0004-one-role-per-user.md)); the full permission matrix; DAL enforcement. Full spec in [`docs/auth-and-permissions.md`](./auth-and-permissions.md). |
+| [Seller center (#13)](https://github.com/Lucy-yunn/carparts/issues/13) | ✅ **Resolved** — five near-read-only sections, exactly two write actions, live-count metrics only, the Q15 boundary. Full spec in [`docs/seller-center.md`](./seller-center.md). |
+| [Notifications (#17)](https://github.com/Lucy-yunn/carparts/issues/17) | ✅ **Resolved** — `Notification` above; in-app only (no email in v1 — [ADR-0008](./adr/0008-in-app-notifications-email-deferred.md)), event → audience matrix, the per-user feed in [`docs/notifications.md`](./notifications.md) |
+| [Final spec assembly (#26)](https://github.com/Lucy-yunn/carparts/issues/26) | ✅ **Resolved** — the build-ready SPEC front door, screen inventory, and admin-tool spec in [`docs/spec/`](./spec/); the eight ADRs in [`docs/adr/`](./adr/). |

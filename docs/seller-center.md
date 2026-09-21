@@ -1,7 +1,7 @@
 # v1 Seller Center — scope & actions
 
-Originally resolved [Seller center — v1 scope & metrics (#13)](https://github.com/Lucy-yunn/test/issues/13)
-on the [Wayfinder map (#1)](https://github.com/Lucy-yunn/test/issues/1). **Revised 2026-09-19**:
+Originally resolved [Seller center — v1 scope & metrics (#13)](https://github.com/Lucy-yunn/carparts/issues/13)
+on the [Wayfinder map (#1)](https://github.com/Lucy-yunn/carparts/issues/1). **Revised 2026-09-19**:
 the seller now operates orders and replies to reviews, so the seller center is no longer
 read-only. See [ADR-0009](./adr/0009-seller-operated-orders-cash-on-delivery.md).
 

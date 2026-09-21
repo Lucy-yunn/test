@@ -1,7 +1,7 @@
 # v1 In-App Messaging Model
 
-Resolves [In-app messaging model (#11)](https://github.com/Lucy-yunn/test/issues/11)
-on the [Wayfinder map (#1)](https://github.com/Lucy-yunn/test/issues/1).
+Resolves [In-app messaging model (#11)](https://github.com/Lucy-yunn/carparts/issues/11)
+on the [Wayfinder map (#1)](https://github.com/Lucy-yunn/carparts/issues/1).
 
 > **Amended 2026-09-19.** Messaging stays in v1. Every seller now has a login
 > ([`auth-and-permissions.md`](./auth-and-permissions.md) §4.4), so the "login-less seller" case
@@ -11,7 +11,7 @@ on the [Wayfinder map (#1)](https://github.com/Lucy-yunn/test/issues/1).
 > also write to the seller center's **Messages** as one of its several write actions, not "the
 > one write action" as §5 says.
 
-Builds on [Core domain model (#2)](https://github.com/Lucy-yunn/test/issues/2). Vocabulary is
+Builds on [Core domain model (#2)](https://github.com/Lucy-yunn/carparts/issues/2). Vocabulary is
 governed by [`CONTEXT.md`](../CONTEXT.md); the entity/field skeleton lives in
 [`docs/domain-model.md`](./domain-model.md). This document owns **who can message whom, the
 surfaces each role uses, the Thread/Message rules, unread state, and moderation** — the
@@ -29,10 +29,10 @@ v1 messaging is **in-app, 1:1, buyer↔seller, text-only** chat (Q26/Q27). One c
 Out of this ticket:
 - **Email / push notifications** and the **cross-event notification policy** (order status,
   cancellation events, new messages, as one design) — a dedicated
-  [notifications ticket](https://github.com/Lucy-yunn/test/issues/1) graduated from the map
+  [notifications ticket](https://github.com/Lucy-yunn/carparts/issues/1) graduated from the map
   fog. This document specifies only the **in-app unread state** (§6).
 - The **seller center** and **admin tool** *screen layouts* — owned by
-  [Seller center (#13)](https://github.com/Lucy-yunn/test/issues/13) and the final spec
+  [Seller center (#13)](https://github.com/Lucy-yunn/carparts/issues/13) and the final spec
   assembly. This document fixes the messaging data and rules those screens act on.
 - **Attachments** (photos in a Thread) — deferred (§4).
 
@@ -170,7 +170,7 @@ conversation; it is expected to be rare.
 | Role | Reads / writes where | Notes |
 |---|---|---|
 | **Buyer** | a dedicated **Messages** area with **Inbox** and **Trash**; a Thread is also opened from the **listing page**, the **order detail page** and the seller profile's **Direct message** | starts a Thread from a listing page (§3.2) or a direct one (§3.5) |
-| **Seller** (with login) | a **Messages** section in the **seller center**, with **Unanswered**, **Answered** and **Trash** | **the one write action in an otherwise read-only seller center** — a context note is on [Seller center (#13)](https://github.com/Lucy-yunn/test/issues/13) so it plans for a reply box |
+| **Seller** (with login) | a **Messages** section in the **seller center**, with **Unanswered**, **Answered** and **Trash** | **the one write action in an otherwise read-only seller center** — a context note is on [Seller center (#13)](https://github.com/Lucy-yunn/carparts/issues/13) so it plans for a reply box |
 | **Staff** | the **admin tool** — a Threads view listing every Thread, with the **report queue** (§7); can open any Thread, post as *IVO Support*, lock, and block | read access is unconditional — Threads are not private from the operator |
 
 ### The inbox
@@ -298,7 +298,7 @@ that staff get a queue of reported Threads.)*
   unread state only.
 - **Seller center (#13)** — must plan a **Messages** section with a **reply box**; it is the
   one write action in the seller center. Context note added to the ticket.
-- **Final spec assembly ([#26](https://github.com/Lucy-yunn/test/issues/26))** — done: the
+- **Final spec assembly ([#26](https://github.com/Lucy-yunn/carparts/issues/26))** — done: the
   admin Threads / report-queue screens are in [`docs/spec/admin-tool.md`](./spec/admin-tool.md) §9;
   the "both sides logged in, no staff relay" decision is [ADR-0006](./adr/0006-both-sides-login-messaging.md).
 - **Attachments in Threads** — deferred; a later enhancement, tied to the same blob-storage

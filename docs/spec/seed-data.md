@@ -14,7 +14,7 @@ from this data.
 
 | File | Contents | State |
 |---|---|---|
-| `prisma/seed/taxonomy.ts` | 13 display Groups + "Other", and every selectable leaf `Category` (73 leaves + 1 catch-all), en-GB, immutable kebab-case slugs, synonyms | **Final** — from research [#3](https://github.com/Lucy-yunn/test/issues/3). Only staff add categories later. |
+| `prisma/seed/taxonomy.ts` | 13 display Groups + "Other", and every selectable leaf `Category` (73 leaves + 1 catch-all), en-GB, immutable kebab-case slugs, synonyms | **Final** — from research [#3](https://github.com/Lucy-yunn/carparts/issues/3). Only staff add categories later. |
 | `prisma/seed/data/vehicle-catalogue.csv` | Founder's Bulgarian used-parts vehicle catalogue v1 — 138 generation rows with market evidence + sources + priority. **The source of truth.** | Supplied 2026-09-07. |
 | `prisma/seed/data/vehicle-catalogue-confirmation-queue.csv` | 12 open questions for the Bulgarian dismantlers (facelift-as-generation, year basis, make coverage, LHD/RHD, …). 15/138 rows flagged `local_confirmation_required`. | Not blocking — imported as-is for v1. |
 | `prisma/seed/vehicles.ts` | **GENERATED** from the CSV by `npm run build:vehicle-fixture` — 14 makes / 50 model groups / 138 generations. Do not hand-edit. | Final for v1. |

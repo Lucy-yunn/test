@@ -2,11 +2,11 @@
 
 - **Status:** accepted
 - **Date:** 2026-09-06
-- **Source:** [#12 Auth, roles & permissions](https://github.com/Lucy-yunn/test/issues/12) §8 · full spec in [`docs/auth-and-permissions.md`](../auth-and-permissions.md)
+- **Source:** [#12 Auth, roles & permissions](https://github.com/Lucy-yunn/carparts/issues/12) §8 · full spec in [`docs/auth-and-permissions.md`](../auth-and-permissions.md)
 
 ## Context
 
-There are three roles: `buyer`, `seller`, `staff`. A person could plausibly be more than one — a mechanic who both sells parts and buys them. The party model ([#2](https://github.com/Lucy-yunn/test/issues/2)) gives each `User` an optional `Buyer` profile and an optional `Seller` profile, which structurally *could* both be attached to one `User`.
+There are three roles: `buyer`, `seller`, `staff`. A person could plausibly be more than one — a mechanic who both sells parts and buys them. The party model ([#2](https://github.com/Lucy-yunn/carparts/issues/2)) gives each `User` an optional `Buyer` profile and an optional `Seller` profile, which structurally *could* both be attached to one `User`.
 
 ## Decision
 

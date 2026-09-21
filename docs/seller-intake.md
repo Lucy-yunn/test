@@ -1,12 +1,12 @@
 # Seller inventory data-intake mechanism — v1
 
-Resolves [Seller inventory data-intake mechanism (#14)](https://github.com/Lucy-yunn/test/issues/14)
-on the [Wayfinder map (#1)](https://github.com/Lucy-yunn/test/issues/1).
+Resolves [Seller inventory data-intake mechanism (#14)](https://github.com/Lucy-yunn/carparts/issues/14)
+on the [Wayfinder map (#1)](https://github.com/Lucy-yunn/carparts/issues/1).
 
 v1 listing entry is **staff-entry** (locked Q10) and this ticket does **not** change that. It
 designs the **handoff**: how a Seller's raw inventory reaches Staff so Staff can create the
 `DonorVehicle` + `Listing` records defined in [`docs/domain-model.md`](./domain-model.md) and
-[Listing model (#8)](https://github.com/Lucy-yunn/test/issues/8).
+[Listing model (#8)](https://github.com/Lucy-yunn/carparts/issues/8).
 
 Vocabulary is governed by [`CONTEXT.md`](../CONTEXT.md). The `DonorVehicle`, `Listing`,
 `ListingPhoto`, and `ListingDefect` entities live in [`docs/domain-model.md`](./domain-model.md);
@@ -224,7 +224,7 @@ justify it — Staff transcription load and photo-storage cost rising with selle
 
 ## 9. Related / spun off
 
-- **[#21](https://github.com/Lucy-yunn/test/issues/21) — vehicle-catalogue grain & the
+- **[#21](https://github.com/Lucy-yunn/carparts/issues/21) — vehicle-catalogue grain & the
   buyer-facing label** (resolved). Outcome: the catalogue is `VehicleGeneration`-grain over a
   grouped `VehicleModelGroup` level (`Make → Model → Generation → Category`); the funnel's
   third step is labelled **"Generation"**; the `Fitment` entity is **removed from v1** and

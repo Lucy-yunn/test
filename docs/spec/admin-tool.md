@@ -89,7 +89,7 @@ sheet ([`seller-intake.md`](../seller-intake.md) §2.4).
 
 ---
 
-## 5. `/admin/parts` — Parts & PartNumbers ([#5](https://github.com/Lucy-yunn/test/issues/5))
+## 5. `/admin/parts` — Parts & PartNumbers ([#5](https://github.com/Lucy-yunn/carparts/issues/5))
 
 **List / search** — by `internalCode` (`PRT-000123`), name, or `PartNumber.normalized`.
 

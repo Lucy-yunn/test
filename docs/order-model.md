@@ -1,12 +1,12 @@
 # v1 Order Model — reservation, seller-operated lifecycle, cash on delivery
 
-Originally resolved [Order model & stubbed checkout (#10)](https://github.com/Lucy-yunn/test/issues/10)
-on the [Wayfinder map (#1)](https://github.com/Lucy-yunn/test/issues/1). **Revised 2026-09-19**
+Originally resolved [Order model & stubbed checkout (#10)](https://github.com/Lucy-yunn/carparts/issues/10)
+on the [Wayfinder map (#1)](https://github.com/Lucy-yunn/carparts/issues/1). **Revised 2026-09-19**
 by the founders' v1 scope change: payment is cash on delivery outside the platform, and the
 seller (not staff) operates the order. Decision record: [ADR-0009](./adr/0009-seller-operated-orders-cash-on-delivery.md).
 
-Builds on [Core domain model (#2)](https://github.com/Lucy-yunn/test/issues/2) and
-[Listing model (#8)](https://github.com/Lucy-yunn/test/issues/8). Vocabulary is governed by
+Builds on [Core domain model (#2)](https://github.com/Lucy-yunn/carparts/issues/2) and
+[Listing model (#8)](https://github.com/Lucy-yunn/carparts/issues/8). Vocabulary is governed by
 [`CONTEXT.md`](../CONTEXT.md); the entity/field skeleton lives in
 [`docs/domain-model.md`](./domain-model.md). This document owns **the lifecycle, the reserve
 flow, the cancellation flow, and the visibility rules**.

@@ -1,9 +1,9 @@
 # Buyer funnel search & Browse UX — v1
 
-Resolves [Buyer funnel search UX (#9)](https://github.com/Lucy-yunn/test/issues/9)
-on the [Wayfinder map (#1)](https://github.com/Lucy-yunn/test/issues/1).
+Resolves [Buyer funnel search UX (#9)](https://github.com/Lucy-yunn/carparts/issues/9)
+on the [Wayfinder map (#1)](https://github.com/Lucy-yunn/carparts/issues/1).
 
-**Amended by [#21](https://github.com/Lucy-yunn/test/issues/21)** (2026-09): the vehicle
+**Amended by [#21](https://github.com/Lucy-yunn/carparts/issues/21)** (2026-09): the vehicle
 catalogue is `VehicleGeneration`-grain, buyer discovery is **provenance-only**, and the
 `Fitment` entity / confirmed-fit badges / Fitment ∪ Provenance union are **removed from v1**.
 The former `docs/fitment-and-compatibility-search.md` is deleted; its surviving content (the

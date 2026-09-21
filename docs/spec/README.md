@@ -4,7 +4,7 @@ This is the **front door** for the build effort. It synthesises the design and p
 authoritative source for each area. It does **not** restate those sources — where this
 document and a topic doc disagree, the **topic doc wins**.
 
-- Charted on the [Wayfinder map (#1)](https://github.com/Lucy-yunn/test/issues/1). Every design
+- Charted on the [Wayfinder map (#1)](https://github.com/Lucy-yunn/carparts/issues/1). Every design
   decision is a closed child ticket (#2–#23); this document (#26) assembles them.
 - The **Q1–Q29 product grilling record** is the first comment on the map — read it for the
   "why" behind the framing below.
@@ -35,7 +35,7 @@ with a language toggle scaffolded from day one (Bulgarian and other EU locales l
 | **Cash on delivery** (revised) | "Reserve this part" creates an `Order`. The buyer pays the seller in cash after inspecting the part at the courier. The platform handles no buyer payment. The **seller** operates the order; staff have no order actions. See [ADR-0009](../adr/0009-seller-operated-orders-cash-on-delivery.md). |
 | **Seller credits** (new) | Sellers prepay credit bundles; publishing a Listing costs one. Staff record top-ups by hand. See [ADR-0010](../adr/0010-prepaid-seller-credits.md). |
 | **Trust surfaces** (new) | Public seller profile, donor-vehicle page, and reviews open to any signed-in buyer. See [ADR-0011](../adr/0011-public-seller-profile-and-donor-vehicle-page.md), [ADR-0012](../adr/0012-reviews-open-to-any-buyer.md). |
-| **Provenance-first** ([#21](https://github.com/Lucy-yunn/test/issues/21)) | Parts are found by the car they were removed from. The platform makes **no verified cross-vehicle compatibility claim**. See [ADR-0003](../adr/0003-provenance-first-generation-grain.md). |
+| **Provenance-first** ([#21](https://github.com/Lucy-yunn/carparts/issues/21)) | Parts are found by the car they were removed from. The platform makes **no verified cross-vehicle compatibility claim**. See [ADR-0003](../adr/0003-provenance-first-generation-grain.md). |
 | **Social login** (Q21) | Google / Facebook buttons rendered **disabled**. |
 
 **Three roles**, exactly one per `User` ([ADR-0004](../adr/0004-one-role-per-user.md)):
@@ -86,7 +86,7 @@ Full route-by-route inventory: [`./screens.md`](./screens.md).
 | **Buyer site** | `/` , `/browse` , `/listing/[id]` , `/sellers/[id]` , `/car/[id]` , `/login` , `/register` , policy pages | anonymous + all roles (reserve, save, review and message are buyer-only) | [`buyer-funnel-search.md`](../buyer-funnel-search.md), [`donor-vehicle-parts.md`](../donor-vehicle-parts.md), [`seller-profile.md`](../seller-profile.md), [`reviews.md`](../reviews.md) |
 | **Buyer account** | `/account/*` — orders, saved parts and sellers, messages, settings, activity | `buyer` | [`order-model.md`](../order-model.md), [`messaging-model.md`](../messaging-model.md), [`notifications.md`](../notifications.md), [`seller-profile.md`](../seller-profile.md) §8 |
 | **Seller center** | `/seller/*` — overview, orders, listings, messages, reviews, credits, store, notifications | `seller` | [`seller-center.md`](../seller-center.md), [`seller-credits.md`](../seller-credits.md) |
-| **Admin tool** | `/admin/*` — the whole back office | `staff` | [`./admin-tool.md`](./admin-tool.md) + the data rules in [#5](https://github.com/Lucy-yunn/test/issues/5)/[#8](https://github.com/Lucy-yunn/test/issues/8)/[#10](https://github.com/Lucy-yunn/test/issues/10)/[#11](https://github.com/Lucy-yunn/test/issues/11)/[#12](https://github.com/Lucy-yunn/test/issues/12) |
+| **Admin tool** | `/admin/*` — the whole back office | `staff` | [`./admin-tool.md`](./admin-tool.md) + the data rules in [#5](https://github.com/Lucy-yunn/carparts/issues/5)/[#8](https://github.com/Lucy-yunn/carparts/issues/8)/[#10](https://github.com/Lucy-yunn/carparts/issues/10)/[#11](https://github.com/Lucy-yunn/carparts/issues/11)/[#12](https://github.com/Lucy-yunn/carparts/issues/12) |
 
 Everything is under `app/[locale]/…`; the admin tool is English-only but still routed under
 `[locale]` for uniformity.
@@ -188,8 +188,8 @@ code, not decisions.
    task, not a planning ticket, but it gates everything below it.)* Define and produce:
    - the exact **`VehicleMake → VehicleModelGroup → VehicleGeneration`** list (from the pilot
      sellers' real donor vehicles — ask the founder's contacts; ~10–20 makes / ~40–70 models
-     / ~80–140 generations), stored as the repo seed fixture ([`domain-model.md`](../domain-model.md) *Vehicles*, [#4](https://github.com/Lucy-yunn/test/issues/4));
-   - the exact **leaf `Category`** list under the ~13 frozen `Group`s ([#3](https://github.com/Lucy-yunn/test/issues/3));
+     / ~80–140 generations), stored as the repo seed fixture ([`domain-model.md`](../domain-model.md) *Vehicles*, [#4](https://github.com/Lucy-yunn/carparts/issues/4));
+   - the exact **leaf `Category`** list under the ~13 frozen `Group`s ([#3](https://github.com/Lucy-yunn/carparts/issues/3));
    - fictional **seller / `DonorVehicle` / `Listing`** counts and content, tied to that
      catalogue — including **≥ 1 login-enabled seller** with enough **listings** (several
      statuses and `Group`s), **favourites**, **orders** (several statuses), **≥ 1 `pending`

@@ -2,11 +2,11 @@
 
 - **Status:** accepted. Since 2026-09-19 every seller must have a login ([ADR-0009](./0009-seller-operated-orders-cash-on-delivery.md)), so the login-less case this ADR handles no longer arises for published listings. The rule stands unchanged.
 - **Date:** 2026-09-06
-- **Source:** [#11 In-app messaging model](https://github.com/Lucy-yunn/test/issues/11) §2 · full spec in [`docs/messaging-model.md`](../messaging-model.md)
+- **Source:** [#11 In-app messaging model](https://github.com/Lucy-yunn/carparts/issues/11) §2 · full spec in [`docs/messaging-model.md`](../messaging-model.md)
 
 ## Context
 
-v1 has in-app 1:1 buyer↔seller messaging (Q26/Q27). But sellers are onboarded white-glove and a `Seller.userId` (a seller-center login) is **optional** — staff may provision one later, or never ([#2](https://github.com/Lucy-yunn/test/issues/2), [#12](https://github.com/Lucy-yunn/test/issues/12)). So some listings belong to sellers with no login. How does a buyer message them?
+v1 has in-app 1:1 buyer↔seller messaging (Q26/Q27). But sellers are onboarded white-glove and a `Seller.userId` (a seller-center login) is **optional** — staff may provision one later, or never ([#2](https://github.com/Lucy-yunn/carparts/issues/2), [#12](https://github.com/Lucy-yunn/carparts/issues/12)). So some listings belong to sellers with no login. How does a buyer message them?
 
 The obvious option is a **staff relay**: the buyer messages, staff forward it to the seller by phone/email and relay the reply back.
 

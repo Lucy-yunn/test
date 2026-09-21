@@ -3,8 +3,8 @@
 - **Status:** accepted
 - **Date:** 2026-09-05 (drafted, research #6) · 2026-09-07 (finalised, #26 Final spec assembly)
 - **Deciders:** founder + reviewing developer
-- **Sources:** [#6 Tech stack & architecture baseline](https://github.com/Lucy-yunn/test/issues/6) · research: `docs/research/tech-stack-baseline.md` (branch `research/tech-stack-baseline`)
-- **Amends:** the proposed draft's "Auth.js (NextAuth v5)" line → **Better Auth** (settled by [#12](https://github.com/Lucy-yunn/test/issues/12)); its S3/UploadThing photo-store line → **Vercel Blob**; removes the `Fitment` many-to-many from the domain sketch ([#21](https://github.com/Lucy-yunn/test/issues/21) — v1 has no `Fitment`).
+- **Sources:** [#6 Tech stack & architecture baseline](https://github.com/Lucy-yunn/carparts/issues/6) · research: `docs/research/tech-stack-baseline.md` (branch `research/tech-stack-baseline`)
+- **Amends:** the proposed draft's "Auth.js (NextAuth v5)" line → **Better Auth** (settled by [#12](https://github.com/Lucy-yunn/carparts/issues/12)); its S3/UploadThing photo-store line → **Vercel Blob**; removes the `Fitment` many-to-many from the domain sketch ([#21](https://github.com/Lucy-yunn/carparts/issues/21) — v1 has no `Fitment`).
 
 ## Context
 
@@ -67,7 +67,7 @@ pnpm · TypeScript `strict` + `next typegen` in CI · Tailwind CSS v4 (scaffolde
 | Area | Chosen | Rejected | Why |
 |---|---|---|---|
 | ORM | Prisma | Drizzle | Prisma has the most Claude-Code examples and easy migrations; Drizzle's lighter runtime doesn't matter at demo scale. |
-| Auth | Better Auth | Auth.js v5 | Better Auth's email/password + role/provisioning + `admin` plugin fit the 3-role staff-provisioned model far better ([#12](https://github.com/Lucy-yunn/test/issues/12)). |
+| Auth | Better Auth | Auth.js v5 | Better Auth's email/password + role/provisioning + `admin` plugin fit the 3-role staff-provisioned model far better ([#12](https://github.com/Lucy-yunn/carparts/issues/12)). |
 | Host + DB | Vercel + Neon | Railway/Render/Fly + bundled Postgres | Lowest ops for a solo builder; the pooling requirement is a one-time setup. |
 | Photo store | Vercel Blob | S3 / UploadThing / R2 | One vendor, zero extra setup on Vercel, behind an abstraction so it's swappable; demo photo volume is tiny. |
 | i18n | next-intl | zero-dep dictionary | Batteries included (formatting, switcher, ICU); the toggle must exist from day one. |

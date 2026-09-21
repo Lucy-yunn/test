@@ -1,7 +1,7 @@
 # "More parts from the same car" — v1
 
-Resolves [Buyer-facing "more parts from this donor vehicle" view — v1 or not (#23)](https://github.com/Lucy-yunn/test/issues/23)
-on the [Wayfinder map (#1)](https://github.com/Lucy-yunn/test/issues/1).
+Resolves [Buyer-facing "more parts from this donor vehicle" view — v1 or not (#23)](https://github.com/Lucy-yunn/carparts/issues/23)
+on the [Wayfinder map (#1)](https://github.com/Lucy-yunn/carparts/issues/1).
 
 > **Amended 2026-09-19.** The "no dedicated donor-vehicle page" cut in §1 and §8 below is
 > **reversed**: every donor vehicle now has a public page with the car's details, why it was
@@ -23,7 +23,7 @@ Vocabulary is governed by [`CONTEXT.md`](../CONTEXT.md).
 ## Terminology note — the vehicle catalogue
 
 This document uses the vehicle-catalogue vocabulary settled by
-[Vehicle-catalogue grain & the buyer-facing label (#21)](https://github.com/Lucy-yunn/test/issues/21):
+[Vehicle-catalogue grain & the buyer-facing label (#21)](https://github.com/Lucy-yunn/carparts/issues/21):
 
 - The buyer-facing hierarchy is **Make → Model → Generation → Category**.
 - **`VehicleGeneration`** is the catalogue leaf and the funnel's third step; it replaces the
@@ -48,7 +48,7 @@ same car"* — listing the other active `Listing`s that share this listing's `do
 
 Rationale:
 
-- A `DonorVehicle` is a first-class entity ([#2](https://github.com/Lucy-yunn/test/issues/2)),
+- A `DonorVehicle` is a first-class entity ([#2](https://github.com/Lucy-yunn/carparts/issues/2)),
   so the data is already joined — `donorVehicleId` + `Listing.status` is all the section needs.
 - Dismantlers list many parts per car. A buyer rebuilding one damaged area (headlight +
   bracket + wing + indicator) can source them from **one seller, one shipment** — and because
@@ -56,7 +56,7 @@ Rationale:
   guaranteed same-seller.
 - It is a **lateral move** from a listing the buyer already reached through the funnel. It is
   **not** a second search entry point, so it does not conflict with "the funnel is the only
-  way in" ([#9](https://github.com/Lucy-yunn/test/issues/9)).
+  way in" ([#9](https://github.com/Lucy-yunn/carparts/issues/9)).
 
 **Out of scope for v1** (see §8): a dedicated or shareable donor-vehicle page, any new search
 entry point, any new data-model element, category grouping within the section.
@@ -74,7 +74,7 @@ It is **suppressed**:
 - When the listing has **no other visible sibling** (§5).
 - When the retained (hidden) listing is being read **through an order** — a buyer viewing
   their `sold` / `cancelled` purchase via the order detail page
-  ([#10](https://github.com/Lucy-yunn/test/issues/10) reads the item through to the retained
+  ([#10](https://github.com/Lucy-yunn/carparts/issues/10) reads the item through to the retained
   `Listing`). The section is a shopping aid, not order information.
 
 Placement on the page: below the listing's own details (photos, condition, known defects,
@@ -103,7 +103,7 @@ inventory-size signal, acceptable for a used-parts marketplace and useful to the
 - The caption is the **only** place the "same car ≠ fits your car" message appears. There is
   no per-card warning (§4).
 - Final legal/tone polish of this copy is deferred with the rest of the site copy flagged in
-  [#9](https://github.com/Lucy-yunn/test/issues/9). Do **not** use `Modification` or
+  [#9](https://github.com/Lucy-yunn/carparts/issues/9). Do **not** use `Modification` or
   "Model Group" in buyer-facing copy.
 
 ### 3.3 Cards
@@ -121,7 +121,7 @@ Each card links to that sibling's own listing detail page, where the normal trea
 ### 3.4 Ordering
 
 **Newest listed first**, flat list — the same default sort as the funnel
-([#9](https://github.com/Lucy-yunn/test/issues/9), post-#21). Category grouping is a
+([#9](https://github.com/Lucy-yunn/carparts/issues/9), post-#21). Category grouping is a
 fast-follow (§8), not v1.
 
 ### 3.5 Size and "See all"
@@ -158,7 +158,7 @@ for the whole section.
 | Situation | Behaviour |
 |---|---|
 | The car has **no other listing** in `published` or `reserved` | Section **hidden entirely** — no empty state, no zero-count heading. |
-| Other siblings exist but are all `draft` / `sold` / `cancelled` / `archived` | Treated as no visible sibling → section **hidden**. Only `published` and `reserved` count (the buyer-visible statuses, per [#8](https://github.com/Lucy-yunn/test/issues/8)). |
+| Other siblings exist but are all `draft` / `sold` / `cancelled` / `archived` | Treated as no visible sibling → section **hidden**. Only `published` and `reserved` count (the buyer-visible statuses, per [#8](https://github.com/Lucy-yunn/carparts/issues/8)). |
 | A sibling is `reserved` | **Shown** (it is buyer-visible per #8; its card reflects the reserved state as anywhere else). |
 | The listing itself is `reserved` | Section still shown — the page is still a normal shopping page. |
 | The listing is reached through an order (retained hidden listing) | Section **suppressed** (§2). |
@@ -168,7 +168,7 @@ for the whole section.
 
 ## 6. Privacy
 
-**No additional masking beyond the existing [#8](https://github.com/Lucy-yunn/test/issues/8)
+**No additional masking beyond the existing [#8](https://github.com/Lucy-yunn/carparts/issues/8)
 donor-data rules.**
 
 The section shows the **same** donor vehicle (masked VIN, mileage, engine code as already
@@ -200,7 +200,7 @@ one-line pointer noting the listing detail page carries this section (added with
 | **Category grouping** within the section | Genuinely useful for the "rebuild one corner" buyer; a fast-follow, not v1. |
 | Any fit / compatibility signal on sibling cards | v1 has no compatibility signal anywhere (#21 removed `Fitment`); revisit only if platform-verified compatibility returns as a future feature. |
 | Cross-seller "same car" linking | Structurally impossible in v1 anyway (`DonorVehicle` belongs to one `Seller`); not a goal. |
-| "Notify me about new parts from this car" | No notification surface for this (`Notification` covers order + cancellation only — [#17](https://github.com/Lucy-yunn/test/issues/17)). |
+| "Notify me about new parts from this car" | No notification surface for this (`Notification` covers order + cancellation only — [#17](https://github.com/Lucy-yunn/carparts/issues/17)). |
 
 ---
 

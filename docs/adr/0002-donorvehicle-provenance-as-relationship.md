@@ -2,7 +2,7 @@
 
 - **Status:** accepted
 - **Date:** 2026-09-05
-- **Source:** [#2 Core domain model](https://github.com/Lucy-yunn/test/issues/2) · full model in [`docs/domain-model.md`](../domain-model.md)
+- **Source:** [#2 Core domain model](https://github.com/Lucy-yunn/carparts/issues/2) · full model in [`docs/domain-model.md`](../domain-model.md)
 
 ## Context
 
@@ -20,7 +20,7 @@ Staff intake is **donor-first**: a dismantler hands over one car and staff list 
 - Invariant (DAL-enforced): `Listing.sellerId == DonorVehicle.sellerId`.
 - `DonorVehicle` has **no lifecycle status** — it is a data record, entered once by staff.
 
-This also enables the buyer-facing **"More parts from the same car"** section ([#23](https://github.com/Lucy-yunn/test/issues/23), [`docs/donor-vehicle-parts.md`](../donor-vehicle-parts.md)) as a pure `donorVehicleId` query — no new model element.
+This also enables the buyer-facing **"More parts from the same car"** section ([#23](https://github.com/Lucy-yunn/carparts/issues/23), [`docs/donor-vehicle-parts.md`](../donor-vehicle-parts.md)) as a pure `donorVehicleId` query — no new model element.
 
 ## Consequences
 
@@ -37,4 +37,4 @@ This also enables the buyer-facing **"More parts from the same car"** section ([
 ## Alternatives considered
 
 - **Embedded provenance fields on `Listing`** (the map's Q6) — rejected: re-typing per part, no same-car link, VIN/mileage duplicated across dozens of rows.
-- **A nullable `DonorVehicle`** (unknown-donor case) — rejected by [#8](https://github.com/Lucy-yunn/test/issues/8): `DonorVehicle.generationId` is **required**; staff extend the hand-built catalogue during intake rather than leaving a donor unidentified.
+- **A nullable `DonorVehicle`** (unknown-donor case) — rejected by [#8](https://github.com/Lucy-yunn/carparts/issues/8): `DonorVehicle.generationId` is **required**; staff extend the hand-built catalogue during intake rather than leaving a donor unidentified.

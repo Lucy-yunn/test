@@ -4,7 +4,7 @@
 
 ### Issue tracker
 
-Issues live in GitHub Issues for `Lucy-yunn/test`, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+Issues live in GitHub Issues for `Lucy-yunn/carparts`, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
